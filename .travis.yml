@@ -3,11 +3,13 @@ node_js:
   - 'node'
 
 deploy:
+  repo: gpuweb-cts-glsl/gpuweb-cts-glsl.github.io
+  target_branch: master
   provider: pages
   skip_cleanup: true
   github_token: $GITHUB_TOKEN
   on:
-    branch: main
+    branch: glsl-dependent
 
 before_deploy:
   - sed -i '/out\//d' .gitignore

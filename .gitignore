@@ -2,6 +2,8 @@
 .vscode/
 
 # Build files
+/out/
+/out-wpt/
 .tscache/
 *.tmp.txt
 
