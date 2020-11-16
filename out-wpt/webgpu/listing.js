@@ -102,6 +102,15 @@ export const listing = [
       "api",
       "operation",
       "render_pass",
+      "resolve"
+    ],
+    "description": "API Operation Tests for RenderPass StoreOp.\nTests a render pass with a resolveTarget resolves correctly for many combinations of:\n  - number of color attachments, some with and some without a resolveTarget\n  - renderPass storeOp set to {‘store’, ‘clear’}\n  - resolveTarget mip level set to {‘0’, base mip > ‘0’}\n  - resolveTarget base array layer set to {‘0’, base layer > '0'} for 2D textures\n  TODO: test all renderable color formats\n  TODO: test that any not-resolved attachments are rendered to correctly."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pass",
       "storeOp"
     ],
     "description": "API Operation Tests for RenderPass StoreOp.\n\n  Test Coverage:\n\n  - Tests that color and depth-stencil store operations {'clear', 'store'} work correctly for a\n    render pass with both a color attachment and depth-stencil attachment.\n      TODO: use depth24plus-stencil8\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with multiple\n    color attachments.\n      TODO: test with more interesting loadOp values\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a color\n    attachment for:\n      - All renderable color formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a\n    depth-stencil attachment for:\n      - All renderable depth-stencil formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: test depth24plus and depth24plus-stencil8 formats\n      TODO: test that depth and stencil aspects are set seperately\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n      TODO: test with more interesting loadOp values"
