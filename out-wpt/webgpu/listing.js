@@ -421,13 +421,13 @@ export const listing = [
   },
   {
     "file": [
-      "web-platform"
+      "web_platform"
     ],
     "readme": "Tests for Web platform-specific interactions like GPUSwapChain and canvas, WebXR,\nImageBitmaps, and video APIs."
   },
   {
     "file": [
-      "web-platform",
+      "web_platform",
       "canvas",
       "context_creation"
     ],
@@ -435,7 +435,7 @@ export const listing = [
   },
   {
     "file": [
-      "web-platform",
+      "web_platform",
       "copyImageBitmapToTexture"
     ],
     "description": "copy imageBitmap To texture tests."
