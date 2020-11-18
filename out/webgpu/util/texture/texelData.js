@@ -1,13 +1,18 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert, unreachable } from '../../../common/framework/util/util.js';import { kUncompressedTextureFormatInfo } from
+**/import { assert, unreachable } from '../../../common/framework/util/util.js';import {
+kEncodableTextureFormatInfo,
+kUncompressedTextureFormatInfo } from
 
 '../../capability_info.js';
 import {
 assertInIntegerRange,
 float32ToFloatBits,
 floatAsNormalizedInteger,
-gammaCompress } from
+gammaCompress,
+encodeRGB9E5UFloat,
+normalizedIntegerAsFloat,
+gammaDecompress } from
 '../conversion.js';
 
 export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";TexelComponent["G"] = "G";TexelComponent["B"] = "B";TexelComponent["A"] = "A";TexelComponent["Depth"] = "Depth";TexelComponent["Stencil"] = "Stencil";})(TexelComponent || (TexelComponent = {}));var
@@ -32,6 +37,10 @@ TexelWriteType;
 //  - floats to unsigned normalized integers
 //  - floats to half floats, interpreted as uint16 bits
 (function (TexelWriteType) {TexelWriteType[TexelWriteType["Sint"] = 0] = "Sint";TexelWriteType[TexelWriteType["Uint"] = 1] = "Uint";TexelWriteType[TexelWriteType["Float"] = 2] = "Float";})(TexelWriteType || (TexelWriteType = {}));
+
+
+
+
 
 
 
@@ -66,21 +75,28 @@ const sint = bitLength => n => ({
   type: TexelWriteType.Sint });
 
 
-const unorm2 = { write: unorm(2), bitLength: 2 };
-const unorm8 = { write: unorm(8), bitLength: 8 };
-const unorm10 = { write: unorm(10), bitLength: 10 };
+const decodeUnorm = bitLength => (n) =>
+normalizedIntegerAsFloat(n, bitLength, false);
+const decodeSnorm = bitLength => (n) =>
+normalizedIntegerAsFloat(n, bitLength, true);
+const identity = n => n;
 
-const snorm8 = { write: snorm(8), bitLength: 8 };
+const unorm2 = { decode: decodeUnorm(2), write: unorm(2), bitLength: 2 };
+const unorm8 = { decode: decodeUnorm(8), write: unorm(8), bitLength: 8 };
+const unorm10 = { decode: decodeUnorm(10), write: unorm(10), bitLength: 10 };
 
-const uint8 = { write: uint(8), bitLength: 8 };
-const uint16 = { write: uint(16), bitLength: 16 };
-const uint32 = { write: uint(32), bitLength: 32 };
+const snorm8 = { decode: decodeSnorm(8), write: snorm(8), bitLength: 8 };
 
-const sint8 = { write: sint(8), bitLength: 8 };
-const sint16 = { write: sint(16), bitLength: 16 };
-const sint32 = { write: sint(32), bitLength: 32 };
+const uint8 = { decode: identity, write: uint(8), bitLength: 8 };
+const uint16 = { decode: identity, write: uint(16), bitLength: 16 };
+const uint32 = { decode: identity, write: uint(32), bitLength: 32 };
+
+const sint8 = { decode: identity, write: sint(8), bitLength: 8 };
+const sint16 = { decode: identity, write: sint(16), bitLength: 16 };
+const sint32 = { decode: identity, write: sint(32), bitLength: 32 };
 
 const float10 = {
+  decode: identity,
   write: n => ({
     value: float32ToFloatBits(n, 0, 5, 5, 15),
     type: TexelWriteType.Uint }),
@@ -89,6 +105,7 @@ const float10 = {
 
 
 const float11 = {
+  decode: identity,
   write: n => ({
     value: float32ToFloatBits(n, 0, 5, 6, 15),
     type: TexelWriteType.Uint }),
@@ -97,6 +114,7 @@ const float11 = {
 
 
 const float16 = {
+  decode: identity,
   write: n => ({
     value: float32ToFloatBits(n, 1, 5, 10, 15),
     type: TexelWriteType.Uint }),
@@ -105,6 +123,7 @@ const float16 = {
 
 
 const float32 = {
+  decode: identity,
   write: n => ({
     value: Math.fround(n),
     type: TexelWriteType.Float }),
@@ -113,6 +132,7 @@ const float32 = {
 
 
 const componentUnimplemented = {
+  decode: identity,
   write: () => {
     unreachable('TexelComponentInfo not implemented for this texture format');
   },
@@ -195,6 +215,17 @@ const kRepresentationInfo =
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 class TexelDataRepresentationImpl {
   // TODO: Determine endianness of the GPU data?
   isGPULittleEndian = true;
@@ -212,20 +243,13 @@ class TexelDataRepresentationImpl {
     }, 0);
   }
 
-  setComponent(data, component, n) {
-    const componentIndex = this.componentOrder.indexOf(component);
-    assert(componentIndex !== -1);
-    const bitOffset = this.componentOrder.slice(0, componentIndex).reduce((acc, curr) => {
-      const componentInfo = this.componentInfo[curr];
-      assert(!!componentInfo);
-      return acc + componentInfo.bitLength;
-    }, 0);
-
-    const componentInfo = this.componentInfo[component];
-    assert(!!componentInfo);
-    const { write, bitLength } = componentInfo;
-
-    const { value, type } = write(n);
+  writeTexelData(
+  data,
+  bitOffset,
+  bitLength,
+  type,
+  value)
+  {
     switch (type) {
       case TexelWriteType.Float:{
           const byteOffset = Math.floor(bitOffset / 8);
@@ -315,6 +339,55 @@ class TexelDataRepresentationImpl {
 
   }
 
+  getComponentBitOffset(component) {
+    const componentIndex = this.componentOrder.indexOf(component);
+    assert(componentIndex !== -1);
+    return this.componentOrder.slice(0, componentIndex).reduce((acc, curr) => {
+      const componentInfo = this.componentInfo[curr];
+      assert(!!componentInfo);
+      return acc + componentInfo.bitLength;
+    }, 0);
+  }
+
+  setComponent(data, component, n) {
+    const bitOffset = this.getComponentBitOffset(component);
+    const componentInfo = this.componentInfo[component];
+    assert(!!componentInfo);
+    const { write, bitLength } = componentInfo;
+
+    const { value, type } = write(n);
+    this.writeTexelData(data, bitOffset, bitLength, type, value);
+  }
+
+  setComponentBytes(data, component, value) {
+    assert(this.format in kEncodableTextureFormatInfo);
+    const format = this.format;
+
+    const componentInfo = this.componentInfo[component];
+    assert(!!componentInfo);
+
+    const bitOffset = this.getComponentBitOffset(component);
+    const { bitLength } = componentInfo;
+
+    switch (kEncodableTextureFormatInfo[format].dataType) {
+      case 'float':
+      case 'ufloat':
+        // Use the shader encoding which can pack floats as uint data.
+        this.setComponent(data, component, value);
+        break;
+      case 'snorm':
+      case 'sint':{
+          this.writeTexelData(data, bitOffset, bitLength, TexelWriteType.Sint, value);
+          break;
+        }
+      case 'unorm':
+      case 'uint':{
+          this.writeTexelData(data, bitOffset, bitLength, TexelWriteType.Uint, value);
+          break;
+        }}
+
+  }
+
   getBytes(components) {
     if (this.sRGB) {
       components = Object.assign({}, components);
@@ -331,6 +404,25 @@ class TexelDataRepresentationImpl {
     const bytesPerBlock = kUncompressedTextureFormatInfo[this.format].bytesPerBlock;
     assert(!!bytesPerBlock);
 
+    if (this.format === 'rgb9e5ufloat') {
+      assert(this.componentOrder.length === 3);
+      assert(this.componentOrder[0] === TexelComponent.R);
+      assert(this.componentOrder[1] === TexelComponent.G);
+      assert(this.componentOrder[2] === TexelComponent.B);
+      assert(bytesPerBlock === 4);
+      assert(components.R !== undefined);
+      assert(components.G !== undefined);
+      assert(components.B !== undefined);
+
+      const buf = new ArrayBuffer(bytesPerBlock);
+      new DataView(buf).setUint32(
+      0,
+      encodeRGB9E5UFloat(components.R, components.G, components.B),
+      this.isGPULittleEndian);
+
+      return buf;
+    }
+
     const data = new ArrayBuffer(bytesPerBlock);
     for (const c of this.componentOrder) {
       const componentValue = components[c];
@@ -338,6 +430,60 @@ class TexelDataRepresentationImpl {
       this.setComponent(data, c, componentValue);
     }
     return data;
+  }
+
+  packData(components) {
+    const bytesPerBlock = kUncompressedTextureFormatInfo[this.format].bytesPerBlock;
+    assert(!!bytesPerBlock);
+
+    if (this.format === 'rgb9e5ufloat') {
+      assert(this.componentOrder.length === 3);
+      assert(this.componentOrder[0] === TexelComponent.R);
+      assert(this.componentOrder[1] === TexelComponent.G);
+      assert(this.componentOrder[2] === TexelComponent.B);
+      assert(bytesPerBlock === 4);
+      assert(components.R !== undefined);
+      assert(components.G !== undefined);
+      assert(components.B !== undefined);
+
+      const buf = new ArrayBuffer(bytesPerBlock);
+      new DataView(buf).setUint32(
+      0,
+      encodeRGB9E5UFloat(components.R, components.G, components.B),
+      this.isGPULittleEndian);
+
+      return buf;
+    }
+
+    const data = new ArrayBuffer(bytesPerBlock);
+    for (const c of this.componentOrder) {
+      const componentValue = components[c];
+      assert(componentValue !== undefined);
+      this.setComponentBytes(data, c, componentValue);
+    }
+    return data;
+  }
+
+  decode(components) {
+    const values = {};
+    for (const c of this.componentOrder) {
+      const componentValue = components[c];
+      const info = this.componentInfo[c];
+      assert(componentValue !== undefined);
+      assert(!!info);
+      values[c] = info.decode(componentValue);
+    }
+    if (this.sRGB) {
+      assert('R' in values && values.R !== undefined);
+      assert('G' in values && values.G !== undefined);
+      assert('B' in values && values.B !== undefined);
+      [values.R, values.G, values.B] = [
+      gammaDecompress(values.R),
+      gammaDecompress(values.G),
+      gammaDecompress(values.B)];
+
+    }
+    return values;
   }}
 
 

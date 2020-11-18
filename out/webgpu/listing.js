@@ -413,6 +413,14 @@ export const listing = [
   },
   {
     "file": [
+      "util",
+      "texture",
+      "texelData"
+    ],
+    "description": "Test helpers for texel data produce the expected data in the shader"
+  },
+  {
+    "file": [
       "web-platform"
     ],
     "readme": "Tests for Web platform-specific interactions like GPUSwapChain and canvas, WebXR,\nImageBitmaps, and video APIs."
