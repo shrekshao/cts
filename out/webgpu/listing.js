@@ -120,9 +120,9 @@ export const listing = [
       "api",
       "operation",
       "resource_init",
-      "copied_texture_clear"
+      "texture_zero_init"
     ],
-    "description": "Test uninitialized textures are initialized to zero when copied."
+    "description": "Test uninitialized textures are initialized to zero when read."
   },
   {
     "file": [
