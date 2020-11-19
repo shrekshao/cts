@@ -131,6 +131,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "labels"
+    ],
+    "description": "For every create function, the descriptor.label is carried over to the object.label.\n\nTODO: implement"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "render_pass",
       "resolve"
     ],
@@ -175,6 +183,24 @@ export const listing = [
       "buffer_mapping"
     ],
     "description": "Validation tests for GPUBuffer.mapAsync, GPUBuffer.unmap and GPUBuffer.getMappedRange."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "features"
+    ],
+    "readme": "Test every method or option that shouldn't be valid without an feature enabled.\n\n- x= that feature {enabled, disabled}\n\nOne file for each feature name.\n\nTODO: implement"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits"
+    ],
+    "readme": "Test everything that shouldn't be valid without a higher-than-specified limit.\n\n- x= that limit {default, max supported (if different), lower than default (TODO: if allowed)}\n\nOne file for each limit name.\n\nTODO: implement"
   },
   {
     "file": [
@@ -292,7 +318,7 @@ export const listing = [
       "validation",
       "error_scope"
     ],
-    "description": "error scope validation tests."
+    "description": "Error scope validation tests.\n\nNote these must create their own device, not use GPUTest (that one already has error scopes on it).\n\nTODO: shorten test names; detail should move to the description.)\n\nTODO: consider slightly revising these tests to make sure they're complete. {\n    - push 0, pop 1\n    - push validation, push oom, pop, pop, pop\n    - push oom, push validation, pop, pop, pop\n    - push validation, pop, pop\n    - push oom, pop, pop\n    - push various x100000 (or some other large number), pop x100000, pop\n    - }"
   },
   {
     "file": [
@@ -301,6 +327,15 @@ export const listing = [
       "fences"
     ],
     "description": "fences validation tests."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "initialization",
+      "requestDevice"
+    ],
+    "description": "Test validation conditions for requestDevice."
   },
   {
     "file": [
@@ -396,6 +431,33 @@ export const listing = [
   },
   {
     "file": [
+      "api",
+      "validation",
+      "state",
+      "contagiousness"
+    ],
+    "readme": "Tests that any object created from an invalid object produces an invalid object.\nExcludes lost devices (devices can't be invalid, only lost).\nExcludes command encoding from invalid objects.\n\n- x= every such method in the API, e.g.:\n    - (invalid texture).createView()\n    - device.createBindGroup(... (invalid buffer) ...)\n\nTODO: implement (or decide that this coverage should be distributed across other test files)."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "state",
+      "device_lost"
+    ],
+    "readme": "Tests of behavior while the device is lost.\n\n- x= every method in the API.\n\nTODO: implement"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "state",
+      "device_mismatched"
+    ],
+    "readme": "Tests of behavior on one device using objects from another device.\n\n- x= every place in the API where an object is passed (as this, an arg, or a dictionary member).\n\nTODO: implement"
+  },
+  {
+    "file": [
       "examples"
     ],
     "description": "Examples of writing CTS tests with various features.\n\nStart here when looking for examples of basic framework usage."
@@ -404,7 +466,7 @@ export const listing = [
     "file": [
       "idl"
     ],
-    "readme": "Tests to check that the WebGPU IDL is correctly implemented, for examples that objects exposed\nexactly the correct members, and that methods throw when passed incomplete dictionaries."
+    "readme": "Tests to check that the WebGPU IDL is correctly implemented, for examples that objects exposed\nexactly the correct members, and that methods throw when passed incomplete dictionaries.\n\nSee https://github.com/gpuweb/cts/issues/332"
   },
   {
     "file": [
@@ -469,5 +531,12 @@ export const listing = [
       "copyImageBitmapToTexture"
     ],
     "description": "copy imageBitmap To texture tests."
+  },
+  {
+    "file": [
+      "web_platform",
+      "reftests"
+    ],
+    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO: Test all possible output texture formats (currently only testing bgra8unorm).\nTODO: Test all possible ways to write into those formats (currently only testing B2T copy)."
   }
 ];
