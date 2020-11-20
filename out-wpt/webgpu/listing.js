@@ -353,6 +353,16 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "encoding",
+      "cmds",
+      "dynamic_render_state"
+    ],
+    "description": "API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...)."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "error_scope"
     ],
     "description": "Error scope validation tests.\n\nNote these must create their own device, not use GPUTest (that one already has error scopes on it).\n\nTODO: shorten test names; detail should move to the description.)\n\nTODO: consider slightly revising these tests to make sure they're complete. {\n    - push 0, pop 1\n    - push validation, push oom, pop, pop, pop\n    - push oom, push validation, pop, pop, pop\n    - push validation, pop, pop\n    - push oom, pop, pop\n    - push various x100000 (or some other large number), pop x100000, pop\n    - }"
@@ -498,38 +508,6 @@ export const listing = [
       "setBindGroup"
     ],
     "description": "setBindGroup validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setBlendColor"
-    ],
-    "description": "setBlendColor validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setScissorRect"
-    ],
-    "description": "setScissorRect validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setStencilReference"
-    ],
-    "description": "setStencilReference validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setViewport"
-    ],
-    "description": "setViewport validation tests."
   },
   {
     "file": [
