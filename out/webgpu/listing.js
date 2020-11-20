@@ -531,6 +531,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "setVertexBuffer"
+    ],
+    "description": "setVertexBuffer validation tests."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "state",
       "device_lost"
     ],
