@@ -12,6 +12,8 @@ function numericKeysOf(obj) {
 
 // Buffers
 
+export const kBufferSizeAlignment = 4;
+
 export const kBufferUsageInfo = {
   [GPUConst.BufferUsage.MAP_READ]: {},
   [GPUConst.BufferUsage.MAP_WRITE]: {},

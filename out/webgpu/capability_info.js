@@ -14,6 +14,8 @@ function numericKeysOf(obj) {
 
 // Buffers
 
+export const kBufferSizeAlignment = 4;
+
 export const kBufferUsageInfo =
 
 {
