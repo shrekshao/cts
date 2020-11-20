@@ -166,6 +166,15 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "render_pipeline",
+      "primitive_topology"
+    ],
+    "description": "Test primitive topology rendering.\n\nDraw a primitive using 6 vertices with each topology and check if the pixel is covered.\n\nVertex sequence and coordinates are the same for each topology:\n  - Vertex buffer = [v1, v2, v3, v4, v5, v6]\n  - Topology = [point-list, line-list, line-strip, triangle-list, triangle-strip]\n\nTest locations are framebuffer coordinates:\n  - Pixel value { valid: green, invalid: black, format: 'rgba8unorm'}\n  - Test point is valid if the pixel value equals the covered pixel value at the test location.\n  - Primitive restart occurs for strips (line-strip and triangle-strip) between [v3, v4].\n\n  Topology: point-list         Valid test location(s)           Invalid test location(s)\n\n       v2    v4     v6         Every vertex.                    Line-strip locations.\n                                                                Triangle-list locations.\n                                                                Triangle-strip locations.\n\n   v1     v3     v5\n\n  Topology: line-list (3 lines)\n\n       v2    v4     v6         Center of three line segments:   Line-strip locations.\n      *      *      *          {v1,V2}, {v3,v4}, and {v4,v5}.   Triangle-list locations.\n     *      *      *                                            Triangle-strip locations.\n    *      *      *\n   v1     v3     v5\n\n  Topology: line-strip (5 lines)\n\n       v2    v4     v6\n       **    **     *\n      *  *  *  *   *           Line-list locations              Triangle-list locations.\n     *    **     **          + Center of two line segments:     Triangle-strip locations.\n    v1    v3     v5            {v2,v3} and {v4,v5}.\n                                                                With primitive restart:\n                                                                Line segment {v3, v4}.\n\n  Topology: triangle-list (2 triangles)\n\n      v2       v4    v6\n      **        ******         Center of two triangle(s):       Triangle-strip locations.\n     ****        ****          {v1,v2,v3} and {v4,v5,v6}.\n    ******        **\n   v1     v3      v5\n\n  Topology: triangle-strip (4 triangles)\n\n      v2        v4      v6\n      ** ****** ** ******      Triangle-list locations          None.\n     **** **** **** ****     + Center of two triangle(s):\n    ****** ** ****** **        {v2,v3,v4} and {v3,v4,v5}.       With primitive restart:\n   v1       v3        v5                                        Triangle {v2, v3, v4}\n                                                                and {v3, v4, v5}."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "resource_init",
       "texture_zero_init"
     ],

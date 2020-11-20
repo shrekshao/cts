@@ -308,4 +308,18 @@ got [${failedByteActualValues.join(', ')}]`;
 
     return returnValue;
   }
+
+  makeBufferWithContents(dataArray, usage) {
+    const buffer = this.device.createBuffer({
+      mappedAtCreation: true,
+      size: dataArray.byteLength,
+      usage,
+    });
+
+    const mappedBuffer = buffer.getMappedRange();
+    const constructor = dataArray.constructor;
+    new constructor(mappedBuffer).set(dataArray);
+    buffer.unmap();
+    return buffer;
+  }
 }
