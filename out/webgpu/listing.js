@@ -157,6 +157,15 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "render_pipeline",
+      "culling_tests"
+    ],
+    "description": "Test culling and rasterizaion state.\n\nTest coverage:\nTest all culling combinations of GPUFrontFace and GPUCullMode show the correct output.\n\nUse 2 triangles with different winding orders:\n\n- Test that the counter-clock wise triangle has correct output for:\n  - All FrontFaces (ccw, cw)\n  - All CullModes (none, front, back)\n  - All depth stencil attachment types (none, depth24plus, depth32float, depth24plus-stencil8)\n  - Some primitive topologies (triangle-list, TODO: triangle-strip)\n\n- Test that the clock wise triangle has correct output for:\n  - All FrontFaces (ccw, cw)\n  - All CullModes (none, front, back)\n  - All depth stencil attachment types (none, depth24plus, depth32float, depth24plus-stencil8)\n  - Some primitive topologies (triangle-list, TODO: triangle-strip)"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "resource_init",
       "texture_zero_init"
     ],
