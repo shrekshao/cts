@@ -480,6 +480,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "render_pass"
+    ],
+    "description": "render pass validation tests."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "render_pass",
       "resolve"
     ],
