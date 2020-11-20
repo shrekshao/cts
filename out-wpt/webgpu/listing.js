@@ -564,6 +564,14 @@ export const listing = [
   },
   {
     "file": [
+      "api",
+      "validation",
+      "vertex_state"
+    ],
+    "description": "vertexState validation tests."
+  },
+  {
+    "file": [
       "examples"
     ],
     "description": "Examples of writing CTS tests with various features.\n\nStart here when looking for examples of basic framework usage."
