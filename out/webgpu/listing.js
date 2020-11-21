@@ -139,6 +139,26 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "memory_sync",
+      "buffer",
+      "rw_and_wr"
+    ],
+    "description": "Memory Synchronization Tests for Buffer: read before write and read after write.\n\n- Create a single buffer and initialize it to 0, wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nRead the data and use it in render, compute, or copy.\nWait on another fence, then call expectContents to verify the written buffer.\nThis is a read-after write test but if the write and read operations are reversed, it will be a read-before-write test.\n  - x= write op: {storage buffer in {compute, render, render-via-bundle}, t2b copy dst, b2b copy dst, writeBuffer}\n  - x= read op: {index buffer, vertex buffer, indirect buffer, uniform buffer, {readonly, readwrite} storage buffer in {compute, render, render-via-bundle}, b2b copy src, b2t copy src}\n  - x= read-write sequence: {read then write, write then read}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "memory_sync",
+      "buffer",
+      "ww"
+    ],
+    "description": "Memory Synchronization Tests for Buffer: write after write.\n\n- Create one single buffer and initialize it to 0. Wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nWrite another number (say 2) into the same buffer via render pass, compute pass, copy, or writeBuffer.\nWait on another fence, then call expectContents to verify the written buffer.\n  - x= 1st write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - x= 2nd write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "render_pass",
       "resolve"
     ],
