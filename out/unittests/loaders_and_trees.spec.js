@@ -24,7 +24,8 @@ const listingData = {
   suite1: [
   { file: [], readme: 'desc 1a' },
   { file: ['foo'], description: 'desc 1b' },
-  { file: ['bar'], readme: 'desc 1c' },
+  { file: ['bar'], readme: 'desc 1h' },
+  { file: ['bar', 'biz'], description: 'desc 1f' },
   { file: ['bar', 'buzz', 'buzz'], description: 'desc 1d' },
   { file: ['baz'], description: 'desc 1e' }],
 
@@ -47,10 +48,6 @@ const specsData = {
 
   'suite1/bar/biz.spec.js': {
     description: 'desc 1f',
-    g: makeTestGroupForUnitTesting(UnitTest) },
-
-  'suite1/bar/bez.spec.js': {
-    description: 'desc 1g',
     g: makeTestGroupForUnitTesting(UnitTest) },
 
   'suite1/bar/buzz/buzz.spec.js': {
@@ -349,13 +346,13 @@ g.test('iterateCollapsed').fn(async t => {
   await testIterateCollapsed(t, ['garbage*'], 'throws');
   await testIterateCollapsed(t, ['suite1*'], 'throws');
   await testIterateCollapsed(t, ['suite1:foo*'], 'throws');
-  await testIterateCollapsed(t, ['suite1:foo:ba*'], 'throws');
+  await testIterateCollapsed(t, ['suite1:foo:he*'], 'throws');
 
   // Valid expectation queries but they don't match anything
   await testIterateCollapsed(t, ['garbage:*'], 'throws');
   await testIterateCollapsed(t, ['suite1:doesntexist:*'], 'throws');
   await testIterateCollapsed(t, ['suite2:foo:*'], 'throws');
-  // Doesn't match anything because we collapse this unnecessary node into just 'suite1:foo:*'
-  await testIterateCollapsed(t, ['suite1:foo,*'], 'throws');
+  // Can't expand subqueries bigger than one suite.
+  await testIterateCollapsed(t, ['suite1:bar,*'], 'throws');
 });
 //# sourceMappingURL=loaders_and_trees.spec.js.map
