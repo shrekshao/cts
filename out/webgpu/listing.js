@@ -329,6 +329,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "createRenderPipeline"
+    ],
+    "description": "createRenderPipeline validation tests."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "createSampler"
     ],
     "description": "createSampler validation tests."
