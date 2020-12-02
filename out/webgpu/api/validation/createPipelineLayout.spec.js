@@ -2,6 +2,8 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 createPipelineLayout validation tests.
+
+TODO: review existing tests, write descriptions, and make sure tests are complete.
 `;import { poptions, params } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { kBindingTypeInfo } from '../../capability_info.js';
