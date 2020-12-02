@@ -77,9 +77,18 @@ export const listing = [
       "api",
       "operation",
       "command_buffer",
-      "copies"
+      "copyBufferToBuffer"
     ],
-    "description": "copy{Buffer,Texture}To{Buffer,Texture} tests.\n\nTest Plan:\n* Validate the correctness of the copy by filling the srcBuffer with testable data, doing\n  CopyBufferToBuffer() copy, and verifying the content of the whole dstBuffer with MapRead:\n  Copy {4 bytes, part of, the whole} srcBuffer to the dstBuffer {with, without} a non-zero valid\n  srcOffset that\n  - covers the whole dstBuffer\n  - covers the beginning of the dstBuffer\n  - covers the end of the dstBuffer\n  - covers neither the beginning nor the end of the dstBuffer\n* Validate the state transitions after the copy:\n  first copy from srcBuffer to dstBuffer, then copy from dstBuffer to srcBuffer and check the\n  content of the whole dstBuffer\n* Validate the order of the copies in one command buffer:\n  first copy from srcBuffer to a region of dstBuffer, then copy from another part of srcBuffer to\n  another region of dstBuffer which have overlaps with the region of dstBuffer in the first copy\n  and check the content of the whole dstBuffer to see the copies are done in correct order."
+    "description": "copyBufferToBuffer operation tests"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
+      "copyTextureToTexture"
+    ],
+    "description": "copyTexturetoTexture operation tests"
   },
   {
     "file": [
