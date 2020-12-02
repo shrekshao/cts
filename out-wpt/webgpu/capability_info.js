@@ -44,8 +44,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 1,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   r8snorm: {
     renderable: false,
@@ -58,8 +56,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 1,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'snorm',
-    componentType: 'float',
   },
   r8uint: {
     renderable: true,
@@ -72,8 +68,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 1,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   r8sint: {
     renderable: true,
@@ -86,8 +80,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 1,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   // 16-bit formats
   r16uint: {
@@ -101,8 +93,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   r16sint: {
     renderable: true,
@@ -115,8 +105,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   r16float: {
     renderable: true,
@@ -129,8 +117,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
   rg8unorm: {
     renderable: true,
@@ -143,8 +129,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   rg8snorm: {
     renderable: false,
@@ -157,8 +141,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'snorm',
-    componentType: 'float',
   },
   rg8uint: {
     renderable: true,
@@ -171,8 +153,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rg8sint: {
     renderable: true,
@@ -185,8 +165,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 2,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   // 32-bit formats
   r32uint: {
@@ -200,8 +178,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   r32sint: {
     renderable: true,
@@ -214,8 +190,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   r32float: {
     renderable: true,
@@ -228,8 +202,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
   rg16uint: {
     renderable: true,
@@ -242,8 +214,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rg16sint: {
     renderable: true,
@@ -256,8 +226,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   rg16float: {
     renderable: true,
@@ -270,8 +238,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
   rgba8unorm: {
     renderable: true,
@@ -284,8 +250,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   'rgba8unorm-srgb': {
     renderable: true,
@@ -298,8 +262,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   rgba8snorm: {
     renderable: false,
@@ -312,8 +274,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'snorm',
-    componentType: 'float',
   },
   rgba8uint: {
     renderable: true,
@@ -326,8 +286,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rgba8sint: {
     renderable: true,
@@ -340,8 +298,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   bgra8unorm: {
     renderable: true,
@@ -354,8 +310,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   'bgra8unorm-srgb': {
     renderable: true,
@@ -368,8 +322,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   // Packed 32-bit formats
   rgb10a2unorm: {
@@ -383,8 +335,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'unorm',
-    componentType: 'float',
   },
   rg11b10ufloat: {
     renderable: false,
@@ -397,8 +347,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'ufloat',
-    componentType: 'float',
   },
   rgb9e5ufloat: {
     renderable: false,
@@ -411,8 +359,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'ufloat',
-    componentType: 'float',
   },
   // 64-bit formats
   rg32uint: {
@@ -426,8 +372,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rg32sint: {
     renderable: true,
@@ -440,8 +384,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   rg32float: {
     renderable: true,
@@ -454,8 +396,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
   rgba16uint: {
     renderable: true,
@@ -468,8 +408,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rgba16sint: {
     renderable: true,
@@ -482,8 +420,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   rgba16float: {
     renderable: true,
@@ -496,8 +432,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 8,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
   // 128-bit formats
   rgba32uint: {
@@ -511,8 +445,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 16,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'uint',
-    componentType: 'uint',
   },
   rgba32sint: {
     renderable: true,
@@ -525,8 +457,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 16,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'sint',
-    componentType: 'sint',
   },
   rgba32float: {
     renderable: true,
@@ -539,8 +469,6 @@ export const kRegularTextureFormatInfo = {
     bytesPerBlock: 16,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
 };
 
@@ -558,8 +486,6 @@ export const kSizedDepthStencilFormatInfo = {
     bytesPerBlock: 4,
     blockWidth: 1,
     blockHeight: 1,
-    dataType: 'float',
-    componentType: 'float',
   },
 };
 

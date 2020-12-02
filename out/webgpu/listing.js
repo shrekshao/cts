@@ -194,15 +194,6 @@ export const listing = [
   {
     "file": [
       "api",
-      "operation",
-      "resource_init",
-      "texture_zero_init"
-    ],
-    "description": "Test uninitialized textures are initialized to zero when read."
-  },
-  {
-    "file": [
-      "api",
       "regression"
     ],
     "readme": "One-off tests that reproduce API bugs found in implementations to prevent the bugs from\nappearing again."
@@ -657,7 +648,7 @@ export const listing = [
     "file": [
       "util",
       "texture",
-      "texelData"
+      "texel_data"
     ],
     "description": "Test helpers for texel data produce the expected data in the shader"
   },
