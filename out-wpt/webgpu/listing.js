@@ -22,6 +22,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "async_ordering"
+    ],
+    "readme": "Test ordering of async resolutions between the following promises (where there are constraints on the ordering).\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- fence.onCompletion()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "buffers"
     ],
     "readme": "GPUBuffer tests."
@@ -33,7 +41,7 @@ export const listing = [
       "buffers",
       "map"
     ],
-    "description": ""
+    "description": "TODO: review and make sure these cases are covered:\n> - making sure writes/reads are to the right address (and get flushed)\n>     - TODO: various mapAsync offset/size\n>     - various getMappedRange offset/size\n>     - TODO: with non-overlapping getMappedRanges\n>     - TODO: with various TypedArray/DataView types\n>     - TODO: mapAsync is not a multiple of 8 but getMappedRange is, if that's allowed (probably won't be allowed, there's an issue in the spec about this)\n>     - x= {read, write, mappedAtCreation {mappable, non-mappable}}"
   },
   {
     "file": [
@@ -51,7 +59,16 @@ export const listing = [
       "buffers",
       "map_oom"
     ],
-    "description": ""
+    "description": "TODO: review and make sure these cases are covered:\n> - mapAsync + getMappedRange\n>     - oom on buffer creation should be followed by validation-failure to mapAsync\n>     - ?\n> - createBufferMapped + getMappedRange\n>     - getMappedRange should always be allowed even if the buffer creation was oom\n>         - unless the range is so huge that an ArrayBuffer can't be created\n>\n> These tests should also test ArrayBuffer detaching (anytime the buffer mapping succeeds)\n> because the mapped ranges may be backed by different types of memory (shmem vs local mem vs real\n> mapped mem).\n>\n> TODO: currently test a huge number, but should also test smaller, but still very large allocations (like 128GiB)"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "buffers",
+      "threading"
+    ],
+    "description": "TODO:\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread"
   },
   {
     "file": [
@@ -95,6 +112,25 @@ export const listing = [
       "api",
       "operation",
       "command_buffer",
+      "programmable",
+      "state_tracking"
+    ],
+    "description": "TODO: for each programmable pass encoder (compute pass, render pass, render bundle encoder):\n- try to stress state caching (setting different states multiple times in different orders) (bind\n  groups, pipeline) and run to make sure the right resources get read."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
+      "queries"
+    ],
+    "readme": "TODO: test the behavior of creating/using/resolving queries.\n- occlusion\n- pipeline statistics\n- timestamp\n- nested (e.g. timestamp or PS query inside occlusion query), if any such cases are valid. Try\n  writing to the same query set (at same or different indices), if valid. Check results make sense."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
       "render",
       "basic"
     ],
@@ -106,9 +142,29 @@ export const listing = [
       "operation",
       "command_buffer",
       "render",
+      "indexed_draw"
+    ],
+    "description": "TODO: plan and implement\n- Test indexed draws with the combinations:\n  - Renderable cases:\n    - indexCount {=, >} the required points of primitive topology and\n      {<, =} the size of index buffer\n    - instanceCount is {1, largeish}\n    - {firstIndex, baseVertex, firstInstance} = 0\n    - firstIndex  {<, =} the size of index buffer\n  - Not renderable cases:\n    - indexCount = 0\n    - indexCount < the required points of primitive topology\n    - instanceCount = {undefined, 0}\n    - firstIndex out of buffer range\n    - firstIndex largeish\n  - x = {drawIndexed, drawIndexedIndirect}\n  - x = index formats\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
+      "render",
       "rendering"
     ],
     "description": ""
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
+      "render",
+      "state_tracking"
+    ],
+    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders). These tests focus on state tracking; there should be more detailed\ntests of the behavior of the viewport/scissor/blend/reference states elsewhere.\nEquivalent tests for setBindGroup and setPipeline are in programmable/state_tracking.spec.ts.\n\nTODO: plan and implement\n- {viewport, scissor rect, blend color, stencil reference, setIndexBuffer, setVertexBuffer}: test rendering result with:\n    - state {unset (= default), explicitly set default value, another value}\n    - persistence: [set, draw, draw] (fn should differentiate from [set, draw] + [draw])\n    - overwriting: [set(1), draw, set(2), draw] (fn should differentiate from [set(1), set(2), draw, draw])\n    - overwriting: [set(1), set(2), draw] (fn should differentiate from [set(1), draw] but not [set(2), draw])\n- setIndexBuffer: specifically test changing the format, offset, size, without changing the buffer\n- setVertexBuffer: specifically test changing the offset, size, without changing the buffer"
   },
   {
     "file": [
@@ -141,6 +197,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "error_scope"
+    ],
+    "readme": "TODO: plan and implement\n- test very deeply nested error scopes, make sure errors go to the right place, e.g.\n    - validation, ..., validation, out-of-memory\n    - out-of-memory, validation, ..., validation\n    - out-of-memory, ..., out-of-memory, validation\n    - validation, out-of-memory, ..., out-of-memory\n- use error scopes on two different threads and make sure errors go to the right place\n- unhandled errors always go to the \"original\" device object\n    - test they go nowhere if the original was dropped (attemptGarbageCollection to make sure)"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "fences"
     ],
     "description": ""
@@ -157,11 +221,19 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "memory_allocation"
+    ],
+    "readme": "Try to stress memory allocators in the implementation and driver.\n\nTODO: plan and implement\n- Tests which (pseudo-randomly?) allocate a bunch of memory and then assert things about the memory\n  (it's not aliased, it's valid to read and write in various ways, accesses read/write the correct data)\n    - Possibly also with OOB accesses/robust buffer access?\n- Tests which are targeted against particular known implementation details"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "memory_sync",
       "buffer",
       "rw_and_wr"
     ],
-    "description": "Memory Synchronization Tests for Buffer: read before write and read after write.\n\n- Create a single buffer and initialize it to 0, wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nRead the data and use it in render, compute, or copy.\nWait on another fence, then call expectContents to verify the written buffer.\nThis is a read-after write test but if the write and read operations are reversed, it will be a read-before-write test.\n  - x= write op: {storage buffer in {compute, render, render-via-bundle}, t2b copy dst, b2b copy dst, writeBuffer}\n  - x= read op: {index buffer, vertex buffer, indirect buffer, uniform buffer, {readonly, readwrite} storage buffer in {compute, render, render-via-bundle}, b2b copy src, b2t copy src}\n  - x= read-write sequence: {read then write, write then read}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}"
+    "description": "Memory Synchronization Tests for Buffer: read before write and read after write.\n\n- Create a single buffer and initialize it to 0, wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nRead the data and use it in render, compute, or copy.\nWait on another fence, then call expectContents to verify the written buffer.\nThis is a read-after write test but if the write and read operations are reversed, it will be a read-before-write test.\n  - x= write op: {storage buffer in {compute, render, render-via-bundle}, t2b copy dst, b2b copy dst, writeBuffer}\n  - x= read op: {index buffer, vertex buffer, indirect buffer, uniform buffer, {readonly, readwrite} storage buffer in {compute, render, render-via-bundle}, b2b copy src, b2t copy src}\n  - x= read-write sequence: {read then write, write then read}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}\n\nTODO: Tests with more than one buffer to try to stress implementations a little bit more."
   },
   {
     "file": [
@@ -171,7 +243,15 @@ export const listing = [
       "buffer",
       "ww"
     ],
-    "description": "Memory Synchronization Tests for Buffer: write after write.\n\n- Create one single buffer and initialize it to 0. Wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nWrite another number (say 2) into the same buffer via render pass, compute pass, copy, or writeBuffer.\nWait on another fence, then call expectContents to verify the written buffer.\n  - x= 1st write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - x= 2nd write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}"
+    "description": "Memory Synchronization Tests for Buffer: write after write.\n\n- Create one single buffer and initialize it to 0. Wait on the fence to ensure the data is initialized.\nWrite a number (say 1) into the buffer via render pass, compute pass, copy or writeBuffer.\nWrite another number (say 2) into the same buffer via render pass, compute pass, copy, or writeBuffer.\nWait on another fence, then call expectContents to verify the written buffer.\n  - x= 1st write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - x= 2nd write type: {storage buffer in {compute, render, render-via-bundle}, t2b-copy, b2b-copy, writeBuffer}\n  - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)\n  - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}\n\nTODO: Tests with more than one buffer to try to stress implementations a little bit more."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pass"
+    ],
+    "readme": "Render pass stuff other than commands (which are in command_buffer/)."
   },
   {
     "file": [
@@ -180,7 +260,7 @@ export const listing = [
       "render_pass",
       "resolve"
     ],
-    "description": "API Operation Tests for RenderPass StoreOp.\nTests a render pass with a resolveTarget resolves correctly for many combinations of:\n  - number of color attachments, some with and some without a resolveTarget\n  - renderPass storeOp set to {‘store’, ‘clear’}\n  - resolveTarget mip level set to {‘0’, base mip > ‘0’}\n  - resolveTarget base array layer set to {‘0’, base layer > '0'} for 2D textures\n  TODO: test all renderable color formats\n  TODO: test that any not-resolved attachments are rendered to correctly."
+    "description": "API Operation Tests for RenderPass StoreOp.\nTests a render pass with a resolveTarget resolves correctly for many combinations of:\n  - number of color attachments, some with and some without a resolveTarget\n  - renderPass storeOp set to {'store', 'clear'}\n  - resolveTarget mip level {0, >0} (TODO?: different mip level from colorAttachment)\n  - resolveTarget {2d array layer, TODO: 3d slice} {0, >0} with {2d, TODO: 3d} resolveTarget\n    (TODO?: different z from colorAttachment)\n  - TODO: test all renderable color formats\n  - TODO: test that any not-resolved attachments are rendered to correctly.\n  - TODO: test different loadOps\n  - TODO?: resolveTarget mip level {0, >0} (TODO?: different mip level from colorAttachment)\n  - TODO?: resolveTarget {2d array layer, TODO: 3d slice} {0, >0} with {2d, TODO: 3d} resolveTarget\n    (different z from colorAttachment)"
   },
   {
     "file": [
@@ -190,6 +270,15 @@ export const listing = [
       "storeOp"
     ],
     "description": "API Operation Tests for RenderPass StoreOp.\n\n  Test Coverage:\n\n  - Tests that color and depth-stencil store operations {'clear', 'store'} work correctly for a\n    render pass with both a color attachment and depth-stencil attachment.\n      TODO: use depth24plus-stencil8\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with multiple\n    color attachments.\n      TODO: test with more interesting loadOp values\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a color\n    attachment for:\n      - All renderable color formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a\n    depth-stencil attachment for:\n      - All renderable depth-stencil formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: test depth24plus and depth24plus-stencil8 formats\n      TODO: test that depth and stencil aspects are set seperately\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n      TODO: test with more interesting loadOp values"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pipeline",
+      "alpha_to_coverage"
+    ],
+    "description": "TODO:\n- for sampleCount = 4, alphaToCoverageEnabled = true and various combinations of:\n    - rasterization masks\n    - increasing alpha values of the first color output including { < 0, = 0, = 1/16, = 2/16, ..., = 15/16, = 1, > 1 }\n    - alpha values of the second color output = { 0, 0.5, 1.0 }.\n- test that for a single pixel in { first, second } { color, depth, stencil } output the final sample mask is applied to it, moreover:\n    - if alpha is 0.0 or less then alpha to coverage mask is 0x0,\n    - if alpha is 1.0 or greater then alpha to coverage mask is 0xFFFFFFFF,\n    - that the number of bits in the alpha to coverage mask is non-decreasing,\n    - that the computation of alpha to coverage mask doesn't depend on any other color output than first,\n    - (not included in the spec): that once a sample is included in the alpha to coverage sample mask\n      it will be included for any alpha greater than or equal to the current value."
   },
   {
     "file": [
@@ -222,6 +311,15 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "render_pipeline",
+      "sample_mask"
+    ],
+    "description": "TODO:\n- for sampleCount = { 1, 4 } and various combinations of:\n    - rasterization mask = { 0, 1, 2, 3, 15 }\n    - sample mask = { 0, 1, 2, 3, 15, 30 }\n    - fragment shader output mask (SV_Coverage) = { 0, 1, 2, 3, 15, 30 }\n- test that final sample mask is the logical AND of all the\n  relevant masks -- meaning that the samples not included in the final mask are discarded\n  for all the { color outputs, depth tests, stencil operations } on any attachments.\n- [choosing 30 = 2 + 4 + 8 + 16 because the 5th bit should be ignored]"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "sampling",
       "anisotropy"
     ],
@@ -235,6 +333,32 @@ export const listing = [
       "lod_clamp"
     ],
     "description": "Tests the behavior of LOD clamping (lodMinClamp, lodMaxClamp).\n\nTODO:\n- Write a test that can test the exact clamping behavior\n- Test a bunch of values, including very large/small ones."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "threading"
+    ],
+    "readme": "Tests for behavior with multiple threads (main thread + workers).\n\nTODO: plan and implement\n- Try postMessage'ing an object of every type (to same or different thread)\n    - {main -> main, main -> worker, worker -> main, worker1 -> worker1, worker1 -> worker2}\n    - through {global postMessage, MessageChannel}\n    - {in, not in} transferrable object list, when valid\n- Short tight loop doing many of an action from two threads at the same time\n    - e.g. {create {buffer, texture, shader, pipeline}}"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "vertex_state",
+      "basic"
+    ],
+    "description": "- Baseline tests checking vertex/instance IDs, with:\n    - No vertexState at all (i.e. no vertex buffers)\n    - One vertex buffer with no attributes"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "vertex_state",
+      "correctness"
+    ],
+    "description": "- Tests that render N points, using a generated pipeline with:\n  (1) a vertex shader that has necessary vertex inputs and a static array of\n  expected data (as indexed by vertexID + instanceID * verticesPerInstance),\n  which checks they're equal and sends the bool to the fragment shader;\n  (2) a fragment shader which writes the result out to a storage buffer\n  (or renders a red/green fragment if we can't do fragmentStoresAndAtomics,\n  maybe with some depth or stencil test magic to do the '&&' of all fragments).\n    - Fill some GPUBuffers with testable data, e.g.\n      [[1.0, 2.0, ...], [-1.0, -2.0, ...]], for use as vertex buffers.\n    - With no/trivial indexing\n        - Either non-indexed, or indexed with a passthrough index buffer ([0, 1, 2, ...])\n            - Of either format\n            - If non-indexed, index format has no effect\n        - Vertex data is read from the buffer correctly\n            - setVertexBuffer offset\n            - Several vertex buffers with several attributes each\n                - Two setVertexBuffers pointing at the same GPUBuffer (if possible)\n                    - Overlapping, non-overlapping\n                - Overlapping attributes (iff that's supposed to work)\n                - Overlapping vertex buffer elements\n                  (an attribute offset + its size > arrayStride)\n                  (iff that's supposed to work)\n                - Zero, one, or two vertex buffers have stepMode \"instance\"\n                - Discontiguous vertex buffer slots, e.g.\n                  [1, some large number (API doesn't practically allow huge numbers here)]\n                - Discontiguous shader locations, e.g.\n                  [2, some large number (max if possible)]\n             - Bind everything possible up to limits\n                 - Also with maxed out attributes?\n             - x= all vertex formats\n        - Data is fed into the shader correctly\n            - Swap attribute order (should have no effect)\n            - Vertex formats x shader input types (should all be valid, I think?)\n        - Maybe a test of one buffer with two attributes, with every possible\n          pair of vertex formats\n    - With indexing. For each index format:\n        - Indices are read from the buffer correctly\n            - setIndexBuffer offset\n        - For each vertex format:\n            - Basic test with several vertex buffers and several attributes"
   },
   {
     "file": [
@@ -284,7 +408,7 @@ export const listing = [
       "buffer",
       "threading"
     ],
-    "description": "TODO:\n- Try to map on one thread while mapping {pending, mapped with ArrayBuffer} on another thread\n- postMessage a mapped range ArrayBuffer or ArrayBufferView {with, without} transferable"
+    "description": "TODO:\n- Try to map on one thread while {pending, mapped, mappedAtCreation} on another thread.\n- Invalid to postMessage a mapped range's ArrayBuffer or ArrayBufferView\n  {with, without} it being in the transfer array.\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread\n  (valid), then try to map on that thread (invalid)"
   },
   {
     "file": [
@@ -374,9 +498,17 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "createQuerySet"
+    ],
+    "description": "TODO"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "createRenderPipeline"
     ],
-    "description": "createRenderPipeline validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete.\n      Make sure the following is covered.\n> - various attachment problems\n>\n> - interface matching between vertex and fragment shader\n>     - superset, subset, etc.\n>\n> - vertexStage {valid, invalid}\n> - fragmentStage {valid, invalid}\n> - primitiveTopology all possible values\n> - rasterizationState various values\n> - sampleCount {0, 1, 3, 4, 8, 16, 1024}\n> - sampleMask {0, 0xFFFFFFFF}\n> - alphaToCoverageEnabled {false, true}"
+    "description": "createRenderPipeline validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete.\n      Make sure the following is covered. Consider splitting the file if too large/disjointed.\n> - various attachment problems\n>\n> - interface matching between vertex and fragment shader\n>     - superset, subset, etc.\n>\n> - vertexStage {valid, invalid}\n> - fragmentStage {valid, invalid}\n> - primitiveTopology all possible values\n> - rasterizationState various values\n> - sampleCount {0, 1, 3, 4, 8, 16, 1024}\n> - sampleMask {0, 0xFFFFFFFF}\n> - alphaToCoverage:\n>     - alphaToCoverageEnabled is { true, false } and sampleCount { = 1, = 4 }.\n>       The only failing case is (true, 1).\n>     - output SV_Coverage semantics is statically used by fragmentStage and\n>       alphaToCoverageEnabled is { true (fails), false (passes) }.\n>     - sampleMask is being used and alphaToCoverageEnabled is { true (fails), false (passes) }."
   },
   {
     "file": [
@@ -409,7 +541,7 @@ export const listing = [
       "encoding",
       "beginRenderPass"
     ],
-    "description": "TODO: check for duplication (render_pass/, etc.), plan, and implement. Notes:\n> - color attachments {zero, one, multiple}\n>     - many different formats\n>     - {without, with} resolve target\n>         - resolve format compatibility with multisampled format\n>     - {all possible load ops, load color {in range, negative, too large}}\n>     - all possible store ops\n> - depth/stencil attachment\n>     - {unset, all possible formats}\n>     - {all possible {depth, stencil} load ops, load values {in range, negative, too large}}\n>     - all possible {depth, stencil} store ops\n>     - depthReadOnly {t,f}, stencilReadOnly {t,f}"
+    "description": "TODO: check for duplication (render_pass/, etc.), plan, and implement. Notes:\n> - color attachments {zero, one, multiple}\n>     - many different formats (some are non-renderable)\n>     - is a view on a texture with multiple mip levels or array layers\n>     - two attachments use the same view, or views of {intersecting, disjoint} ranges\n>     - {without, with} resolve target\n>         - resolve format compatibility with multisampled format\n>     - {all possible load ops, load color {in range, negative, too large}}\n>     - all possible store ops\n> - depth/stencil attachment\n>     - {unset, all possible formats}\n>     - {all possible {depth, stencil} load ops, load values {in range, negative, too large}}\n>     - all possible {depth, stencil} store ops\n>     - depthReadOnly {t,f}, stencilReadOnly {t,f}"
   },
   {
     "file": [
@@ -439,7 +571,7 @@ export const listing = [
       "cmds",
       "dynamic_render_state"
     ],
-    "description": "API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...).\n\nTODO: ensure existing tests cover these notes. Note many of these may be operation tests instead.\n> - setViewport\n>     - {x, y} = {0, invalid values if any}\n>     - {width, height, minDepth, maxDepth} = {\n>         - least possible value that's valid\n>         - greatest possible negative value that's invalid\n>         - greatest possible positive value that's valid\n>         - least possible positive value that's invalid if any\n>         - }\n>     - minDepth {<, =, >} maxDepth\n> - setScissorRect\n>     - {width, height} = 0\n>     - {x+width, y+height} = attachment size + 1\n> - setBlendColor\n>     - color {slightly, very} out of range\n>     - used with a simple pipeline that {does, doesn't} use it\n> - setStencilReference\n>     - {0, max}\n>     - used with a simple pipeline that {does, doesn't} use it"
+    "description": "API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...).\n\nTODO: ensure existing tests cover these notes. Note many of these may be operation tests instead.\n> - setViewport\n>     - {x, y} = {0, invalid values if any}\n>     - {width, height, minDepth, maxDepth} = {\n>         - least possible value that's valid\n>         - greatest possible negative value that's invalid\n>         - greatest possible positive value that's valid\n>         - least possible positive value that's invalid if any\n>         - }\n>     - minDepth {<, =, >} maxDepth\n> - setScissorRect\n>     - {width, height} = 0\n>     - {x+width, y+height} = attachment size + 1\n> - setBlendColor\n>     - color {slightly, very} out of range\n>     - used with a simple pipeline that {does, doesn't} use it\n> - setStencilReference\n>     - {0, max}\n>     - used with a simple pipeline that {does, doesn't} use it\n\nTODO: setIndexBuffer, setVertexBuffer state (maybe in another file)."
   },
   {
     "file": [
@@ -459,7 +591,7 @@ export const listing = [
       "cmds",
       "programmable_pass"
     ],
-    "description": "TODO: check for duplication (setBindGroup.spec.ts, etc.), plan, and implement. Notes:\n> Does **not** test usage scopes.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - {none, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n>\n> - bind group state\n>     - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n>     - x= all relevant stages\n>     - test that bind groups required by the pipeline layout are required\n>       (they don't have to be used in the shader, and shouldn't be, both to\n>       support incomplete WGSL impls and to verify only the layout matters)\n>         - and that they are \"group-equivalent\" (value-equal, not just \"compatible\")\n>     - in the test fn, test once without the dispatch/draw (should always be valid) and once with the dispatch/draw, to make sure the validation happens in dispatch/draw."
+    "description": "TODO: check for duplication (setBindGroup.spec.ts, etc.), plan, and implement. Notes:\n> Does **not** test usage scopes.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - {none, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n>     - setBindGroup in different orders (e.g. 0,1,2 vs 2,0,1)\n>\n> - bind group state\n>     - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n>     - x= all relevant stages\n>     - test that bind groups required by the pipeline layout are required\n>       (they don't have to be used in the shader, and shouldn't be, both to\n>       support incomplete WGSL impls and to verify only the layout matters)\n>         - and that they are \"group-equivalent\" (value-equal, not just \"compatible\")\n>     - in the test fn, test once without the dispatch/draw (should always be valid) and once with the dispatch/draw, to make sure the validation happens in dispatch/draw."
   },
   {
     "file": [
@@ -489,6 +621,66 @@ export const listing = [
       "encoder_state"
     ],
     "description": "TODO:\n- createCommandEncoder\n- non-pass command, or beginPass, during {render, compute} pass\n- {before (control case), after} finish()\n    - x= {finish(), ... all non-pass commands}\n- {before (control case), after} endPass()\n    - x= {render, compute} pass\n    - x= {finish(), ... all relevant pass commands}\n    - x= {\n        - before endPass (control case)\n        - after endPass (no pass open)\n        - after endPass+beginPass (a new pass of the same type is open)\n        - }\n    - should make whole encoder invalid\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "begin_end"
+    ],
+    "description": "Validation for encoding begin/endable queries.\n\nTODO:\n- balance: {\n    - begin 0, end 1\n    - begin 1, end 0\n    - begin 1, end 1\n    - begin 2, end 2\n    - }\n    - x= {\n        - render pass + occlusion\n        - render pass + pipeline statistics\n        - compute pass + pipeline statistics\n        - }\n- nesting: test whether it's allowed to nest various types of queries\n  (including writeTimestamp inside begin/endable queries)."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "general"
+    ],
+    "description": "TODO:\n\n- For each way to start a query (all possible types in all possible encoders):\n    - queryIndex {in, out of} range for GPUQuerySet\n    - GPUQuerySet {valid, invalid}\n        - or {undefined}, for occlusionQuerySet\n    - ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "occlusion"
+    ],
+    "description": "Validation for encoding occlusion queries.\nExcludes query begin/end balance and nesting (begin_end.spec.ts)\nand querySet/queryIndex (general.spec.ts).\n\nTODO:\n- Test an occlusion query with no draw calls. (If that's valid, move the test to api/operation/.)\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "pipeline_statistics"
+    ],
+    "description": "Validation for encoding pipeline statistics queries.\nExcludes query begin/end balance and nesting (begin_end.spec.ts)\nand querySet/queryIndex (general.spec.ts).\n\nTODO:\n- Test with an invalid querySet.\n- Test an pipeline statistics query with no draw/dispatch calls.\n  (If that's valid, move the test to api/operation/.)\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "resolveQuerySet"
+    ],
+    "description": "TODO:\n- invalid GPUQuerySet\n- firstQuery and/or queryCount out of range\n- invalid destination buffer\n- destinationOffset out of range\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "queries",
+      "timestamp"
+    ],
+    "description": "Validation for encoding timestamp queries.\nExcludes query nesting (begin_end.spec.ts) and querySet/queryIndex (general.spec.ts).\n\nTODO: Is there anything to test here? If not, delete this file."
   },
   {
     "file": [
@@ -565,7 +757,7 @@ export const listing = [
       "queue",
       "copyImageBitmapToTexture"
     ],
-    "description": "copyImageBitmapToTexture Validation Tests in Queue.\n\nTODO: Split this test plan per-test.\n\nTest Plan:\n- For source.imageBitmap:\n  - imageBitmap generated from ImageData:\n    - Check that an error is generated when imageBitmap is closed.\n\n- For destination.texture:\n  - For 2d destination textures:\n    - Check that an error is generated when texture is in destroyed state.\n    - Check that an error is generated when texture is an error texture.\n    - Check that an error is generated when texture is created without usage COPY_DST.\n    - Check that an error is generated when sample count is not 1.\n    - Check that an error is generated when mipLevel is too large.\n    - Check that an error is generated when texture format is not valid.\n\n- For copySize:\n  - Noop copy shouldn't throw any exception or return any validation error.\n  - Check that an error is generated when destination.texture.origin + copySize is too large.\n\nTODO: 1d, 3d texture and 2d array textures."
+    "description": "copyImageBitmapToTexture Validation Tests in Queue.\nTODO: Should this be the same file as, or next to, web_platform/copyImageBitmapToTexture.spec.ts?\n\nTODO: Split this test plan per-test.\n\nTest Plan:\n- For source.imageBitmap:\n  - imageBitmap generated from ImageData:\n    - Check that an error is generated when imageBitmap is closed.\n\n- For destination.texture:\n  - For 2d destination textures:\n    - Check that an error is generated when texture is in destroyed state.\n    - Check that an error is generated when texture is an error texture.\n    - Check that an error is generated when texture is created without usage COPY_DST.\n    - Check that an error is generated when sample count is not 1.\n    - Check that an error is generated when mipLevel is too large.\n    - Check that an error is generated when texture format is not valid.\n\n- For copySize:\n  - Noop copy shouldn't throw any exception or return any validation error.\n  - Check that an error is generated when destination.texture.origin + copySize is too large.\n\nTODO: 1d, 3d texture and 2d array textures."
   },
   {
     "file": [
@@ -604,7 +796,7 @@ export const listing = [
       "queue",
       "writeBuffer"
     ],
-    "description": "Tests writeBuffer validation.\n\n- buffer missing usage flag\n- bufferOffset {ok, too large for buffer}\n- dataOffset {ok, too large for data}\n- size {ok, too large for buffer}\n- size {ok, too large for data}\n- size unspecified; default {ok, too large for buffer}\n\nNote: destroyed buffer is tested in destroyed/.\n\nTODO: implement."
+    "description": "Tests writeBuffer validation.\n\n- buffer missing usage flag\n- bufferOffset {ok, unaligned, too large for buffer}\n- dataOffset {ok, too large for data}\n- buffer size {ok, too small for copy}\n- data size {ok, too small for copy}\n- size {aligned, unaligned}\n- size unspecified; default {ok, too large for buffer}\n\nNote: destroyed buffer is tested in destroyed/.\n\nTODO: implement."
   },
   {
     "file": [
@@ -626,6 +818,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "render_pass"
+    ],
+    "readme": "Render pass stuff other than commands (which are in encoding/cmds/)."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "render_pass",
       "resolve"
     ],
@@ -638,7 +838,7 @@ export const listing = [
       "render_pass",
       "storeOp"
     ],
-    "description": "API Validation Tests for RenderPass StoreOp.\n\nTest Coverage:\n  - Tests that when depthReadOnly is true, depthStoreOp must be 'store'.\n    - When depthReadOnly is true and depthStoreOp is 'clear', an error should be generated.\n\n  - Tests that when stencilReadOnly is true, stencilStoreOp must be 'store'.\n    - When stencilReadOnly is true and stencilStoreOp is 'clear', an error should be generated.\n\n  - Tests that the depthReadOnly value matches the stencilReadOnly value.\n    - When depthReadOnly does not match stencilReadOnly, an error should be generated.\n\n  - Tests that depthReadOnly and stencilReadOnly default to false."
+    "description": "API Validation Tests for RenderPass StoreOp.\n\nTest Coverage:\n  - Tests that when depthReadOnly is true, depthStoreOp must be 'store'.\n    - When depthReadOnly is true and depthStoreOp is 'clear', an error should be generated.\n\n  - Tests that when stencilReadOnly is true, stencilStoreOp must be 'store'.\n    - When stencilReadOnly is true and stencilStoreOp is 'clear', an error should be generated.\n\n  - Tests that the depthReadOnly value matches the stencilReadOnly value.\n    - When depthReadOnly does not match stencilReadOnly, an error should be generated.\n\n  - Tests that depthReadOnly and stencilReadOnly default to false.\n\nTODO: test interactions with depthLoadValue too"
   },
   {
     "file": [
@@ -666,7 +866,7 @@ export const listing = [
       "texture",
       "in_render_common"
     ],
-    "description": "TODO:\n- 2 views:\n    - x= {upon the same subresource, or different subresources of the same texture}\n    - x= possible binding types on each view: read = {sampled texture, readonly storage texture}, write = {storage texture, render target}\n    - x= different shader stages: {0, ..., 7}\n        - maybe first view vis = {1, 2, 4}, second view vis = {0, ..., 7}\n    - x= bindings are in {\n        - same draw call\n        - same pass, different draw call\n        - different pass\n        - }"
+    "description": "TODO:\n- 2 views:\n    - x= {upon the same subresource, or different subresources {mip level, array layer, aspect} of the same texture}\n    - x= possible binding types on each view: read = {sampled texture, readonly storage texture}, write = {storage texture, render target}\n    - x= different shader stages: {0, ..., 7}\n        - maybe first view vis = {1, 2, 4}, second view vis = {0, ..., 7}\n    - x= bindings are in {\n        - same draw call\n        - same pass, different draw call\n        - different pass\n        - }\n(It's probably not necessary to test EVERY possible combination of options in this whole\nblock, so we could break it down into a few smaller ones (one for different types of\nsubresources, one for same draw/same pass/different pass, one for visibilities).)"
   },
   {
     "file": [
@@ -676,7 +876,7 @@ export const listing = [
       "texture",
       "in_render_misc"
     ],
-    "description": "TODO:\n- 2 views: upon the same subresource, or different subresources of the same texture\n    - texture usages in copies and in render pass\n    - consecutively set bind groups on the same index\n    - unused bind groups"
+    "description": "TODO:\n- 2 views: upon the same subresource, or different subresources of the same texture\n    - texture usages in copies and in render pass\n    - consecutively set bind groups on the same index (@Richard-Yunchao: Maybe I can combine this one with the above tests. The two bind groups can either have the same index or different indices.)\n    - unused bind groups"
   },
   {
     "file": [
@@ -735,7 +935,7 @@ export const listing = [
       "validation",
       "vertex_state"
     ],
-    "description": "vertexState validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete.\n      Make sure the following is covered.\n> - In createRenderPipeline():\n> - An attribute is unused by the shader\n> - If invalid, test these (if valid, they should be operation tests instead):\n>     - Overlapping attributes\n>         - Verify correct sizing of every vertex format\n>     - Overlapping vertex buffer elements (an attribute offset + its size > arrayStride)\n>     - Shader tries to use an attribute location that's not bound\n>     - Alignment constraints on attributes, if any\n>     - Alignment constraints on arrayStride, if any"
+    "description": "vertexState validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete.\n      Make sure the following is covered.\n> - In createRenderPipeline():\n> - An attribute is unused by the shader\n> - If invalid, test these (if valid, they should be operation tests instead):\n>     - Vertex buffer with zero attributes\n>     - Overlapping attributes\n>         - Verify correct sizing of every vertex format\n>     - Overlapping vertex buffer elements (an attribute offset + its size > arrayStride)\n>     - Shader tries to use an attribute location that's not bound\n>     - Alignment constraints on attributes, if any\n>     - Alignment constraints on arrayStride, if any"
   },
   {
     "file": [
@@ -819,7 +1019,7 @@ export const listing = [
       "web_platform",
       "copyImageBitmapToTexture"
     ],
-    "description": "copy imageBitmap To texture tests."
+    "description": "copyImageBitmapToTexture from various sources."
   },
   {
     "file": [

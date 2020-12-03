@@ -2,6 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 copyImageBitmapToTexture Validation Tests in Queue.
+TODO: Should this be the same file as, or next to, web_platform/copyImageBitmapToTexture.spec.ts?
 
 TODO: Split this test plan per-test.
 

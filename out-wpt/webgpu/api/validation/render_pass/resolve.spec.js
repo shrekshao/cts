@@ -27,8 +27,7 @@
           the colorAttachment's height or width.`;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUConst } from '../../../constants.js';
-
-import { ValidationTest } from './../validation_test.js';
+import { ValidationTest } from '../validation_test.js';
 
 const kNumColorAttachments = 4;
 

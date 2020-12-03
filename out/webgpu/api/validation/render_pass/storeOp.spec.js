@@ -13,9 +13,11 @@ Test Coverage:
   - Tests that the depthReadOnly value matches the stencilReadOnly value.
     - When depthReadOnly does not match stencilReadOnly, an error should be generated.
 
-  - Tests that depthReadOnly and stencilReadOnly default to false.`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
+  - Tests that depthReadOnly and stencilReadOnly default to false.
 
-import { ValidationTest } from './../validation_test.js';
+TODO: test interactions with depthLoadValue too
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
+import { ValidationTest } from '../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);
 
