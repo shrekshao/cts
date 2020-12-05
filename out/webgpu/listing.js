@@ -115,7 +115,7 @@ export const listing = [
       "programmable",
       "state_tracking"
     ],
-    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setBindGroup and setPipeline.\n\nTODO: for each programmable pass encoder {compute pass, render pass, render bundle encoder}\n- try setting states multiple times in different orders, check state is correct in draw/dispatch.\n    - Changing from pipeline A to B where both have the same layout except for {first,mid,last}\n      bind group index."
+    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setBindGroup and setPipeline.\n\nTODO: for each programmable pass encoder {compute pass, render pass, render bundle encoder}\n- try setting states multiple times in different orders, check state is correct in draw/dispatch.\n    - Changing from pipeline A to B where both have the same layout except for {first,mid,last}\n      bind group index.\n    - Try with a pipeline that e.g. only uses bind group 1, or bind groups 0 and 2."
   },
   {
     "file": [
