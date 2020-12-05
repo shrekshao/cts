@@ -115,7 +115,7 @@ export const listing = [
       "programmable",
       "state_tracking"
     ],
-    "description": "TODO: for each programmable pass encoder (compute pass, render pass, render bundle encoder):\n- try to stress state caching (setting different states multiple times in different orders) (bind\n  groups, pipeline) and run to make sure the right resources get read."
+    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setBindGroup and setPipeline.\n\nTODO: for each programmable pass encoder {compute pass, render pass, render bundle encoder}\n- try setting states multiple times in different orders, check state is correct in draw/dispatch.\n    - Changing from pipeline A to B where both have the same layout except for {first,mid,last}\n      bind group index."
   },
   {
     "file": [
@@ -135,6 +135,16 @@ export const listing = [
       "basic"
     ],
     "description": "Basic command buffer rendering tests."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
+      "render",
+      "dynamic_state"
+    ],
+    "description": "Tests of the behavior of the viewport/scissor/blend/reference states.\n\nTODO:\n- {viewport, scissor rect, blend color, stencil reference, setIndexBuffer, setVertexBuffer}:\n  Test rendering result with {various values}.\n    - Set the state in different ways to make sure it gets the correct value in the end: {\n        - state unset (= default)\n        - state explicitly set once to {default value, another value}\n        - persistence: [set, draw, draw] (fn should differentiate from [set, draw] + [draw])\n        - overwriting: [set(1), draw, set(2), draw] (fn should differentiate from [set(1), set(2), draw, draw])\n        - overwriting: [set(1), set(2), draw] (fn should differentiate from [set(1), draw] but not [set(2), draw])\n        - }"
   },
   {
     "file": [
@@ -164,7 +174,7 @@ export const listing = [
       "render",
       "state_tracking"
     ],
-    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders). These tests focus on state tracking; there should be more detailed\ntests of the behavior of the viewport/scissor/blend/reference states elsewhere.\nEquivalent tests for setBindGroup and setPipeline are in programmable/state_tracking.spec.ts.\n\nTODO: plan and implement\n- {viewport, scissor rect, blend color, stencil reference, setIndexBuffer, setVertexBuffer}: test rendering result with:\n    - state {unset (= default), explicitly set default value, another value}\n    - persistence: [set, draw, draw] (fn should differentiate from [set, draw] + [draw])\n    - overwriting: [set(1), draw, set(2), draw] (fn should differentiate from [set(1), set(2), draw, draw])\n    - overwriting: [set(1), set(2), draw] (fn should differentiate from [set(1), draw] but not [set(2), draw])\n- setIndexBuffer: specifically test changing the format, offset, size, without changing the buffer\n- setVertexBuffer: specifically test changing the offset, size, without changing the buffer"
+    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setIndexBuffer and setVertexBuffer.\nEquivalent tests for setBindGroup and setPipeline are in programmable/state_tracking.spec.ts.\nEquivalent tests for viewport/scissor/blend/reference are in render/dynamic_state.spec.ts\n\nTODO: plan and implement\n- try setting states multiple times in different orders, check state is correct in a draw call.\n    - setIndexBuffer: specifically test changing the format, offset, size, without changing the buffer\n    - setVertexBuffer: specifically test changing the offset, size, without changing the buffer\n- try changing the pipeline {before,after} the vertex/index buffers.\n  (In D3D12, the vertex buffer stride is part of SetVertexBuffer instead of the pipeline.)"
   },
   {
     "file": [
@@ -249,6 +259,15 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "queue",
+      "writeBuffer"
+    ],
+    "description": "TODO:\n- source.origin is unaligned\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "render_pass"
     ],
     "readme": "Render pass stuff other than commands (which are in command_buffer/)."
@@ -315,6 +334,15 @@ export const listing = [
       "sample_mask"
     ],
     "description": "TODO:\n- for sampleCount = { 1, 4 } and various combinations of:\n    - rasterization mask = { 0, 1, 2, 3, 15 }\n    - sample mask = { 0, 1, 2, 3, 15, 30 }\n    - fragment shader output mask (SV_Coverage) = { 0, 1, 2, 3, 15, 30 }\n- test that final sample mask is the logical AND of all the\n  relevant masks -- meaning that the samples not included in the final mask are discarded\n  for all the { color outputs, depth tests, stencil operations } on any attachments.\n- [choosing 30 = 2 + 4 + 8 + 16 because the 5th bit should be ignored]"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "resource_init",
+      "texture_zero"
+    ],
+    "description": "Test uninitialized textures are initialized to zero when read."
   },
   {
     "file": [
@@ -538,6 +566,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "create_pipeline"
+    ],
+    "description": "TODO:\nFor {createRenderPipeline, createComputePipeline}, start with a valid descriptor (control case),\nthen for each stage {{vertex, fragment}, compute}, make exactly one of the following errors:\n- one stage's module is an invalid object\n- one stage's entryPoint doesn't exist\n  - {different name, empty string, name that's almost the same but differs in some subtle unicode way}"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "encoding",
       "beginRenderPass"
     ],
@@ -589,16 +625,6 @@ export const listing = [
       "validation",
       "encoding",
       "cmds",
-      "programmable_pass"
-    ],
-    "description": "TODO: check for duplication (setBindGroup.spec.ts, etc.), plan, and implement. Notes:\n> Does **not** test usage scopes.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - {none, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n>     - setBindGroup in different orders (e.g. 0,1,2 vs 2,0,1)\n>\n> - bind group state\n>     - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n>     - x= all relevant stages\n>     - test that bind groups required by the pipeline layout are required\n>       (they don't have to be used in the shader, and shouldn't be, both to\n>       support incomplete WGSL impls and to verify only the layout matters)\n>         - and that they are \"group-equivalent\" (value-equal, not just \"compatible\")\n>     - in the test fn, test once without the dispatch/draw (should always be valid) and once with the dispatch/draw, to make sure the validation happens in dispatch/draw."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "encoding",
-      "cmds",
       "render"
     ],
     "description": "Does **not** test usage scopes (resource_usages/) or programmable pass stuff (programmable_pass).\n\nTODO: check for duplication (render_pass.spec.ts, etc.), plan, and implement. Notes:\n> All x= {render pass, render bundle}\n>\n> - setPipeline\n>     - {valid, invalid} GPURenderPipeline\n> - setIndexBuffer\n>     - buffer is {valid, invalid, destroyed, doesn't have usage)\n>     - (offset, size) is\n>         - (0, 0)\n>         - (0, 1)\n>         - (0, 4)\n>         - (0, 5)\n>         - (0, b.size)\n>         - (min alignment, b.size - 4)\n>         - (4, b.size - 4)\n>         - (b.size - 4, 4)\n>         - (b.size, min size)\n>         - (0, min size), and if that's valid:\n>             - (b.size - min size, min size)\n> - setVertexBuffer\n>     - slot is {0, max, max+1}\n>     - buffer is {valid, invalid, destroyed, doesn't have usage)\n>     - (offset, size) is like above\n> - draws (note bind group state is not tested here):\n>     - various zero-sized draws\n>     - draws with vertexCount not aligned to primitive topology (line-list or triangle-list) (should not error)\n>     - index buffer is {unset, set}\n>     - vertex buffers are {unset, set} (some that the pipeline uses, some it doesn't)\n>       (note: to test this, the shader in the pipeline doesn't have to actually use inputs)\n>     - x= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}\n> - indirect draws:\n>     - indirectBuffer is {valid, invalid, destroyed, doesn't have usage)\n>     - indirectOffset is {\n>         - 0, 1, 4\n>         - b.size - sizeof(args struct)\n>         - b.size - sizeof(args struct) + min alignment (1 or 2 or 4)\n>         - }\n>     - x= {drawIndirect, drawIndexedIndirect}"
@@ -621,6 +647,26 @@ export const listing = [
       "encoder_state"
     ],
     "description": "TODO:\n- createCommandEncoder\n- non-pass command, or beginPass, during {render, compute} pass\n- {before (control case), after} finish()\n    - x= {finish(), ... all non-pass commands}\n- {before (control case), after} endPass()\n    - x= {render, compute} pass\n    - x= {finish(), ... all relevant pass commands}\n    - x= {\n        - before endPass (control case)\n        - after endPass (no pass open)\n        - after endPass+beginPass (a new pass of the same type is open)\n        - }\n    - should make whole encoder invalid\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "programmable",
+      "pipeline_bind_group_compat"
+    ],
+    "description": "TODO:\n- test compatibility between bind groups and pipelines\n    - bind groups required by the pipeline layout are required.\n    - bind groups unused by the pipeline layout can be set or not.\n        (Even if e.g. bind groups 0 and 2 are used, but 1 is unused.)\n    - bindGroups[i].layout is \"group-equivalent\" (value-equal) to pipelineLayout.bgls[i].\n    - in the test fn, test once without the dispatch/draw (should always be valid) and once with\n      the dispatch/draw, to make sure the validation happens in dispatch/draw.\n    - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n    - x= all relevant stages"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "programmable",
+      "setBindGroup"
+    ],
+    "description": "setBindGroup validation tests.\n\nTODO: merge these notes and implement.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - {null, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n>     - setBindGroup in different orders (e.g. 0,1,2 vs 2,0,1)"
   },
   {
     "file": [
@@ -681,6 +727,16 @@ export const listing = [
       "timestamp"
     ],
     "description": "Validation for encoding timestamp queries.\nExcludes query nesting (begin_end.spec.ts) and querySet/queryIndex (general.spec.ts).\n\nTODO: Is there anything to test here? If not, delete this file."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "render",
+      "setVertexBuffer"
+    ],
+    "description": "setVertexBuffer validation tests."
   },
   {
     "file": [
@@ -877,22 +933,6 @@ export const listing = [
       "in_render_misc"
     ],
     "description": "TODO:\n- 2 views: upon the same subresource, or different subresources of the same texture\n    - texture usages in copies and in render pass\n    - consecutively set bind groups on the same index (@Richard-Yunchao: Maybe I can combine this one with the above tests. The two bind groups can either have the same index or different indices.)\n    - unused bind groups"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setBindGroup"
-    ],
-    "description": "setBindGroup validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "setVertexBuffer"
-    ],
-    "description": "setVertexBuffer validation tests."
   },
   {
     "file": [
