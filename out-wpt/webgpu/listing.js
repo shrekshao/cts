@@ -391,6 +391,15 @@ export const listing = [
   {
     "file": [
       "api",
+      "operation",
+      "vertex_state",
+      "index_format"
+    ],
+    "description": "Test indexing, index format and primitive restart."
+  },
+  {
+    "file": [
+      "api",
       "regression"
     ],
     "readme": "One-off tests that reproduce API bugs found in implementations to prevent the bugs from\nappearing again."
