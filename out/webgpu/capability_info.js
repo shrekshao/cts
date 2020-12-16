@@ -404,4 +404,11 @@ GPUConst.ShaderStage.FRAGMENT,
 GPUConst.ShaderStage.COMPUTE];
 
 export const kShaderStageCombinations = [0, 1, 2, 3, 4, 5, 6, 7];
+
+// TODO: Update with all possible sample counts when defined
+// TODO: Switch existing tests to use kTextureSampleCounts
+export const kTextureSampleCounts = [1, 4];
+
+// TODO: Update maximum color attachments when defined
+export const kMaxColorAttachments = 4;
 //# sourceMappingURL=capability_info.js.map

@@ -415,6 +415,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "attachment_compatibility"
+    ],
+    "description": "Validation for attachment compatibility between render passes, bundles, and pipelines\n\nTODO: Add sparse color attachment compatibility test when defined by specification"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "buffer",
       "create"
     ],
