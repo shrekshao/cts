@@ -105,7 +105,7 @@ export const listing = [
       "command_buffer",
       "copyTextureToTexture"
     ],
-    "description": "copyTexturetoTexture operation tests"
+    "description": "copyTexturetoTexture operation tests\n\n  TODO(jiawei.shao@intel.com): support all WebGPU texture formats."
   },
   {
     "file": [
