@@ -290,6 +290,7 @@ const kBindableResource = {
   plainSamp: {},
   compareSamp: {},
   sampledTex: {},
+  sampledTexMS: {},
   storageTex: {},
   errorBuf: {},
   errorSamp: {},
@@ -321,6 +322,11 @@ const kBindingKind = {
   },
   sampledTex: {
     resource: 'sampledTex',
+    perStageLimitClass: kPerStageBindingLimits.sampledTex,
+    perPipelineLimitClass: kPerPipelineBindingLimits.sampledTex,
+  },
+  sampledTexMS: {
+    resource: 'sampledTexMS',
     perStageLimitClass: kPerStageBindingLimits.sampledTex,
     perPipelineLimitClass: kPerPipelineBindingLimits.sampledTex,
   },
@@ -377,7 +383,7 @@ export const kTextureBindingTypeInfo = {
   },
   'multisampled-texture': {
     usage: GPUConst.TextureUsage.SAMPLED,
-    ...kBindingKind.sampledTex,
+    ...kBindingKind.sampledTexMS,
     ...kValidStagesAll,
   },
   'writeonly-storage-texture': {

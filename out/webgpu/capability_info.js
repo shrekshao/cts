@@ -280,6 +280,7 @@ export const kTextureViewDimensions = keysOf(kTextureViewDimensionInfo);
 
 
 
+
 // Bindings
 
 export const kMaxBindingsPerBindGroup = 16;
@@ -315,8 +316,16 @@ export const kPerPipelineBindingLimits =
 const kBindableResource =
 
 {
-  uniformBuf: {}, storageBuf: {}, plainSamp: {}, compareSamp: {}, sampledTex: {}, storageTex: {},
-  errorBuf: {}, errorSamp: {}, errorTex: {} };
+  uniformBuf: {},
+  storageBuf: {},
+  plainSamp: {},
+  compareSamp: {},
+  sampledTex: {},
+  sampledTexMS: {},
+  storageTex: {},
+  errorBuf: {},
+  errorSamp: {},
+  errorTex: {} };
 
 export const kBindableResources = keysOf(kBindableResource);
 
@@ -335,6 +344,7 @@ const kBindingKind =
   plainSamp: { resource: 'plainSamp', perStageLimitClass: kPerStageBindingLimits.sampler, perPipelineLimitClass: kPerPipelineBindingLimits.sampler },
   compareSamp: { resource: 'compareSamp', perStageLimitClass: kPerStageBindingLimits.sampler, perPipelineLimitClass: kPerPipelineBindingLimits.sampler },
   sampledTex: { resource: 'sampledTex', perStageLimitClass: kPerStageBindingLimits.sampledTex, perPipelineLimitClass: kPerPipelineBindingLimits.sampledTex },
+  sampledTexMS: { resource: 'sampledTexMS', perStageLimitClass: kPerStageBindingLimits.sampledTex, perPipelineLimitClass: kPerPipelineBindingLimits.sampledTex },
   storageTex: { resource: 'storageTex', perStageLimitClass: kPerStageBindingLimits.storageTex, perPipelineLimitClass: kPerPipelineBindingLimits.storageTex } };
 
 
@@ -381,7 +391,7 @@ export const kTextureBindingTypeInfo =
 
 {
   'sampled-texture': { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTex, ...kValidStagesAll },
-  'multisampled-texture': { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTex, ...kValidStagesAll },
+  'multisampled-texture': { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTexMS, ...kValidStagesAll },
   'writeonly-storage-texture': { usage: GPUConst.TextureUsage.STORAGE, ...kBindingKind.storageTex, ...kValidStagesStorageWrite },
   'readonly-storage-texture': { usage: GPUConst.TextureUsage.STORAGE, ...kBindingKind.storageTex, ...kValidStagesAll } };
 

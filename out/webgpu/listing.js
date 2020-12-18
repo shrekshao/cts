@@ -184,7 +184,7 @@ export const listing = [
       "render",
       "storeop"
     ],
-    "description": "renderPass store op test that drawn quad is either stored or cleared based on storeop"
+    "description": "renderPass store op test that drawn quad is either stored or cleared based on storeop\n\nTODO: is this duplicated with api,operation,render_pass,storeOp?"
   },
   {
     "file": [
