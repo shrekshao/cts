@@ -2,8 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 Test indexing, index format and primitive restart.
-`;import { params, poptions } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { getTextureCopyLayout } from '../../../util/texture/layout.js';
 
@@ -51,52 +50,53 @@ kHeight,
 
 class IndexFormatTest extends GPUTest {
   MakeRenderPipeline(
-  primitiveTopology,
-  indexFormat)
+  topology,
+  stripIndexFormat)
   {
     const vertexModule = this.device.createShaderModule({
       // TODO?: These positions will create triangles that cut right through pixel centers. If this
       // results in different rasterization results on different hardware, tweak to avoid this.
       code: `
-        const pos: array<vec2<f32>, 4> = array<vec2<f32>, 4>(
+        let pos: array<vec2<f32>, 4> = array<vec2<f32>, 4>(
           vec2<f32>(0.01,  0.98),
           vec2<f32>(0.99, -0.98),
           vec2<f32>(0.99,  0.98),
           vec2<f32>(0.01, -0.98));
 
-        [[builtin(position)]] var<out> Position : vec4<f32>;
-        [[builtin(vertex_idx)]] var<in> VertexIndex : u32;
-
         [[stage(vertex)]]
-        fn main() -> void {
+        fn main([[builtin(vertex_index)]] VertexIndex : u32)
+             -> [[builtin(position)]] vec4<f32> {
+          var Position : vec4<f32>;
           if (VertexIndex == 0xFFFFu || VertexIndex == 0xFFFFFFFFu) {
             Position = vec4<f32>(-0.99, -0.98, 0.0, 1.0);
           } else {
             Position = vec4<f32>(pos[VertexIndex], 0.0, 1.0);
           }
+          return Position;
         }
       ` });
 
 
     const fragmentModule = this.device.createShaderModule({
       code: `
-        [[location(0)]] var<out> fragColor : u32;
-
         [[stage(fragment)]]
-        fn main() -> void {
-          fragColor = 1u;
+        fn main() -> [[location(0)]] u32 {
+          return 1u;
         }
       ` });
 
 
     return this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [] }),
-      vertexStage: { module: vertexModule, entryPoint: 'main' },
-      fragmentStage: { module: fragmentModule, entryPoint: 'main' },
-      primitiveTopology,
-      colorStates: [{ format: kTextureFormat }],
-      vertexState: {
-        indexFormat } });
+      vertex: { module: vertexModule, entryPoint: 'main' },
+      fragment: {
+        module: fragmentModule,
+        entryPoint: 'main',
+        targets: [{ format: kTextureFormat }] },
+
+      primitive: {
+        topology,
+        stripIndexFormat } });
 
 
   }
@@ -134,8 +134,8 @@ class IndexFormatTest extends GPUTest {
 
     const colorAttachment = this.device.createTexture({
       format: kTextureFormat,
-      size: { width: kWidth, height: kHeight, depth: 1 },
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.OUTPUT_ATTACHMENT });
+      size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
+      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
 
     const result = this.device.createBuffer({
@@ -146,7 +146,7 @@ class IndexFormatTest extends GPUTest {
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [
-      { attachment: colorAttachment.createView(), loadValue: [0, 0, 0, 0], storeOp: 'store' }] });
+      { view: colorAttachment.createView(), loadValue: [0, 0, 0, 0], storeOp: 'store' }] });
 
 
     pass.setPipeline(pipeline);
@@ -158,7 +158,7 @@ class IndexFormatTest extends GPUTest {
     { buffer: result, bytesPerRow, rowsPerImage },
     [kWidth, kHeight]);
 
-    this.device.defaultQueue.submit([encoder.finish()]);
+    this.device.queue.submit([encoder.finish()]);
 
     return result;
   }
@@ -182,7 +182,7 @@ export const g = makeTestGroup(IndexFormatTest);
 
 g.test('index_format,uint16').
 desc('Test rendering result of indexed draw with index format of uint16.').
-params([
+paramsSubcasesOnly([
 { indexOffset: 0, _expectedShape: kSquare },
 { indexOffset: 6, _expectedShape: kBottomLeftTriangle },
 { indexOffset: 18, _expectedShape: kNothing }]).
@@ -199,12 +199,12 @@ fn(t => {
   const result = t.run(indexBuffer, indices.length, 'uint16', indexOffset);
 
   const expectedTextureValues = t.CreateExpectedUint8Array(_expectedShape);
-  t.expectContents(result, expectedTextureValues);
+  t.expectGPUBufferValuesEqual(result, expectedTextureValues);
 });
 
 g.test('index_format,uint32').
 desc('Test rendering result of indexed draw with index format of uint32.').
-params([
+paramsSubcasesOnly([
 { indexOffset: 0, _expectedShape: kSquare },
 { indexOffset: 12, _expectedShape: kBottomLeftTriangle },
 { indexOffset: 36, _expectedShape: kNothing }]).
@@ -220,7 +220,7 @@ fn(t => {
   const result = t.run(indexBuffer, indices.length, 'uint32', indexOffset);
 
   const expectedTextureValues = t.CreateExpectedUint8Array(_expectedShape);
-  t.expectContents(result, expectedTextureValues);
+  t.expectGPUBufferValuesEqual(result, expectedTextureValues);
 });
 
 g.test('primitive_restart').
@@ -315,10 +315,10 @@ is different from what you would get if the topology were incorrect.
         |########|
 `).
 
-params(
-params().
-combine(poptions('indexFormat', ['uint16', 'uint32'])).
-combine([
+params((u) =>
+u //
+.combine('indexFormat', ['uint16', 'uint32']).
+combineWithParams([
 {
   primitiveTopology: 'point-list',
   _indices: [0, 1, -1, 2, 3, 0],
@@ -378,6 +378,6 @@ fn(t => {
   const result = t.run(indexBuffer, _indices.length, indexFormat, 0, primitiveTopology);
 
   const expectedTextureValues = t.CreateExpectedUint8Array(_expectedShape);
-  t.expectContents(result, expectedTextureValues);
+  t.expectGPUBufferValuesEqual(result, expectedTextureValues);
 });
 //# sourceMappingURL=index_format.spec.js.map

@@ -4,8 +4,7 @@
 API validation test for compute pass
 
 Does **not** test usage scopes (resource_usages/) or programmable pass stuff (programmable_pass).
-`;import { params, poptions } from '../../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { ValidationTest } from '../../validation_test.js';
 
 class F extends ValidationTest {
@@ -51,7 +50,7 @@ desc(
 setPipeline should generate an error iff using an 'invalid' pipeline.
 `).
 
-params(poptions('state', ['valid', 'invalid'])).
+params(u => u.beginSubcases().combine('state', ['valid', 'invalid'])).
 fn(t => {
   const pipeline = t.createComputePipeline(t.params.state);
   const { encoder, finish } = t.createEncoder('compute pass');
@@ -70,14 +69,13 @@ Test 'direct' and 'indirect' dispatch with various sizes.
     - invalid, TODO: workSizes {x,y,z} just under and above limit, once limit is established.
 `).
 
-params(
-params().
-combine(poptions('dispatchType', ['direct', 'indirect'])).
-combine(
-poptions('workSizes', [
+params((u) =>
+u.
+combine('dispatchType', ['direct', 'indirect']).
+beginSubcases().
+combine('workSizes', [
 [0, 0, 0],
-[1, 1, 1]]))).
-
+[1, 1, 1]])).
 
 
 fn(t => {
@@ -106,14 +104,13 @@ indirectBuffer with 6 elements.
   - invalid, the last element is outside the buffer
 
 TODO: test specifically which call the validation error occurs in.
-      (Should be finish() for invalid, but dispatchIndirect() for destroyed.)
+      (Should be finish() for invalid, but submit() for destroyed.)
 `).
 
-params(
-params().
-combine(poptions('state', ['valid', 'invalid', 'destroyed'])).
-combine(
-poptions('offset', [
+paramsSubcasesOnly((u) =>
+u //
+.combine('state', ['valid', 'invalid', 'destroyed']).
+combine('offset', [
 // valid (for 'valid' buffers)
 0,
 Uint32Array.BYTES_PER_ELEMENT,
@@ -121,8 +118,7 @@ kBufferData.byteLength - 3 * Uint32Array.BYTES_PER_ELEMENT,
 // invalid, non-multiple of 4 offset
 1,
 // invalid, last element outside buffer
-kBufferData.byteLength - 2 * Uint32Array.BYTES_PER_ELEMENT]))).
-
+kBufferData.byteLength - 2 * Uint32Array.BYTES_PER_ELEMENT])).
 
 
 fn(t => {

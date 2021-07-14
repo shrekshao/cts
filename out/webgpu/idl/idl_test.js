@@ -1,10 +1,13 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { Fixture } from '../../common/framework/fixture.js';import { assert } from '../../common/framework/util/util.js';
+**/import { Fixture } from '../../common/framework/fixture.js';import { assert } from '../../common/util/util.js';
 
 
 
 
+/**
+                                                                                                                    * Base fixture for testing the exposed interface is correct (without actually using WebGPU).
+                                                                                                                    */
 export class IDLTest extends Fixture {
   // TODO: add a helper to check prototype chains
 

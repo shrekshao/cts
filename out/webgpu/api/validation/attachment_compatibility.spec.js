@@ -4,16 +4,15 @@
 Validation for attachment compatibility between render passes, bundles, and pipelines
 
 TODO: Add sparse color attachment compatibility test when defined by specification
-`;import { poptions, params } from '../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { range } from '../../../common/framework/util/util.js';
+`;import { makeTestGroup } from '../../../common/framework/test_group.js';
+import { range } from '../../../common/util/util.js';
 import {
-kRegularTextureFormatInfo,
 kRegularTextureFormats,
 kSizedDepthStencilFormats,
 kUnsizedDepthStencilFormats,
 kTextureSampleCounts,
-kMaxColorAttachments } from
+kMaxColorAttachments,
+kTextureFormatInfo } from
 '../../capability_info.js';
 
 import { ValidationTest } from './validation_test.js';
@@ -31,7 +30,7 @@ class F extends ValidationTest {
     createTexture({
       size: [1, 1, 1],
       format,
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
       sampleCount }).
 
     createView();
@@ -42,8 +41,9 @@ class F extends ValidationTest {
   sampleCount)
   {
     return {
-      attachment: this.createAttachmentTextureView(format, sampleCount),
-      loadValue: [0, 0, 0, 0] };
+      view: this.createAttachmentTextureView(format, sampleCount),
+      loadValue: [0, 0, 0, 0],
+      storeOp: 'store' };
 
   }
 
@@ -52,7 +52,7 @@ class F extends ValidationTest {
   sampleCount)
   {
     return {
-      attachment: this.createAttachmentTextureView(format, sampleCount),
+      view: this.createAttachmentTextureView(format, sampleCount),
       depthLoadValue: 0,
       depthStoreOp: 'clear',
       stencilLoadValue: 1,
@@ -107,32 +107,30 @@ class F extends ValidationTest {
   }
 
   createRenderPipeline(
-  colorStates,
-  depthStencilState,
+  targets,
+  depthStencil,
   sampleCount)
   {
     return this.device.createRenderPipeline({
-      vertexStage: {
+      vertex: {
         module: this.device.createShaderModule({
           code: `
-            [[builtin(position)]] var<out> position : vec4<f32>;
-
-            [[stage(vertex)]] fn main() -> void {
-              position = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+            [[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+              return vec4<f32>(0.0, 0.0, 0.0, 0.0);
             }` }),
 
         entryPoint: 'main' },
 
-      fragmentStage: {
+      fragment: {
         module: this.device.createShaderModule({
-          code: '[[stage(fragment)]] fn main() -> void {}' }),
+          code: '[[stage(fragment)]] fn main() {}' }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        targets },
 
-      primitiveTopology: 'triangle-list',
-      colorStates,
-      depthStencilState,
-      sampleCount });
+      primitive: { topology: 'triangle-list' },
+      depthStencil,
+      multisample: { count: sampleCount } });
 
   }}
 
@@ -140,16 +138,16 @@ class F extends ValidationTest {
 export const g = makeTestGroup(F);
 
 const kColorAttachmentFormats = kRegularTextureFormats.filter(format => {
-  const info = kRegularTextureFormatInfo[format];
+  const info = kTextureFormatInfo[format];
   return info.color && info.renderable;
 });
 
 g.test('render_pass_and_bundle,color_format').
 desc('Test that color attachment formats in render passes and bundles must match.').
-params(
-params().
-combine(poptions('passFormat', kColorAttachmentFormats)).
-combine(poptions('bundleFormat', kColorAttachmentFormats))).
+paramsSubcasesOnly((u) =>
+u //
+.combine('passFormat', kColorAttachmentFormats).
+combine('bundleFormat', kColorAttachmentFormats)).
 
 fn(t => {
   const { passFormat, bundleFormat } = t.params;
@@ -176,10 +174,10 @@ desc(
   TODO: Add sparse color attachment compatibility test when defined by specification
   `).
 
-params(
-params().
-combine(poptions('passCount', kColorAttachmentCounts)).
-combine(poptions('bundleCount', kColorAttachmentCounts))).
+paramsSubcasesOnly((u) =>
+u //
+.combine('passCount', kColorAttachmentCounts).
+combine('bundleCount', kColorAttachmentCounts)).
 
 fn(t => {
   const { passCount, bundleCount } = t.params;
@@ -201,13 +199,15 @@ fn(t => {
 
 g.test('render_pass_and_bundle,depth_format').
 desc('Test that the depth attachment format in render passes and bundles must match.').
-params(
-params().
-combine(poptions('passFormat', kDepthStencilAttachmentFormats)).
-combine(poptions('bundleFormat', kDepthStencilAttachmentFormats))).
+paramsSubcasesOnly((u) =>
+u //
+.combine('passFormat', kDepthStencilAttachmentFormats).
+combine('bundleFormat', kDepthStencilAttachmentFormats)).
 
-fn(t => {
+fn(async t => {
   const { passFormat, bundleFormat } = t.params;
+  await t.selectDeviceForTextureFormatOrSkipTestCase([passFormat, bundleFormat]);
+
   const bundleEncoder = t.device.createRenderBundleEncoder({
     colorFormats: ['rgba8unorm'],
     depthStencilFormat: bundleFormat });
@@ -228,10 +228,10 @@ fn(t => {
 
 g.test('render_pass_and_bundle,sample_count').
 desc('Test that the sample count in render passes and bundles must match.').
-params(
-params().
-combine(poptions('renderSampleCount', kTextureSampleCounts)).
-combine(poptions('bundleSampleCount', kTextureSampleCounts))).
+paramsSubcasesOnly((u) =>
+u //
+.combine('renderSampleCount', kTextureSampleCounts).
+combine('bundleSampleCount', kTextureSampleCounts)).
 
 fn(t => {
   const { renderSampleCount, bundleSampleCount } = t.params;
@@ -257,11 +257,12 @@ desc(
 Test that color attachment formats in render passes or bundles match the pipeline color format.
 `).
 
-params(
-params().
-combine(poptions('encoderType', ['render pass', 'render bundle'])).
-combine(poptions('encoderFormat', kColorAttachmentFormats)).
-combine(poptions('pipelineFormat', kColorAttachmentFormats))).
+params((u) =>
+u.
+combine('encoderType', ['render pass', 'render bundle']).
+beginSubcases().
+combine('encoderFormat', kColorAttachmentFormats).
+combine('pipelineFormat', kColorAttachmentFormats)).
 
 fn(t => {
   const { encoderType, encoderFormat, pipelineFormat } = t.params;
@@ -284,11 +285,12 @@ count.
 TODO: Add sparse color attachment compatibility test when defined by specification
 `).
 
-params(
-params().
-combine(poptions('encoderType', ['render pass', 'render bundle'])).
-combine(poptions('encoderCount', kColorAttachmentCounts)).
-combine(poptions('pipelineCount', kColorAttachmentCounts))).
+params((u) =>
+u.
+combine('encoderType', ['render pass', 'render bundle']).
+beginSubcases().
+combine('encoderCount', kColorAttachmentCounts).
+combine('pipelineCount', kColorAttachmentCounts)).
 
 fn(t => {
   const { encoderType, encoderCount, pipelineCount } = t.params;
@@ -311,14 +313,17 @@ desc(
 Test that the depth attachment format in render passes or bundles match the pipeline depth format.
 `).
 
-params(
-params().
-combine(poptions('encoderType', ['render pass', 'render bundle'])).
-combine(poptions('encoderFormat', kDepthStencilAttachmentFormats)).
-combine(poptions('pipelineFormat', kDepthStencilAttachmentFormats))).
+params((u) =>
+u.
+combine('encoderType', ['render pass', 'render bundle']).
+beginSubcases().
+combine('encoderFormat', kDepthStencilAttachmentFormats).
+combine('pipelineFormat', kDepthStencilAttachmentFormats)).
 
-fn(t => {
+fn(async t => {
   const { encoderType, encoderFormat, pipelineFormat } = t.params;
+  await t.selectDeviceForTextureFormatOrSkipTestCase([encoderFormat, pipelineFormat]);
+
   const pipeline = t.createRenderPipeline(
   [{ format: 'rgba8unorm' }],
   pipelineFormat !== undefined ? { format: pipelineFormat } : undefined);
@@ -339,33 +344,51 @@ fn(t => {
 g.test('render_pass_or_bundle_and_pipeline,sample_count').
 desc(
 `
-Test that the sample count in render passes or bundles match the pipeline sample count.
+Test that the sample count in render passes or bundles match the pipeline sample count for both color texture and depthstencil texture.
 `).
 
-params(
-params().
-combine(poptions('encoderType', ['render pass', 'render bundle'])).
-combine(poptions('encoderSampleCount', kTextureSampleCounts)).
-combine(poptions('pipelineSampleCount', kTextureSampleCounts))).
+params((u) =>
+u.
+combine('encoderType', ['render pass', 'render bundle']).
+beginSubcases().
+combine('encoderSampleCount', kTextureSampleCounts).
+combine('pipelineSampleCount', kTextureSampleCounts)).
 
 fn(t => {
   const { encoderType, encoderSampleCount, pipelineSampleCount } = t.params;
-  const pipeline = t.createRenderPipeline(
+
+  // For color texture
+  const pipelineWithoutDepthStencil = t.createRenderPipeline(
   [{ format: 'rgba8unorm' }],
   undefined,
   pipelineSampleCount);
 
 
-  const { encoder, finish } = t.createPassOrBundleEncoder(
-  encoderType,
-  ['rgba8unorm'],
-  undefined,
-  encoderSampleCount);
-
-  encoder.setPipeline(pipeline);
+  const {
+    encoder: encoderWithoutDepthStencil,
+    finish: finishWithoutDepthStencil } =
+  t.createPassOrBundleEncoder(encoderType, ['rgba8unorm'], undefined, encoderSampleCount);
+  encoderWithoutDepthStencil.setPipeline(pipelineWithoutDepthStencil);
 
   t.expectValidationError(() => {
-    t.queue.submit([finish()]);
+    t.queue.submit([finishWithoutDepthStencil()]);
+  }, encoderSampleCount !== pipelineSampleCount);
+
+  // For DepthStencil texture
+  const pipelineWithDepthStencilOnly = t.createRenderPipeline(
+  [],
+  { format: 'depth24plus-stencil8' },
+  pipelineSampleCount);
+
+
+  const {
+    encoder: encoderWithDepthStencilOnly,
+    finish: finishWithDepthStencilOnly } =
+  t.createPassOrBundleEncoder(encoderType, [], 'depth24plus-stencil8', encoderSampleCount);
+  encoderWithDepthStencilOnly.setPipeline(pipelineWithDepthStencilOnly);
+
+  t.expectValidationError(() => {
+    t.queue.submit([finishWithDepthStencilOnly()]);
   }, encoderSampleCount !== pipelineSampleCount);
 });
 //# sourceMappingURL=attachment_compatibility.spec.js.map

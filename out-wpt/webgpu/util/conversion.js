@@ -1,8 +1,12 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { assert } from '../../common/framework/util/util.js';
+ **/ import { assert } from '../../common/util/util.js';
 import { clamp } from './math.js';
 
+/**
+ * Encodes a JS `number` into a "normalized" (unorm/snorm) integer representation with `bits` bits.
+ * Input must be between -1 and 1 if signed, or 0 and 1 if unsigned.
+ */
 export function floatAsNormalizedInteger(float, bits, signed) {
   if (signed) {
     assert(float >= -1 && float <= 1);
@@ -15,6 +19,10 @@ export function floatAsNormalizedInteger(float, bits, signed) {
   }
 }
 
+/**
+ * Decodes a JS `number` from a "normalized" (unorm/snorm) integer representation with `bits` bits.
+ * Input must be an integer in the range of the specified unorm/snorm type.
+ */
 export function normalizedIntegerAsFloat(integer, bits, signed) {
   assert(Number.isInteger(integer));
   if (signed) {
@@ -31,7 +39,13 @@ export function normalizedIntegerAsFloat(integer, bits, signed) {
   }
 }
 
-// Does not handle clamping, underflow, overflow, denormalized numbers
+/**
+ * Encodes a JS `number` into an IEEE754 floating point number with the specified number of
+ * sign, exponent, mantissa bits, and exponent bias.
+ * Returns the result as an integer-valued JS `number`.
+ *
+ * Does not handle clamping, underflow, overflow, or denormalized numbers.
+ */
 export function float32ToFloatBits(n, signBits, exponentBits, mantissaBits, bias) {
   assert(exponentBits <= 8);
   assert(mantissaBits <= 23);
@@ -67,11 +81,36 @@ export function float32ToFloatBits(n, signBits, exponentBits, mantissaBits, bias
   return (sign << (exponentBits + mantissaBits)) | (newBiasedExp << mantissaBits) | newMantissa;
 }
 
-// Three partial-precision floating-point numbers encoded into a single 32-bit value all
-// sharing the same 5-bit exponent.
-// There is no sign bit, and there is a shared 5-bit biased (15) exponent and a 9-bit
-// mantissa for each channel. The mantissa does NOT have an implicit leading "1.",
-// and instead has an implicit leading "0.".
+/**
+ * Encodes a JS `number` into an IEEE754 16 bit floating point number.
+ * Returns the result as an integer-valued JS `number`.
+ *
+ * Does not handle clamping, underflow, overflow, or denormalized numbers.
+ */
+export function float32ToFloat16Bits(n) {
+  return float32ToFloatBits(n, 1, 5, 10, 15);
+}
+
+/**
+ * Decodes an IEEE754 16 bit floating point number into a JS `number` and returns.
+ */
+export function float16BitsToFloat32(float16Bits) {
+  const buf = new DataView(new ArrayBuffer(Float32Array.BYTES_PER_ELEMENT));
+  // shift exponent and mantissa bits and fill with 0 on right, shift sign bit
+  buf.setUint32(0, ((float16Bits & 0x7fff) << 13) | ((float16Bits & 0x8000) << 16), true);
+  // shifting for bias different: f16 uses a bias of 15, f32 uses a bias of 127
+  return buf.getFloat32(0, true) * 2 ** (127 - 15);
+}
+
+/**
+ * Encodes three JS `number` values into RGB9E5, returned as an integer-valued JS `number`.
+ *
+ * RGB9E5 represents three partial-precision floating-point numbers encoded into a single 32-bit
+ * value all sharing the same 5-bit exponent.
+ * There is no sign bit, and there is a shared 5-bit biased (15) exponent and a 9-bit
+ * mantissa for each channel. The mantissa does NOT have an implicit leading "1.",
+ * and instead has an implicit leading "0.".
+ */
 export function packRGB9E5UFloat(r, g, b) {
   for (const v of [r, g, b]) {
     assert(v >= 0 && v < Math.pow(2, 16));
@@ -114,6 +153,12 @@ export function packRGB9E5UFloat(r, g, b) {
   return rMantissa | (gMantissa << 9) | (bMantissa << 18) | (biasedExp << 27);
 }
 
+/**
+ * Asserts that a number is within the representable (inclusive) of the integer type with the
+ * specified number of bits and signedness.
+ *
+ * TODO: Assert isInteger? Then this function "asserts that a number is representable" by the type
+ */
 export function assertInIntegerRange(n, bits, signed) {
   if (signed) {
     const min = -Math.pow(2, bits - 1);
@@ -125,12 +170,18 @@ export function assertInIntegerRange(n, bits, signed) {
   }
 }
 
+/**
+ * Converts a linear value into a "gamma"-encoded value using the sRGB-clamped transfer function.
+ */
 export function gammaCompress(n) {
   n = n <= 0.0031308 ? (323 * n) / 25 : (211 * Math.pow(n, 5 / 12) - 11) / 200;
-  return clamp(n, 0, 1);
+  return clamp(n, { min: 0, max: 1 });
 }
 
+/**
+ * Converts a "gamma"-encoded value into a linear value using the sRGB-clamped transfer function.
+ */
 export function gammaDecompress(n) {
   n = n <= 0.04045 ? (n * 25) / 323 : Math.pow((200 * n + 11) / 211, 12 / 5);
-  return clamp(n, 0, 1);
+  return clamp(n, { min: 0, max: 1 });
 }

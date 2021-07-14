@@ -1,8 +1,9 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert, unreachable } from '../../../common/framework/util/util.js';import {
+**/import { assert, unreachable } from '../../../common/util/util.js';import {
 assertInIntegerRange,
 float32ToFloatBits,
+float32ToFloat16Bits,
 floatAsNormalizedInteger,
 gammaCompress,
 gammaDecompress,
@@ -10,7 +11,8 @@ normalizedIntegerAsFloat,
 packRGB9E5UFloat } from
 '../conversion.js';
 
-export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";TexelComponent["G"] = "G";TexelComponent["B"] = "B";TexelComponent["A"] = "A";TexelComponent["Depth"] = "Depth";TexelComponent["Stencil"] = "Stencil";})(TexelComponent || (TexelComponent = {}));
+/** A component of a texture format: R, G, B, A, Depth, or Stencil. */
+export let TexelComponent;
 
 
 
@@ -19,10 +21,7 @@ export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";
 
 
 
-
-
-
-
+/** Arbitrary data, per component of a texel format. */(function (TexelComponent) {TexelComponent["R"] = "R";TexelComponent["G"] = "G";TexelComponent["B"] = "B";TexelComponent["A"] = "A";TexelComponent["Depth"] = "Depth";TexelComponent["Stencil"] = "Stencil";})(TexelComponent || (TexelComponent = {}));
 
 
 
@@ -43,11 +42,11 @@ export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";
 
 
 /**
-                                                                                                                                                                                                                                                                                    * Create a PerTexelComponent object filled with the same value for all components.
-                                                                                                                                                                                                                                                                                    * @param {TexelComponent[]} components - The component names.
-                                                                                                                                                                                                                                                                                    * @param {T} value - The value to assign to each component.
-                                                                                                                                                                                                                                                                                    * @returns {PerTexelComponent<T>}
-                                                                                                                                                                                                                                                                                    */
+                                                                                                                                                                                                                                                                                                                 * Create a PerTexelComponent object filled with the same value for all components.
+                                                                                                                                                                                                                                                                                                                 * @param {TexelComponent[]} components - The component names.
+                                                                                                                                                                                                                                                                                                                 * @param {T} value - The value to assign to each component.
+                                                                                                                                                                                                                                                                                                                 * @returns {PerTexelComponent<T>}
+                                                                                                                                                                                                                                                                                                                 */
 function makePerTexelComponent(components, value) {
   const values = {};
   for (const c of components) {
@@ -328,7 +327,7 @@ function makeFloatInfo(componentOrder, bitLength) {
       switch (bitLength) {
         case 16:
           components = applyEach(
-          n => float32ToFloatBits(n, 1, 5, 10, 15),
+          n => float32ToFloat16Bits(n),
           componentOrder)(
           components);
           return packComponents(componentOrder, components, 16, 'uint');
@@ -349,14 +348,23 @@ const kBGRA = [TexelComponent.B, TexelComponent.G, TexelComponent.R, TexelCompon
 
 const identity = n => n;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const kTexelRepresentationInfo =
-
-
-
-
-
-
-
 
 {
   ...{
@@ -403,20 +411,20 @@ export const kTexelRepresentationInfo =
         B: { dataType: 'unorm', bitLength: 10 },
         A: { dataType: 'unorm', bitLength: 2 } },
 
-      encode: components => {var _components$R, _components$G, _components$B, _components$A;
+      encode: components => {
         return {
-          R: floatAsNormalizedInteger((_components$R = components.R) !== null && _components$R !== void 0 ? _components$R : unreachable(), 10, false),
-          G: floatAsNormalizedInteger((_components$G = components.G) !== null && _components$G !== void 0 ? _components$G : unreachable(), 10, false),
-          B: floatAsNormalizedInteger((_components$B = components.B) !== null && _components$B !== void 0 ? _components$B : unreachable(), 10, false),
-          A: floatAsNormalizedInteger((_components$A = components.A) !== null && _components$A !== void 0 ? _components$A : unreachable(), 2, false) };
+          R: floatAsNormalizedInteger(components.R ?? unreachable(), 10, false),
+          G: floatAsNormalizedInteger(components.G ?? unreachable(), 10, false),
+          B: floatAsNormalizedInteger(components.B ?? unreachable(), 10, false),
+          A: floatAsNormalizedInteger(components.A ?? unreachable(), 2, false) };
 
       },
-      decode: components => {var _components$R2, _components$G2, _components$B2, _components$A2;
+      decode: components => {
         return {
-          R: normalizedIntegerAsFloat((_components$R2 = components.R) !== null && _components$R2 !== void 0 ? _components$R2 : unreachable(), 10, false),
-          G: normalizedIntegerAsFloat((_components$G2 = components.G) !== null && _components$G2 !== void 0 ? _components$G2 : unreachable(), 10, false),
-          B: normalizedIntegerAsFloat((_components$B2 = components.B) !== null && _components$B2 !== void 0 ? _components$B2 : unreachable(), 10, false),
-          A: normalizedIntegerAsFloat((_components$A2 = components.A) !== null && _components$A2 !== void 0 ? _components$A2 : unreachable(), 2, false) };
+          R: normalizedIntegerAsFloat(components.R ?? unreachable(), 10, false),
+          G: normalizedIntegerAsFloat(components.G ?? unreachable(), 10, false),
+          B: normalizedIntegerAsFloat(components.B ?? unreachable(), 10, false),
+          A: normalizedIntegerAsFloat(components.A ?? unreachable(), 2, false) };
 
       },
       pack: (components) =>
@@ -441,11 +449,11 @@ export const kTexelRepresentationInfo =
         G: { dataType: 'ufloat', bitLength: 11 },
         B: { dataType: 'ufloat', bitLength: 10 } },
 
-      pack: components => {var _components$R3, _components$G3, _components$B3;
+      pack: components => {
         components = {
-          R: float32ToFloatBits((_components$R3 = components.R) !== null && _components$R3 !== void 0 ? _components$R3 : unreachable(), 0, 5, 6, 15),
-          G: float32ToFloatBits((_components$G3 = components.G) !== null && _components$G3 !== void 0 ? _components$G3 : unreachable(), 0, 5, 6, 15),
-          B: float32ToFloatBits((_components$B3 = components.B) !== null && _components$B3 !== void 0 ? _components$B3 : unreachable(), 0, 5, 5, 15) };
+          R: float32ToFloatBits(components.R ?? unreachable(), 0, 5, 6, 15),
+          G: float32ToFloatBits(components.G ?? unreachable(), 0, 5, 6, 15),
+          B: float32ToFloatBits(components.B ?? unreachable(), 0, 5, 5, 15) };
 
         return packComponents(
         kRGB,
@@ -467,14 +475,14 @@ export const kTexelRepresentationInfo =
       }),
       encode: applyEach(identity, kRGB),
       decode: applyEach(identity, kRGB),
-      pack: components => {var _components$R4, _components$G4, _components$B4;return (
-          new Uint32Array([
-          packRGB9E5UFloat((_components$R4 =
-          components.R) !== null && _components$R4 !== void 0 ? _components$R4 : unreachable(), (_components$G4 =
-          components.G) !== null && _components$G4 !== void 0 ? _components$G4 : unreachable(), (_components$B4 =
-          components.B) !== null && _components$B4 !== void 0 ? _components$B4 : unreachable())]).
+      pack: (components) =>
+      new Uint32Array([
+      packRGB9E5UFloat(
+      components.R ?? unreachable(),
+      components.G ?? unreachable(),
+      components.B ?? unreachable())]).
 
-          buffer);} },
+      buffer },
 
     depth32float: {
       componentOrder: [TexelComponent.Depth],
@@ -483,12 +491,82 @@ export const kTexelRepresentationInfo =
       componentInfo: { Depth: { dataType: 'float', bitLength: 32 } },
       pack: components => packComponents([TexelComponent.Depth], components, 32, 'float') },
 
+    depth16unorm: makeNormalizedInfo([TexelComponent.Depth], 16, { signed: false, sRGB: false }),
     depth24plus: {
       componentOrder: [TexelComponent.Depth],
       componentInfo: { Depth: { dataType: null, bitLength: 24 } },
       encode: applyEach(() => unreachable('depth24plus cannot be encoded'), [TexelComponent.Depth]),
       decode: applyEach(() => unreachable('depth24plus cannot be decoded'), [TexelComponent.Depth]),
       pack: () => unreachable('depth24plus data cannot be packed') },
+
+    stencil8: {
+      componentOrder: [TexelComponent.Stencil],
+      componentInfo: { Stencil: { dataType: 'uint', bitLength: 8 } },
+      encode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return components;
+      },
+      decode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return components;
+      },
+      pack: components => packComponents([TexelComponent.Stencil], components, 8, 'uint') },
+
+    'depth24unorm-stencil8': {
+      componentOrder: [TexelComponent.Depth, TexelComponent.Stencil],
+      componentInfo: {
+        Depth: {
+          dataType: 'unorm',
+          bitLength: 24 },
+
+        Stencil: {
+          dataType: 'uint',
+          bitLength: 8 } },
+
+
+      encode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return {
+          Depth: floatAsNormalizedInteger(components.Depth ?? unreachable(), 24, false),
+          Stencil: components.Stencil };
+
+      },
+      decode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return {
+          Depth: normalizedIntegerAsFloat(components.Depth ?? unreachable(), 24, false),
+          Stencil: components.Stencil };
+
+      },
+      pack: () => unreachable('depth24unorm-stencil8 data cannot be packed') },
+
+    'depth32float-stencil8': {
+      componentOrder: [TexelComponent.Depth, TexelComponent.Stencil],
+      componentInfo: {
+        Depth: {
+          dataType: 'float',
+          bitLength: 32 },
+
+        Stencil: {
+          dataType: 'uint',
+          bitLength: 8 } },
+
+
+      encode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return components;
+      },
+      decode: components => {
+        assert(components.Stencil !== undefined);
+        assertInIntegerRange(components.Stencil, 8, false);
+        return components;
+      },
+      pack: () => unreachable('depth32float-stencil8 data cannot be packed') },
 
     'depth24plus-stencil8': {
       componentOrder: [TexelComponent.Depth, TexelComponent.Stencil],

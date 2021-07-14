@@ -6,12 +6,13 @@ import {
   raceWithRejectOnTimeout,
   unreachable,
   assertReject,
-} from '../../common/framework/util/util.js';
+} from '../../common/util/util.js';
 import { DefaultLimits } from '../constants.js';
 
 import { getGPU } from './navigator_gpu.js';
 
 class TestFailedButDeviceReusable extends Error {}
+class FeaturesNotSupported extends Error {}
 export class TestOOMedShouldAttemptGC extends Error {}
 
 export class DevicePool {
@@ -131,16 +132,14 @@ class DescriptorToHolderMap {
     try {
       value = await DeviceHolder.create(descriptor);
     } catch (ex) {
-      var _ex$message;
-      this.unsupported.add(key);
-      throw new SkipTestCase(
-        `GPUDeviceDescriptor not supported: ${JSON.stringify(descriptor)}\n${
-          (_ex$message = ex === null || ex === void 0 ? void 0 : ex.message) !== null &&
-          _ex$message !== void 0
-            ? _ex$message
-            : ''
-        }`
-      );
+      if (ex instanceof FeaturesNotSupported) {
+        this.unsupported.add(key);
+        throw new SkipTestCase(
+          `GPUDeviceDescriptor not supported: ${JSON.stringify(descriptor)}\n${ex?.message ?? ''}`
+        );
+      }
+
+      throw ex;
     }
     this.insertAndCleanUp(key, value);
     return value;
@@ -167,23 +166,40 @@ class DescriptorToHolderMap {
  * (it just means some GPUDevice objects won't get deduplicated).
  */
 function canonicalizeDescriptor(desc) {
-  const extensionsCanonicalized = desc.extensions ? Array.from(desc.extensions).sort() : [];
-  const limits = { ...desc.limits };
+  const featuresCanonicalized = desc.requiredFeatures
+    ? Array.from(new Set(desc.requiredFeatures)).sort()
+    : [];
 
   const limitsCanonicalized = { ...DefaultLimits };
-  for (const k of Object.keys(limits)) {
-    if (limits[k] !== undefined) {
-      limitsCanonicalized[k] = limits[k];
+  if (desc.requiredLimits) {
+    for (const k of Object.keys(desc.requiredLimits)) {
+      if (desc.requiredLimits[k] !== undefined) {
+        limitsCanonicalized[k] = desc.requiredLimits[k];
+      }
     }
   }
 
   // Type ensures every field is carried through.
   const descriptorCanonicalized = {
-    extensions: extensionsCanonicalized,
-    limits: limitsCanonicalized,
+    requiredFeatures: featuresCanonicalized,
+    requiredLimits: limitsCanonicalized,
   };
 
   return [descriptorCanonicalized, JSON.stringify(descriptorCanonicalized)];
+}
+
+function supportsFeature(adapter, descriptor) {
+  if (descriptor === undefined) {
+    return true;
+  }
+
+  for (const feature of descriptor.requiredFeatures) {
+    if (!adapter.features.has(feature)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -206,6 +222,9 @@ class DeviceHolder {
     const gpu = getGPU();
     const adapter = await gpu.requestAdapter();
     assert(adapter !== null, 'requestAdapter returned null');
+    if (!supportsFeature(adapter, descriptor)) {
+      throw new FeaturesNotSupported('One or more features are not supported');
+    }
     const device = await adapter.requestDevice(descriptor);
     assert(device !== null, 'requestDevice returned null');
 

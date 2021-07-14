@@ -1,15 +1,13 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { publicParamsEquals } from './params_utils.js';import { assert } from './util/util.js';
+**/import { mergeParams } from '../internal/params_utils.js'; // ================================================================
+// "Public" ParamsBuilder API / Documentation
+// ================================================================
 
-/** Conditionally chooses between two types depending on whether T is a union. */
-
-
-
-
-
-
-
+/**
+ * Provides doc comments for the methods of CaseParamsBuilder and SubcaseParamsBuilder.
+ * (Also enforces rough interface match between them.)
+ */
 
 
 
@@ -33,8 +31,6 @@
 
 
 
-function typeAssert() {}
-{
 
 
 
@@ -57,141 +53,263 @@ function typeAssert() {}
 
 
 
-  {
-    typeAssert();
-    typeAssert();
-    typeAssert();
-    typeAssert();
-    typeAssert();
 
-    typeAssert();
 
-    typeAssert();
-    typeAssert();
-    typeAssert();
-    typeAssert();
-    typeAssert();
 
-    // Unexpected test results - hopefully okay to ignore these
-    typeAssert();
-    typeAssert();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+     * Base class for `CaseParamsBuilder` and `SubcaseParamsBuilder`.
+     */
+export class ParamsBuilderBase {
+
+
+  constructor(cases) {
+    this.cases = cases;
   }
+
+  /**
+     * Hidden from test files. Use `builderIterateCasesWithSubcases` to access this.
+     */}
+
+
+
+/**
+          * Calls the (normally hidden) `iterateCasesWithSubcases()` method.
+          */
+export function builderIterateCasesWithSubcases(builder) {
+
+
+
+
+  return builder.iterateCasesWithSubcases();
 }
 
-export function poptions(
-name,
-values)
+/**
+   * Builder for combinatorial test **case** parameters.
+   *
+   * CaseParamsBuilder is immutable. Each method call returns a new, immutable object,
+   * modifying the list of cases according to the method called.
+   *
+   * This means, for example, that the `unit` passed into `TestBuilder.params()` can be reused.
+   */
+export class CaseParamsBuilder extends
+ParamsBuilderBase
 {
-  const iter = makeReusableIterable(function* () {
-    for (const value of values) {
-      yield { [name]: value };
+  *iterateCasesWithSubcases() {
+    for (const a of this.cases()) {
+      yield [a, undefined];
     }
-  });
-
-  return iter;
-}
-
-export function pbool(
-name)
-{
-  return poptions(name, [false, true]);
-}
-
-export function params() {
-  return new ParamsBuilder();
-}
-
-export class ParamsBuilder {
-  paramSpecs = [{}];
+  }
 
   [Symbol.iterator]() {
-    const iter = this.paramSpecs[Symbol.iterator]();
-    return iter;
+    return this.cases();
   }
 
-  combine(newParams) {
-    const paramSpecs = this.paramSpecs;
-    this.paramSpecs = makeReusableIterable(function* () {
-      for (const a of paramSpecs) {
-        for (const b of newParams) {
-          yield mergeParams(a, b);
-        }
+  /** @inheritdoc */
+  expandWithParams(
+  expander)
+  {
+    const newGenerator = expanderGenerator(this.cases, expander);
+    return new CaseParamsBuilder(() => newGenerator({}));
+  }
+
+  /** @inheritdoc */
+  expand(
+  key,
+  expander)
+  {
+    return this.expandWithParams(function* (p) {
+      for (const value of expander(p)) {
+        // TypeScript doesn't know here that NewPKey is always a single literal string type.
+        yield { [key]: value };
       }
     });
-
-    return this;
   }
 
-  expand(expander) {
-    const paramSpecs = this.paramSpecs;
-    this.paramSpecs = makeReusableIterable(function* () {
-      for (const a of paramSpecs) {
-        for (const b of expander(a)) {
-          yield mergeParams(a, b);
-        }
-      }
-    });
-
-    return this;
+  /** @inheritdoc */
+  combineWithParams(
+  newParams)
+  {
+    return this.expandWithParams(() => newParams);
   }
 
+  /** @inheritdoc */
+  combine(
+  key,
+  values)
+  {
+    return this.expand(key, () => values);
+  }
+
+  /** @inheritdoc */
   filter(pred) {
-    const paramSpecs = this.paramSpecs;
-    this.paramSpecs = makeReusableIterable(function* () {
-      for (const p of paramSpecs) {
-        if (pred(p)) {
-          yield p;
-        }
-      }
-    });
-    return this;
+    const newGenerator = filterGenerator(this.cases, pred);
+    return new CaseParamsBuilder(() => newGenerator({}));
   }
 
+  /** @inheritdoc */
   unless(pred) {
     return this.filter(x => !pred(x));
   }
 
-  exclude(exclude) {
-    const excludeArray = Array.from(exclude);
-    const paramSpecs = this.paramSpecs;
-    this.paramSpecs = makeReusableIterable(function* () {
-      for (const p of paramSpecs) {
-        if (excludeArray.every(e => !publicParamsEquals(p, e))) {
-          yield p;
-        }
-      }
+  /**
+     * "Finalize" the list of cases and begin defining subcases.
+     * Returns a new SubcaseParamsBuilder. Methods called on SubcaseParamsBuilder
+     * generate new subcases instead of new cases.
+     */
+  beginSubcases() {
+    return new SubcaseParamsBuilder(
+    () => this.cases(),
+    function* () {
+      yield {};
     });
-    return this;
+
   }}
 
 
-// If you create an Iterable by calling a generator function (e.g. in IIFE), it is exhausted after
-// one use. This just wraps a generator function in an object so it be iterated multiple times.
-function makeReusableIterable(generatorFn) {
-  return { [Symbol.iterator]: generatorFn };
+/**
+      * The unit CaseParamsBuilder, representing a single case with no params: `[ {} ]`.
+      *
+      * `punit` is passed to every `.params()`/`.paramsSubcasesOnly()` call, so `kUnitCaseParamsBuilder`
+      * is only explicitly needed if constructing a ParamsBuilder outside of a test builder.
+      */
+export const kUnitCaseParamsBuilder = new CaseParamsBuilder(function* () {
+  yield {};
+});
+
+/**
+     * Builder for combinatorial test _subcase_ parameters.
+     *
+     * SubcaseParamsBuilder is immutable. Each method call returns a new, immutable object,
+     * modifying the list of subcases according to the method called.
+     */
+export class SubcaseParamsBuilder extends
+ParamsBuilderBase
+{
+
+
+  constructor(cases, generator) {
+    super(cases);
+    this.subcases = generator;
+  }
+
+  *iterateCasesWithSubcases() {
+    for (const caseP of this.cases()) {
+      const subcases = Array.from(this.subcases(caseP));
+      if (subcases.length) {
+        yield [caseP, subcases];
+      }
+    }
+  }
+
+  /** @inheritdoc */
+  expandWithParams(
+  expander)
+  {
+    return new SubcaseParamsBuilder(this.cases, expanderGenerator(this.subcases, expander));
+  }
+
+  /** @inheritdoc */
+  expand(
+  key,
+  expander)
+  {
+    return this.expandWithParams(function* (p) {
+      for (const value of expander(p)) {
+        // TypeScript doesn't know here that NewPKey is always a single literal string type.
+        yield { [key]: value };
+      }
+    });
+  }
+
+  /** @inheritdoc */
+  combineWithParams(
+  newParams)
+  {
+    return this.expandWithParams(() => newParams);
+  }
+
+  /** @inheritdoc */
+  combine(
+  key,
+  values)
+  {
+    return this.expand(key, () => values);
+  }
+
+  /** @inheritdoc */
+  filter(pred) {
+    return new SubcaseParamsBuilder(this.cases, filterGenerator(this.subcases, pred));
+  }
+
+  /** @inheritdoc */
+  unless(pred) {
+    return this.filter(x => !pred(x));
+  }}
+
+
+function expanderGenerator(
+baseGenerator,
+expander)
+{
+  return function* (base) {
+    for (const a of baseGenerator(base)) {
+      for (const b of expander(mergeParams(base, a))) {
+        yield mergeParams(a, b);
+      }
+    }
+  };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// (keyof A & keyof B) is not empty, so they overlapped
-
-function mergeParams(a, b) {
-  for (const key of Object.keys(a)) {
-    assert(!(key in b), 'Duplicate key: ' + key);
-  }
-  return { ...a, ...b };
+function filterGenerator(
+baseGenerator,
+pred)
+{
+  return function* (base) {
+    for (const a of baseGenerator(base)) {
+      if (pred(mergeParams(base, a))) {
+        yield a;
+      }
+    }
+  };
 }
 //# sourceMappingURL=params_builder.js.map

@@ -1,12 +1,12 @@
 // Implements the standalone test runner (see also: /standalone/index.html).
 
-import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { Logger } from '../framework/logging/logger.js';
-import { LiveTestCaseResult } from '../framework/logging/result.js';
-import { parseQuery } from '../framework/query/parseQuery.js';
-import { TestQueryLevel } from '../framework/query/query.js';
-import { TestTreeNode, TestSubtree, TestTreeLeaf } from '../framework/tree.js';
-import { assert } from '../framework/util/util.js';
+import { DefaultTestFileLoader } from '../internal/file_loader.js';
+import { Logger } from '../internal/logging/logger.js';
+import { LiveTestCaseResult } from '../internal/logging/result.js';
+import { parseQuery } from '../internal/query/parseQuery.js';
+import { TestQueryLevel } from '../internal/query/query.js';
+import { TestTreeNode, TestSubtree, TestTreeLeaf } from '../internal/tree.js';
+import { assert, ErrorWithExtra } from '../util/util.js';
 
 import { optionEnabled } from './helper/options.js';
 import { TestWorker } from './helper/test_worker.js';
@@ -21,7 +21,8 @@ let haveSomeResults = false;
 const runnow = optionEnabled('runnow');
 const debug = optionEnabled('debug');
 
-const logger = new Logger(debug);
+Logger.globalDebugMode = debug;
+const logger = new Logger();
 
 const worker = optionEnabled('worker') ? new TestWorker(debug) : undefined;
 
@@ -112,8 +113,7 @@ function makeCaseHTML(t: TestTreeLeaf): VisualizedSubtree {
               .attr('title', 'Log stack to console')
               .appendTo(caselog)
               .on('click', () => {
-                /* eslint-disable-next-line no-console */
-                console.log(l);
+                consoleLogError(l);
               });
             $('<pre>').addClass('testcaselogtext').appendTo(caselog).text(l.toJSON());
           }
@@ -192,6 +192,18 @@ function makeSubtreeChildrenHTML(
   return { runSubtree: runMySubtree, generateSubtreeHTML: generateMyHTML };
 }
 
+function consoleLogError(e: Error | ErrorWithExtra | undefined) {
+  if (e === undefined) return;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  (globalThis as any)._stack = e;
+  /* eslint-disable-next-line no-console */
+  console.log('_stack =', e);
+  if ('extra' in e && e.extra !== undefined) {
+    /* eslint-disable-next-line no-console */
+    console.log('_stack.extra =', e.extra);
+  }
+}
+
 function makeTreeNodeHeaderHTML(
   n: TestTreeNode,
   runSubtree: RunSubtree,
@@ -199,27 +211,19 @@ function makeTreeNodeHeaderHTML(
   onChange: (checked: boolean) => void
 ): [HTMLElement, SetCheckedRecursively] {
   const isLeaf = 'run' in n;
-  const div = $('<div>').addClass('nodeheader');
+  const div = $('<details>').addClass('nodeheader');
+  const header = $('<summary>').appendTo(div);
 
   const setChecked = () => {
-    if (checkbox) {
-      checkbox.prop('checked', true); // (does not fire onChange)
-      onChange(true);
-    }
+    div.prop('open', true); // (does not fire onChange)
+    onChange(true);
   };
 
-  let checkbox: JQuery<HTMLElement> | undefined;
   const href = `?${worker ? 'worker&' : ''}${debug ? 'debug&' : ''}q=${n.query.toString()}`;
   if (onChange) {
-    checkbox = $('<input>')
-      .attr('type', 'checkbox')
-      .addClass('collapsebtn')
-      .on('change', function (this) {
-        onChange((this as HTMLInputElement).checked);
-      })
-      .attr('alt', 'Expand')
-      .attr('title', 'Expand')
-      .appendTo(div);
+    div.on('toggle', function (this) {
+      onChange((this as HTMLDetailsElement).open);
+    });
 
     // Expand the shallower parts of the tree at load.
     // Also expand completely within subtrees that are at the same query level
@@ -236,14 +240,24 @@ function makeTreeNodeHeaderHTML(
     .on('click', async () => {
       await runSubtree();
     })
-    .appendTo(div);
+    .appendTo(header);
   $('<a>')
     .addClass('nodelink')
     .attr('href', href)
     .attr('alt', 'Open')
     .attr('title', 'Open')
-    .appendTo(div);
-  const nodetitle = $('<div>').addClass('nodetitle').appendTo(div);
+    .appendTo(header);
+  if ('testCreationStack' in n && n.testCreationStack) {
+    $('<button>')
+      .addClass('testcaselogbtn')
+      .attr('alt', 'Log test creation stack to console')
+      .attr('title', 'Log test creation stack to console')
+      .appendTo(header)
+      .on('click', () => {
+        consoleLogError(n.testCreationStack);
+      });
+  }
+  const nodetitle = $('<div>').addClass('nodetitle').appendTo(header);
   $('<input>')
     .attr('type', 'text')
     .prop('readonly', true)
@@ -255,7 +269,7 @@ function makeTreeNodeHeaderHTML(
     $('<pre>') //
       .addClass('nodedescription')
       .text(n.description)
-      .appendTo(nodetitle);
+      .appendTo(header);
   }
   return [div[0], setChecked];
 }
@@ -294,7 +308,7 @@ let lastQueryLevelToExpand: TestQueryLevel = 2;
   }
   const tree = await loader.loadTree(rootQuery);
 
-  tree.dissolveLevelBoundaries();
+  tree.dissolveSingleChildTrees();
 
   const { runSubtree, generateSubtreeHTML } = makeSubtreeHTML(tree.root, 1);
   const setTreeCheckedRecursively = generateSubtreeHTML(resultsVis);

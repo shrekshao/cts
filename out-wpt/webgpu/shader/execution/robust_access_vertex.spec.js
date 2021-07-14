@@ -45,7 +45,6 @@ from 0 instead of from baseVertex (will fail check for gl_VertexIndex).
 Vertex buffer contents could be randomized to prevent the case where a previous test creates
 a similar buffer to ours and the OOB-read seems valid. This should be deterministic, which adds
 more complexity that we may not need.`;
-import { params, pbool, poptions } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { GPUTest } from '../../gpu_test.js';
 
@@ -152,7 +151,7 @@ class DrawCall {
     if (partialLastNumber) {
       size -= 3;
     }
-    this.device.defaultQueue.writeBuffer(vertexBuffer, 0, vertexArray, size);
+    this.device.queue.writeBuffer(vertexBuffer, 0, vertexArray, size);
     return vertexBuffer;
   }
 
@@ -163,7 +162,7 @@ class DrawCall {
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
 
-    this.device.defaultQueue.writeBuffer(indexBuffer, 0, indexArray);
+    this.device.queue.writeBuffer(indexBuffer, 0, indexArray);
     return indexBuffer;
   }
 
@@ -239,23 +238,21 @@ const typeInfoMap = {
 };
 
 g.test('vertexAccess')
-  .params(
-    params()
-      .combine(pbool('indexed'))
-      .combine(pbool('indirect'))
-      .expand(p =>
-        poptions(
-          'drawCallTestParameter',
-          p.indexed
-            ? ['indexCount', 'instanceCount', 'firstIndex', 'baseVertex', 'firstInstance']
-            : ['vertexCount', 'instanceCount', 'firstVertex', 'firstInstance']
-        )
+  .params(u =>
+    u
+      .combine('indexed', [false, true])
+      .combine('indirect', [false, true])
+      .expand('drawCallTestParameter', p =>
+        p.indexed
+          ? ['indexCount', 'instanceCount', 'firstIndex', 'baseVertex', 'firstInstance']
+          : ['vertexCount', 'instanceCount', 'firstVertex', 'firstInstance']
       )
-      .combine(poptions('type', Object.keys(typeInfoMap)))
-      .combine(poptions('additionalBuffers', [0, 4]))
-      .combine(pbool('partialLastNumber'))
-      .combine(pbool('offsetVertexBuffer'))
-      .combine(poptions('errorScale', [1, 4, 10 ** 2, 10 ** 4, 10 ** 6]))
+      .beginSubcases()
+      .combine('type', Object.keys(typeInfoMap))
+      .combine('additionalBuffers', [0, 4])
+      .combine('partialLastNumber', [false, true])
+      .combine('offsetVertexBuffer', [false, true])
+      .combine('errorScale', [1, 4, 10 ** 2, 10 ** 4, 10 ** 6])
   )
   .fn(async t => {
     const p = t.params;
@@ -293,25 +290,26 @@ g.test('vertexAccess')
     );
 
     // Create attributes listing
-    let layoutStr = '';
+    let layoutStr = 'struct Attributes {';
     const attributeNames = [];
     {
       let currAttribute = 0;
       for (let i = 0; i < bufferContents.length; i++) {
         for (let j = 0; j < attributesPerBuffer; j++) {
-          layoutStr += `[[location(${currAttribute})]] var<in> a_${currAttribute} : ${typeInfo.wgslType};\n`;
+          layoutStr += `[[location(${currAttribute})]] a_${currAttribute} : ${typeInfo.wgslType};\n`;
           attributeNames.push(`a_${currAttribute}`);
           currAttribute++;
         }
       }
     }
+    layoutStr += '};';
 
     // Vertex buffer descriptors
-    const vertexBuffers = [];
+    const buffers = [];
     {
       let currAttribute = 0;
       for (let i = 0; i < bufferContents.length; i++) {
-        vertexBuffers.push({
+        buffers.push({
           arrayStride: attributesPerBuffer * typeInfo.size,
           stepMode: i === 0 ? 'instance' : 'vertex',
           attributes: Array(attributesPerBuffer)
@@ -332,11 +330,9 @@ g.test('vertexAccess')
     }
 
     const pipeline = t.device.createRenderPipeline({
-      vertexStage: {
+      vertex: {
         module: t.device.createShaderModule({
           code: `
-            [[builtin(position)]] var<out> Position : vec4<f32>;
-            [[builtin(vertex_idx)]] var<in> VertexIndex : u32;
             ${layoutStr}
 
             fn valid(f : f32) -> bool {
@@ -347,51 +343,53 @@ g.test('vertexAccess')
               ${typeInfo.validationFunc}
             }
 
-            [[stage(vertex)]] fn main() -> void {
+            [[stage(vertex)]] fn main(
+              [[builtin(vertex_index)]] VertexIndex : u32,
+              attributes : Attributes
+              ) -> [[builtin(position)]] vec4<f32> {
               var attributesInBounds : bool = ${attributeNames
-                .map(a => `validationFunc(${a})`)
+                .map(a => `validationFunc(attributes.${a})`)
                 .join(' && ')};
               var indexInBounds : bool = VertexIndex == 0u ||
                   (VertexIndex >= ${vertexIndexOffset}u &&
                    VertexIndex < ${vertexIndexOffset + numVertices}u);
 
+              var Position : vec4<f32>;
               if (attributesInBounds && (${!p.indexed} || indexInBounds)) {
-                # Success case, move the vertex out of the viewport
+                // Success case, move the vertex out of the viewport
                 Position = vec4<f32>(-1.0, 0.0, 0.0, 1.0);
               } else {
-                # Failure case, move the vertex inside the viewport
+                // Failure case, move the vertex inside the viewport
                 Position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
               }
+              return Position;
             }`,
         }),
 
         entryPoint: 'main',
+        buffers,
       },
 
-      fragmentStage: {
+      fragment: {
         module: t.device.createShaderModule({
           code: `
-            [[location(0)]] var<out> fragColor : vec4<f32>;
-            [[stage(fragment)]] fn main() -> void {
-              fragColor = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+            [[stage(fragment)]] fn main() -> [[location(0)]] vec4<f32> {
+              return vec4<f32>(1.0, 0.0, 0.0, 1.0);
             }`,
         }),
 
         entryPoint: 'main',
+        targets: [{ format: 'rgba8unorm' }],
       },
 
-      primitiveTopology: 'point-list',
-      colorStates: [{ format: 'rgba8unorm' }],
-      vertexState: {
-        vertexBuffers,
-      },
+      primitive: { topology: 'point-list' },
     });
 
     // Pipeline setup, texture setup
     const colorAttachment = t.device.createTexture({
       format: 'rgba8unorm',
-      size: { width: 1, height: 1, depth: 1 },
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.OUTPUT_ATTACHMENT,
+      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     const colorAttachmentView = colorAttachment.createView();
@@ -403,7 +401,7 @@ g.test('vertexAccess')
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: colorAttachmentView,
+          view: colorAttachmentView,
           storeOp: 'store',
           loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
         },
@@ -416,7 +414,7 @@ g.test('vertexAccess')
     draw.insertInto(pass, p.indexed, p.indirect);
 
     pass.endPass();
-    t.device.defaultQueue.submit([encoder.finish()]);
+    t.device.queue.submit([encoder.finish()]);
 
     // Validate we see green instead of red, meaning no fragment ended up on-screen
     t.expectSinglePixelIn2DTexture(

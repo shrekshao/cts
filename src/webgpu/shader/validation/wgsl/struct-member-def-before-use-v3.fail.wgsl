@@ -1,5 +1,5 @@
-# v-0007 -  This fails because `fn Foo()` returns `struct goo`, which does not
-# have a member `s.z`.
+// v-0007 -  This fails because `fn Foo()` returns `struct goo`, which does not
+// have a member `s.z`.
 
 struct goo {
   s : vec2<i32>;
@@ -12,8 +12,8 @@ fn Foo() -> goo {
   return a;
 }
 
-[[stage(vertex)]]
-fn main() -> void {
+[[stage(fragment)]]
+fn main() {
   var r : i32 = Foo().s.z;
   return;
 }

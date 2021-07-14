@@ -2,13 +2,13 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 Tests for TestQuery
-`;import { TestQueryMultiFile,
+`;import { makeTestGroup } from '../common/framework/test_group.js';import {
+TestQueryMultiFile,
 TestQueryMultiTest,
 TestQueryMultiCase,
 TestQuerySingleCase } from
 
-'../common/framework/query/query.js';
-import { makeTestGroup } from '../common/framework/test_group.js';
+'../common/internal/query/query.js';
 
 import { UnitTest } from './unit_test.js';
 

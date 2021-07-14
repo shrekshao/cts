@@ -1,4 +1,4 @@
-# v-0004 - Self recursion is dis-allowed and `c` calls itself.
+// v-0004 - Self recursion is dis-allowed and `c` calls itself.
 
 fn d() -> i32 {
   return 2;
@@ -16,8 +16,8 @@ fn a() -> i32 {
   return b();
 }
 
-[[stage(vertex)]]
-fn main() -> void {
+[[stage(fragment)]]
+fn main() {
   var v : i32 = a();
   return;
 }

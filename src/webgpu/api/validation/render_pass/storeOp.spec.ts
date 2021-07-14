@@ -22,7 +22,7 @@ import { ValidationTest } from '../validation_test.js';
 export const g = makeTestGroup(ValidationTest);
 
 g.test('store_op_and_read_only')
-  .params([
+  .paramsSimple([
     { readonly: true, _valid: true },
     // Using depthReadOnly=true and depthStoreOp='clear' should cause a validation error.
     { readonly: true, depthStoreOp: 'clear', _valid: false },
@@ -49,8 +49,8 @@ g.test('store_op_and_read_only')
 
     const depthAttachment = t.device.createTexture({
       format: 'depth24plus-stencil8',
-      size: { width: 1, height: 1, depth: 1 },
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
     const depthAttachmentView = depthAttachment.createView();
 
@@ -58,7 +58,7 @@ g.test('store_op_and_read_only')
     const pass = encoder.beginRenderPass({
       colorAttachments: [],
       depthStencilAttachment: {
-        attachment: depthAttachmentView,
+        view: depthAttachmentView,
         depthLoadValue: 'load',
         depthStoreOp,
         depthReadOnly,

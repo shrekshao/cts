@@ -2,22 +2,26 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/
 import * as fs from 'fs';
+import * as path from 'path';
 import * as process from 'process';
 
-import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { Logger } from '../framework/logging/logger.js';
+import { DefaultTestFileLoader } from '../internal/file_loader.js';
+import { prettyPrintLog } from '../internal/logging/log_message.js';
+import { Logger } from '../internal/logging/logger.js';
 
-import { parseQuery } from '../framework/query/parseQuery.js';
-import { assert, unreachable } from '../framework/util/util.js';
+import { parseQuery } from '../internal/query/parseQuery.js';
+import { parseExpectationsForTestQuery } from '../internal/query/query.js';
+import { assert, unreachable } from '../util/util.js';
 
 function usage(rc) {
   console.log('Usage:');
   console.log('  tools/run [OPTIONS...] QUERIES...');
   console.log("  tools/run 'unittests:*' 'webgpu:buffers,*'");
   console.log('Options:');
-  console.log('  --verbose     Print result/log of every test as it runs.');
-  console.log('  --debug       Include debug messages in logging.');
-  console.log('  --print-json  Print the complete result JSON in the output.');
+  console.log('  --verbose       Print result/log of every test as it runs.');
+  console.log('  --debug         Include debug messages in logging.');
+  console.log('  --print-json    Print the complete result JSON in the output.');
+  console.log('  --expectations  Path to expectations file.');
   return process.exit(rc);
 }
 
@@ -29,8 +33,11 @@ if (!fs.existsSync('src/common/runtime/cmdline.ts')) {
 let verbose = false;
 let debug = false;
 let printJSON = false;
+let loadWebGPUExpectations = undefined;
+
 const queries = [];
-for (const a of process.argv.slice(2)) {
+for (let i = 2; i < process.argv.length; ++i) {
+  const a = process.argv[i];
   if (a.startsWith('-')) {
     if (a === '--verbose') {
       verbose = true;
@@ -38,6 +45,9 @@ for (const a of process.argv.slice(2)) {
       debug = true;
     } else if (a === '--print-json') {
       printJSON = true;
+    } else if (a === '--expectations') {
+      const expectationsFile = path.resolve(process.cwd(), process.argv[++i]);
+      loadWebGPUExpectations = import(expectationsFile).then(m => m.expectations);
     } else {
       usage(1);
     }
@@ -51,97 +61,101 @@ if (queries.length === 0) {
 }
 
 (async () => {
-  try {
-    const loader = new DefaultTestFileLoader();
-    assert(queries.length === 1, 'currently, there must be exactly one query on the cmd line');
-    const testcases = await loader.loadCases(parseQuery(queries[0]));
+  const loader = new DefaultTestFileLoader();
+  assert(queries.length === 1, 'currently, there must be exactly one query on the cmd line');
+  const filterQuery = parseQuery(queries[0]);
+  const testcases = await loader.loadCases(filterQuery);
+  const expectations = parseExpectationsForTestQuery(
+  await (loadWebGPUExpectations ?? []),
+  filterQuery);
 
-    const log = new Logger(debug);
 
-    const failed = [];
-    const warned = [];
-    const skipped = [];
+  Logger.globalDebugMode = debug;
+  const log = new Logger();
 
-    let total = 0;
+  const failed = [];
+  const warned = [];
+  const skipped = [];
 
-    for (const testcase of testcases) {
-      const name = testcase.query.toString();
-      const [rec, res] = log.record(name);
-      await testcase.run(rec);
+  let total = 0;
 
-      if (verbose) {
-        printResults([[name, res]]);
-      }
+  for (const testcase of testcases) {
+    const name = testcase.query.toString();
+    const [rec, res] = log.record(name);
+    await testcase.run(rec, expectations);
 
-      total++;
-      switch (res.status) {
-        case 'pass':
-          break;
-        case 'fail':
-          failed.push([name, res]);
-          break;
-        case 'warn':
-          warned.push([name, res]);
-          break;
-        case 'skip':
-          skipped.push([name, res]);
-          break;
-        default:
-          unreachable('unrecognized status');}
-
+    if (verbose) {
+      printResults([[name, res]]);
     }
 
-    assert(total > 0, 'found no tests!');
+    total++;
+    switch (res.status) {
+      case 'pass':
+        break;
+      case 'fail':
+        failed.push([name, res]);
+        break;
+      case 'warn':
+        warned.push([name, res]);
+        break;
+      case 'skip':
+        skipped.push([name, res]);
+        break;
+      default:
+        unreachable('unrecognized status');}
 
-    // TODO: write results out somewhere (a file?)
-    if (printJSON) {
-      console.log(log.asJSON(2));
-    }
+  }
 
-    if (skipped.length) {
-      console.log('');
-      console.log('** Skipped **');
-      printResults(skipped);
-    }
-    if (warned.length) {
-      console.log('');
-      console.log('** Warnings **');
-      printResults(warned);
-    }
-    if (failed.length) {
-      console.log('');
-      console.log('** Failures **');
-      printResults(failed);
-    }
+  assert(total > 0, 'found no tests!');
 
-    const passed = total - warned.length - failed.length - skipped.length;
-    const pct = x => (100 * x / total).toFixed(2);
-    const rpt = x => {
-      const xs = x.toString().padStart(1 + Math.log10(total), ' ');
-      return `${xs} / ${total} = ${pct(x).padStart(6, ' ')}%`;
-    };
+  // TODO: write results out somewhere (a file?)
+  if (printJSON) {
+    console.log(log.asJSON(2));
+  }
+
+  if (skipped.length) {
     console.log('');
-    console.log(`** Summary **
+    console.log('** Skipped **');
+    printResults(skipped);
+  }
+  if (warned.length) {
+    console.log('');
+    console.log('** Warnings **');
+    printResults(warned);
+  }
+  if (failed.length) {
+    console.log('');
+    console.log('** Failures **');
+    printResults(failed);
+  }
+
+  const passed = total - warned.length - failed.length - skipped.length;
+  const pct = x => (100 * x / total).toFixed(2);
+  const rpt = x => {
+    const xs = x.toString().padStart(1 + Math.log10(total), ' ');
+    return `${xs} / ${total} = ${pct(x).padStart(6, ' ')}%`;
+  };
+  console.log('');
+  console.log(`** Summary **
 Passed  w/o warnings = ${rpt(passed)}
 Passed with warnings = ${rpt(warned.length)}
 Skipped              = ${rpt(skipped.length)}
 Failed               = ${rpt(failed.length)}`);
 
-    if (failed.length || warned.length) {
-      process.exit(1);
-    }
-  } catch (ex) {
-    console.log(ex);
+  if (failed.length || warned.length) {
     process.exit(1);
   }
-})();
+})().catch(ex => {
+  console.log(ex.stack ?? ex.toString());
+  process.exit(1);
+});
 
 function printResults(results) {
   for (const [name, r] of results) {
     console.log(`[${r.status}] ${name} (${r.timems}ms). Log:`);
     if (r.logs) {
       for (const l of r.logs) {
-        console.log('  - ' + l.toJSON().replace(/\n/g, '\n    '));
+        console.log(prettyPrintLog(l));
       }
     }
   }

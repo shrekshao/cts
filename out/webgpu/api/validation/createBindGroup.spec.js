@@ -1,19 +1,19 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
-createBindGroup validation tests.
+  createBindGroup validation tests.
 
-TODO: review existing tests, write descriptions, and make sure tests are complete.
-`;import { poptions, params } from '../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { unreachable } from '../../../common/framework/util/util.js';
+  TODO: Ensure sure tests cover all createBindGroup validation rules.
+`;import { makeTestGroup } from '../../../common/framework/test_group.js';
+import { unreachable } from '../../../common/util/util.js';
 import {
-kBindingTypes,
-kBindingTypeInfo,
+allBindingEntries,
+bindingTypeInfo,
 kBindableResources,
 kTextureUsages,
-kTextureBindingTypes,
-kTextureBindingTypeInfo } from
+kTextureViewDimensions,
+sampledAndStorageBindingEntries,
+texBindingTypeInfo } from
 '../../capability_info.js';
 import { GPUConst } from '../../constants.js';
 
@@ -25,105 +25,133 @@ function clone(descriptor) {
 
 export const g = makeTestGroup(ValidationTest);
 
-g.test('binding_count_mismatch').fn(async t => {
+g.test('binding_count_mismatch').
+desc('Test that the number of entries must match the number of entries in the BindGroupLayout.').
+paramsSubcasesOnly((u) =>
+u //
+.combine('layoutEntryCount', [1, 2, 3]).
+combine('bindGroupEntryCount', [1, 2, 3])).
+
+fn(async t => {
+  const { layoutEntryCount, bindGroupEntryCount } = t.params;
+
+  const layoutEntries = [];
+  for (let i = 0; i < layoutEntryCount; ++i) {
+    layoutEntries.push({
+      binding: i,
+      visibility: GPUShaderStage.COMPUTE,
+      buffer: { type: 'storage' } });
+
+  }
+  const bindGroupLayout = t.device.createBindGroupLayout({ entries: layoutEntries });
+
+  const entries = [];
+  for (let i = 0; i < bindGroupEntryCount; ++i) {
+    entries.push({
+      binding: i,
+      resource: { buffer: t.getStorageBuffer() } });
+
+  }
+
+  const shouldError = layoutEntryCount !== bindGroupEntryCount;
+  t.expectValidationError(() => {
+    t.device.createBindGroup({
+      entries,
+      layout: bindGroupLayout });
+
+  }, shouldError);
+});
+
+g.test('binding_must_be_present_in_layout').
+desc(
+'Test that the binding slot for each entry matches a binding slot defined in the BindGroupLayout.').
+
+paramsSubcasesOnly((u) =>
+u //
+.combine('layoutBinding', [0, 1, 2]).
+combine('binding', [0, 1, 2])).
+
+fn(async t => {
+  const { layoutBinding, binding } = t.params;
+
   const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, type: 'storage-buffer' }] });
-
-
-  const goodDescriptor = {
-    entries: [{ binding: 0, resource: { buffer: t.getStorageBuffer() } }],
-    layout: bindGroupLayout };
-
-
-  // Control case
-  t.device.createBindGroup(goodDescriptor);
-
-  // Another binding is not expected.
-  const badDescriptor = {
     entries: [
-    { binding: 0, resource: { buffer: t.getStorageBuffer() } },
-    // Another binding is added.
-    { binding: 1, resource: { buffer: t.getStorageBuffer() } }],
+    { binding: layoutBinding, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }] });
 
+
+
+  const descriptor = {
+    entries: [{ binding, resource: { buffer: t.getStorageBuffer() } }],
     layout: bindGroupLayout };
 
 
+  const shouldError = layoutBinding !== binding;
   t.expectValidationError(() => {
-    t.device.createBindGroup(badDescriptor);
-  });
+    t.device.createBindGroup(descriptor);
+  }, shouldError);
 });
 
-g.test('binding_must_be_present_in_layout').fn(async t => {
-  const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, type: 'storage-buffer' }] });
+g.test('binding_must_contain_resource_defined_in_layout').
+desc(
+'Test that only compatible resource types specified in the BindGroupLayout are allowed for each entry.').
 
-
-  const goodDescriptor = {
-    entries: [{ binding: 0, resource: { buffer: t.getStorageBuffer() } }],
-    layout: bindGroupLayout };
-
-
-  // Control case
-  t.device.createBindGroup(goodDescriptor);
-
-  // Binding index 0 must be present.
-  const badDescriptor = {
-    entries: [{ binding: 1, resource: { buffer: t.getStorageBuffer() } }],
-    layout: bindGroupLayout };
-
-
-  t.expectValidationError(() => {
-    t.device.createBindGroup(badDescriptor);
-  });
-});
-
-g.test('buffer_binding_must_contain_exactly_one_buffer_of_its_type').
-params(
-params().
-combine(poptions('bindingType', kBindingTypes)).
-combine(poptions('resourceType', kBindableResources))).
+paramsSubcasesOnly((u) =>
+u //
+.combine('resourceType', kBindableResources).
+combine('entry', allBindingEntries(false))).
 
 fn(t => {
-  const { bindingType, resourceType } = t.params;
-  const info = kBindingTypeInfo[bindingType];
+  const { resourceType, entry } = t.params;
+  const info = bindingTypeInfo(entry);
 
-  const storageTextureFormat = info.resource === 'storageTex' ? 'rgba8unorm' : undefined;
   const layout = t.device.createBindGroupLayout({
-    entries: [
-    { binding: 0, visibility: GPUShaderStage.COMPUTE, type: bindingType, storageTextureFormat }] });
-
+    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, ...entry }] });
 
 
   const resource = t.getBindingResource(resourceType);
 
-  const resourceBindingMatches = info.resource === resourceType;
+  let resourceBindingIsCompatible;
+  switch (resourceType) {
+    // Either type of sampler may be bound to a filtering sampler binding.
+    case 'filtSamp':
+      resourceBindingIsCompatible =
+      info.resource === 'filtSamp' || info.resource === 'nonFiltSamp';
+      break;
+    // But only non-filtering samplers can be used with non-filtering sampler bindings.
+    case 'nonFiltSamp':
+      resourceBindingIsCompatible = info.resource === 'nonFiltSamp';
+      break;
+    default:
+      resourceBindingIsCompatible = info.resource === resourceType;
+      break;}
+
   t.expectValidationError(() => {
     t.device.createBindGroup({ layout, entries: [{ binding: 0, resource }] });
-  }, !resourceBindingMatches);
+  }, !resourceBindingIsCompatible);
 });
 
 g.test('texture_binding_must_have_correct_usage').
-params(
-params().
-combine(poptions('type', kTextureBindingTypes)).
-combine(poptions('usage', kTextureUsages)).
-unless(({ type, usage }) => {
-  const info = kTextureBindingTypeInfo[type];
+desc('Tests that texture bindings must have the correct usage.').
+paramsSubcasesOnly((u) =>
+u //
+.combine('entry', sampledAndStorageBindingEntries(false)).
+combine('usage', kTextureUsages).
+unless(({ entry, usage }) => {
+  const info = texBindingTypeInfo(entry);
   // Can't create the texture for this (usage=STORAGE and sampleCount=4), so skip.
   return usage === GPUConst.TextureUsage.STORAGE && info.resource === 'sampledTexMS';
 })).
 
 fn(async t => {
-  const { type, usage } = t.params;
-  const info = kTextureBindingTypeInfo[type];
+  const { entry, usage } = t.params;
+  const info = texBindingTypeInfo(entry);
 
-  const storageTextureFormat = info.resource === 'storageTex' ? 'rgba8unorm' : undefined;
   const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, type, storageTextureFormat }] });
+    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, ...entry }] });
 
 
   const descriptor = {
-    size: { width: 16, height: 16, depth: 1 },
+    size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
     usage,
     sampleCount: info.resource === 'sampledTexMS' ? 4 : 1 };
@@ -140,35 +168,39 @@ fn(async t => {
 });
 
 g.test('texture_must_have_correct_component_type').
-params(poptions('textureComponentType', ['float', 'sint', 'uint'])).
+desc(
+`
+    Tests that texture bindings must have a format that matches the sample type specified in the BindGroupLayout.
+    - Tests a compatible format for every sample type
+    - Tests an incompatible format for every sample type`).
+
+params(u => u.combine('sampleType', ['float', 'sint', 'uint'])).
 fn(async t => {
-  const { textureComponentType } = t.params;
+  const { sampleType } = t.params;
 
   const bindGroupLayout = t.device.createBindGroupLayout({
     entries: [
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      type: 'sampled-texture',
-      textureComponentType }] });
+      texture: { sampleType } }] });
 
 
 
 
-  // TODO: Test more texture component types.
   let format;
-  if (textureComponentType === 'float') {
+  if (sampleType === 'float') {
     format = 'r8unorm';
-  } else if (textureComponentType === 'sint') {
+  } else if (sampleType === 'sint') {
     format = 'r8sint';
-  } else if (textureComponentType === 'uint') {
+  } else if (sampleType === 'uint') {
     format = 'r8uint';
   } else {
     unreachable('Unexpected texture component type');
   }
 
   const goodDescriptor = {
-    size: { width: 16, height: 16, depth: 1 },
+    size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format,
     usage: GPUTextureUsage.SAMPLED };
 
@@ -185,13 +217,13 @@ fn(async t => {
 
 
   function* mismatchedTextureFormats() {
-    if (textureComponentType !== 'float') {
+    if (sampleType !== 'float') {
       yield 'r8unorm';
     }
-    if (textureComponentType !== 'sint') {
+    if (sampleType !== 'sint') {
       yield 'r8sint';
     }
-    if (textureComponentType !== 'uint') {
+    if (sampleType !== 'uint') {
       yield 'r8uint';
     }
   }
@@ -210,50 +242,56 @@ fn(async t => {
   }
 });
 
-// TODO: Write test for all dimensions.
-g.test('texture_must_have_correct_dimension').fn(async t => {
+g.test('texture_must_have_correct_dimension').
+desc(
+`
+    Test that bound texture views match the dimensions supplied in the BindGroupLayout
+    - Test for every GPUTextureViewDimension`).
+
+params((u) =>
+u.
+combine('viewDimension', kTextureViewDimensions).
+beginSubcases().
+combine('dimension', kTextureViewDimensions)).
+
+fn(async t => {
+  const { viewDimension, dimension } = t.params;
   const bindGroupLayout = t.device.createBindGroupLayout({
     entries: [
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      type: 'sampled-texture',
-      viewDimension: '2d' }] });
+      texture: { viewDimension } }] });
 
 
 
 
-  const goodDescriptor = {
-    size: { width: 16, height: 16, depth: 1 },
+  const texture = t.device.createTexture({
+    size: { width: 16, height: 16, depthOrArrayLayers: 6 },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.SAMPLED };
+    usage: GPUTextureUsage.SAMPLED });
 
 
-  // Control case
-  t.device.createBindGroup({
-    entries: [{ binding: 0, resource: t.device.createTexture(goodDescriptor).createView() }],
-    layout: bindGroupLayout });
-
-
-  // Mismatched texture binding formats are not valid.
-  const badDescriptor = clone(goodDescriptor);
-  badDescriptor.size.depth = 2;
+  const shouldError = viewDimension !== dimension;
+  const arrayLayerCount = dimension === '2d' ? 1 : undefined;
+  const textureView = texture.createView({ dimension, arrayLayerCount });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
-      entries: [{ binding: 0, resource: t.device.createTexture(badDescriptor).createView() }],
+      entries: [{ binding: 0, resource: textureView }],
       layout: bindGroupLayout });
 
-  });
+  }, shouldError);
 });
 
 g.test('buffer_offset_and_size_for_bind_groups_match').
 desc(
-`TODO: describe
+`
+    Test that a buffer binding's [offset, offset + size) must be contained in the BindGroup entry's buffer.
+    - Test for various offsets and sizes
+    - TODO(#234): disallow zero-sized bindings`).
 
-TODO(#234): disallow zero-sized bindings`).
-
-params([
+paramsSubcasesOnly([
 { offset: 0, size: 512, _success: true }, // offset 0 is valid
 { offset: 256, size: 256, _success: true }, // offset 256 (aligned) is valid
 
@@ -284,7 +322,7 @@ fn(async t => {
   const { offset, size, _success } = t.params;
 
   const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, type: 'storage-buffer' }] });
+    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }] });
 
 
   const buffer = t.device.createBuffer({
@@ -311,5 +349,52 @@ fn(async t => {
       t.device.createBindGroup(descriptor);
     });
   }
+});
+
+g.test('minBindingSize').
+desc('Tests that minBindingSize is correctly enforced.').
+paramsSubcasesOnly((u) =>
+u //
+.combine('minBindingSize', [undefined, 4, 256]).
+expand('size', ({ minBindingSize }) =>
+minBindingSize !== undefined ?
+[minBindingSize - 1, minBindingSize, minBindingSize + 1] :
+[4, 256])).
+
+
+fn(t => {
+  const { size, minBindingSize } = t.params;
+
+  const bindGroupLayout = t.device.createBindGroupLayout({
+    entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.FRAGMENT,
+      buffer: {
+        type: 'storage',
+        minBindingSize } }] });
+
+
+
+
+
+  const storageBuffer = t.device.createBuffer({
+    size,
+    usage: GPUBufferUsage.STORAGE });
+
+
+  t.expectValidationError(() => {
+    t.device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: storageBuffer } }] });
+
+
+
+
+  }, minBindingSize !== undefined && size < minBindingSize);
 });
 //# sourceMappingURL=createBindGroup.spec.js.map
