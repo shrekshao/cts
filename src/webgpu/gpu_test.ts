@@ -251,6 +251,8 @@ export class GPUTest extends Fixture {
     const mapped = new type(mappable.getMappedRange(mapOffset, mapSize));
     const data = mapped.subarray(subarrayStart, typedLength) as T;
 
+    console.log(mapped);
+
     return {
       data,
       cleanup() {
