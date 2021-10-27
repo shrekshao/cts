@@ -104,7 +104,16 @@ export function rejectOnTimeout(ms, msg) {
    * and otherwise passes the result through.
    */
 export function raceWithRejectOnTimeout(p, ms, msg) {
-  return Promise.race([p, rejectOnTimeout(ms, msg)]);
+  // Setup a promise that will reject after `ms` milliseconds. We cancel this timeout when
+  // `p` is finalized, so the JavaScript VM doesn't hang around waiting for the timer to
+  // complete, once the test runner has finished executing the tests.
+  const timeoutPromise = new Promise((_resolve, reject) => {
+    const handle = timeout(() => {
+      reject(new PromiseTimeoutError(msg));
+    }, ms);
+    p = p.finally(() => clearTimeout(handle));
+  });
+  return Promise.race([p, timeoutPromise]);
 }
 
 /**
@@ -153,5 +162,61 @@ export function* iterRange(n, fn) {
   for (let i = 0; i < n; ++i) {
     yield fn(i);
   }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function subarrayAsU8(
+buf,
+{ start = 0, length })
+{
+  if (buf instanceof ArrayBuffer) {
+    return new Uint8Array(buf, start, length);
+  } else {
+    const sub = buf.subarray(start, length !== undefined ? start + length : undefined);
+    return new Uint8Array(sub.buffer, sub.byteOffset, sub.byteLength);
+  }
+}
+
+/**
+   * Copy a range of bytes from one ArrayBuffer or TypedArray to another.
+   *
+   * `start`/`length` are in elements (or in bytes, if ArrayBuffer).
+   */
+export function memcpy(
+src,
+dst)
+{
+  subarrayAsU8(dst.dst, dst).set(subarrayAsU8(src.src, src));
 }
 //# sourceMappingURL=util.js.map

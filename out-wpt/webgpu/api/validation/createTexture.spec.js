@@ -10,6 +10,7 @@ import {
   kTextureDimensions,
   kTextureUsages,
   kUncompressedTextureFormats,
+  kRegularTextureFormats,
   textureDimensionAndFormatCompatible,
 } from '../../capability_info.js';
 import { DefaultLimits, GPUConst } from '../../constants.js';
@@ -64,7 +65,7 @@ g.test('zero_size')
       mipLevelCount,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success = zeroArgument === 'none';
@@ -93,7 +94,7 @@ g.test('dimension_type_and_format_compatibility')
       size: [info.blockWidth, info.blockHeight, 1],
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     t.expectValidationError(() => {
@@ -130,7 +131,7 @@ g.test('mipLevelCount,format')
       mipLevelCount,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success = mipLevelCount <= 6;
@@ -184,7 +185,7 @@ g.test('mipLevelCount,bound_check')
       mipLevelCount: 0,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const mipLevelCount = maxMipLevelCount(descriptor);
@@ -204,7 +205,7 @@ g.test('mipLevelCount,bound_check,bigger_than_integer_bit_width')
       size: [32, 32],
       mipLevelCount: 100,
       format: 'rgba8unorm',
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     t.expectValidationError(() => {
@@ -232,7 +233,7 @@ g.test('sampleCount,various_sampleCount_with_all_formats')
       sampleCount,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -247,7 +248,7 @@ g.test('sampleCount,valid_sampleCount_with_other_parameter_varies')
   .desc(
     `Test texture creation with valid sample count when dimensions, arrayLayerCount, mipLevelCount, format, and usage varies.
      Texture can be single sample (sampleCount is 1) or multi-sample (sampleCount is 4).
-     Multisample texture requires that 1) its dimension is 2d or undefined, 2) its format supports multisample, 3) its mipLevelCount and arrayLayerCount are 1, 4) its usage doesn't include STORAGE.`
+     Multisample texture requires that 1) its dimension is 2d or undefined, 2) its format supports multisample, 3) its mipLevelCount and arrayLayerCount are 1, 4) its usage doesn't include STORAGE_BINDING.`
   )
   .params(u =>
     u
@@ -268,7 +269,7 @@ g.test('sampleCount,valid_sampleCount_with_other_parameter_varies')
         const info = kTextureFormatInfo[format];
         return (
           ((usage & GPUConst.TextureUsage.RENDER_ATTACHMENT) !== 0 && !info.renderable) ||
-          ((usage & GPUConst.TextureUsage.STORAGE) !== 0 && !info.storage)
+          ((usage & GPUConst.TextureUsage.STORAGE_BINDING) !== 0 && !info.storage)
         );
       })
   )
@@ -298,7 +299,7 @@ g.test('sampleCount,valid_sampleCount_with_other_parameter_varies')
         kTextureFormatInfo[format].multisample &&
         mipLevelCount === 1 &&
         arrayLayerCount === 1 &&
-        (usage & GPUConst.TextureUsage.STORAGE) === 0);
+        (usage & GPUConst.TextureUsage.STORAGE_BINDING) === 0);
 
     t.expectValidationError(() => {
       t.device.createTexture(descriptor);
@@ -327,7 +328,7 @@ g.test('texture_size,default_value_and_smallest_size,uncompressed_format')
       size,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     t.device.createTexture(descriptor);
@@ -365,7 +366,7 @@ g.test('texture_size,default_value_and_smallest_size,compressed_format')
       size,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     t.expectValidationError(() => {
@@ -395,7 +396,7 @@ g.test('texture_size,1d_texture')
       size: [width, height, depthOrArrayLayers],
       dimension: '1d',
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -435,7 +436,7 @@ g.test('texture_size,2d_texture,uncompressed_format')
       size,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -505,7 +506,7 @@ g.test('texture_size,2d_texture,compressed_format')
       size,
       dimension,
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -521,10 +522,12 @@ g.test('texture_size,2d_texture,compressed_format')
   });
 
 g.test('texture_size,3d_texture,uncompressed_format')
-  .desc(`Test texture size requirement for 3D texture with uncompressed format.`)
+  .desc(
+    `Test texture size requirement for 3D texture with uncompressed format. Note that depth/stencil formats are invalid for 3D textures, so we only test regular formats.`
+  )
   .paramsSubcasesOnly(u =>
     u //
-      .combine('format', kUncompressedTextureFormats)
+      .combine('format', kRegularTextureFormats)
       .combine('size', [
         // Test the bound of width
         [DefaultLimits.maxTextureDimension3D - 1, 1, 1],
@@ -548,7 +551,7 @@ g.test('texture_size,3d_texture,uncompressed_format')
       size,
       dimension: '3d',
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -621,7 +624,7 @@ g.test('texture_size,3d_texture,compressed_format')
       size,
       dimension: '3d',
       format,
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     };
 
     const success =
@@ -669,7 +672,7 @@ g.test('texture_usage')
     // Note that we unconditionally test copy usages for all formats. We don't check copySrc/copyDst in kTextureFormatInfo in capability_info.js
     // if (!info.copySrc && (usage & GPUTextureUsage.COPY_SRC) !== 0) success = false;
     // if (!info.copyDst && (usage & GPUTextureUsage.COPY_DST) !== 0) success = false;
-    if (!info.storage && (usage & GPUTextureUsage.STORAGE) !== 0) success = false;
+    if (!info.storage && (usage & GPUTextureUsage.STORAGE_BINDING) !== 0) success = false;
     if (!info.renderable && (usage & GPUTextureUsage.RENDER_ATTACHMENT) !== 0) success = false;
 
     t.expectValidationError(() => {

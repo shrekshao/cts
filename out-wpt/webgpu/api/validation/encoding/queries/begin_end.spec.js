@@ -18,11 +18,7 @@ TODO: tests for pipeline statistics queries:
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { ValidationTest } from '../../validation_test.js';
 
-import {
-  beginRenderPassWithQuerySet,
-  createQuerySetWithType,
-  createRenderEncoderWithQuerySet,
-} from './common.js';
+import { beginRenderPassWithQuerySet, createQuerySetWithType } from './common.js';
 
 export const g = makeTestGroup(ValidationTest);
 
@@ -42,19 +38,17 @@ Tests that begin/end occlusion queries mismatch on render pass:
   ])
   .fn(async t => {
     const { begin, end } = t.params;
-    const querySet = createQuerySetWithType(t, 'occlusion', 2);
 
-    const encoder = createRenderEncoderWithQuerySet(t, querySet);
+    const occlusionQuerySet = createQuerySetWithType(t, 'occlusion', 2);
+
+    const encoder = t.createEncoder('render pass', { occlusionQuerySet });
     for (let i = 0; i < begin; i++) {
       encoder.encoder.beginOcclusionQuery(i);
     }
     for (let j = 0; j < end; j++) {
       encoder.encoder.endOcclusionQuery();
     }
-
-    t.expectValidationError(() => {
-      encoder.finish();
-    }, begin !== end);
+    encoder.validateFinishAndSubmit(begin === end, true);
   });
 
 g.test('occlusion_query,begin_end_invalid_nesting')
@@ -72,21 +66,19 @@ Tests the invalid nesting of begin/end occlusion queries:
     { calls: [0, 1, 'end', 'end'], _valid: false },
   ])
   .fn(async t => {
-    const querySet = createQuerySetWithType(t, 'occlusion', 2);
+    const { calls, _valid } = t.params;
 
-    const encoder = createRenderEncoderWithQuerySet(t, querySet);
+    const occlusionQuerySet = createQuerySetWithType(t, 'occlusion', 2);
 
-    for (const i of t.params.calls) {
+    const encoder = t.createEncoder('render pass', { occlusionQuerySet });
+    for (const i of calls) {
       if (i !== 'end') {
         encoder.encoder.beginOcclusionQuery(i);
       } else {
         encoder.encoder.endOcclusionQuery();
       }
     }
-
-    t.expectValidationError(() => {
-      encoder.finish();
-    }, !t.params._valid);
+    encoder.validateFinishAndSubmit(_valid, true);
   });
 
 g.test('occlusion_query,disjoint_queries_with_same_query_index')

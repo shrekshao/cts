@@ -77,7 +77,7 @@ g.test('depth_compare_func')
     const depthTexture = t.device.createTexture({
       size: { width: 1, height: 1 },
       format,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
 
     const depthTextureView = depthTexture.createView();
@@ -86,16 +86,9 @@ g.test('depth_compare_func')
       vertex: {
         module: t.device.createShaderModule({
           code: `
-            struct Output {
-              [[builtin(position)]] Position : vec4<f32>;
-              [[location(0)]] color : vec4<f32>;
-            };
-
             [[stage(vertex)]] fn main(
-              [[builtin(vertex_index)]] VertexIndex : u32) -> Output {
-              var output : Output;
-              output.Position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
-              return output;
+              [[builtin(vertex_index)]] VertexIndex : u32) -> [[builtin(position)]] vec4<f32> {
+              return vec4<f32>(0.5, 0.5, 0.5, 1.0);
             }
             `,
         }),
@@ -180,7 +173,7 @@ g.test('reverse_depth')
     const depthTexture = t.device.createTexture({
       size: { width: 1, height: 1 },
       format: depthBufferFormat,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     });
 
     const depthTextureView = depthTexture.createView();

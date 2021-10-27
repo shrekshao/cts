@@ -72,8 +72,12 @@
 						<section class="tsd-index-section ">
 							<h3>Functions</h3>
 							<ul class="tsd-index-list">
+								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#gettexturedimensionfromview" class="tsd-kind-icon">get<wbr>Texture<wbr>Dimension<wbr>From<wbr>View</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#maxmiplevelcount" class="tsd-kind-icon">max<wbr>Mip<wbr>Level<wbr>Count</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#physicalmipsize" class="tsd-kind-icon">physical<wbr>Mip<wbr>Size</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#reifytexturedescriptor" class="tsd-kind-icon">reify<wbr>Texture<wbr>Descriptor</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#reifytextureviewdescriptor" class="tsd-kind-icon">reify<wbr>Texture<wbr>View<wbr>Descriptor</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#viewdimensionsfortexturedimension" class="tsd-kind-icon">view<wbr>Dimensions<wbr>For<wbr>Texture<wbr>Dimension</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_texture_base.html#virtualmipsize" class="tsd-kind-icon">virtual<wbr>Mip<wbr>Size</a></li>
 							</ul>
 						</section>
@@ -82,6 +86,35 @@
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Functions</h2>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
+					<a name="gettexturedimensionfromview" class="tsd-anchor"></a>
+					<h3>get<wbr>Texture<wbr>Dimension<wbr>From<wbr>View</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
+						<li class="tsd-signature tsd-kind-icon">get<wbr>Texture<wbr>Dimension<wbr>From<wbr>View<span class="tsd-signature-symbol">(</span>viewDimension<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUTextureViewDimension</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">&quot;1d&quot;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">&quot;2d&quot;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">&quot;3d&quot;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L75">src/webgpu/util/texture/base.ts:75</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Get texture dimension from view dimension in order to create an compatible texture for a given
+									view dimension.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>viewDimension: <span class="tsd-signature-type">GPUTextureViewDimension</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">&quot;1d&quot;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">&quot;2d&quot;</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">&quot;3d&quot;</span></h4>
+						</li>
+					</ul>
+				</section>
 				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
 					<a name="maxmiplevelcount" class="tsd-anchor"></a>
 					<h3>max<wbr>Mip<wbr>Level<wbr>Count</h3>
@@ -92,7 +125,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/4ab1145/src/webgpu/util/texture/base.ts#L9">src/webgpu/util/texture/base.ts:9</a></li>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L9">src/webgpu/util/texture/base.ts:9</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -128,7 +161,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/4ab1145/src/webgpu/util/texture/base.ts#L29">src/webgpu/util/texture/base.ts:29</a></li>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L29">src/webgpu/util/texture/base.ts:29</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -157,6 +190,93 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
+					<a name="reifytexturedescriptor" class="tsd-anchor"></a>
+					<h3>reify<wbr>Texture<wbr>Descriptor</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
+						<li class="tsd-signature tsd-kind-icon">reify<wbr>Texture<wbr>Descriptor<span class="tsd-signature-symbol">(</span>desc<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Required</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;label&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L104">src/webgpu/util/texture/base.ts:104</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Reifies the optional fields of <code>GPUTextureDescriptor</code>.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>desc: <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">&gt;</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Required</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;label&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
+					<a name="reifytextureviewdescriptor" class="tsd-anchor"></a>
+					<h3>reify<wbr>Texture<wbr>View<wbr>Descriptor</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
+						<li class="tsd-signature tsd-kind-icon">reify<wbr>Texture<wbr>View<wbr>Descriptor<span class="tsd-signature-symbol">(</span>textureDescriptor<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">&gt;</span>, view<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureViewDescriptor</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Required</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureViewDescriptor</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;label&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L111">src/webgpu/util/texture/base.ts:111</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Reifies the optional fields of <code>GPUTextureViewDescriptor</code> (given a <code>GPUTextureDescriptor</code>).</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>textureDescriptor: <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureDescriptor</span><span class="tsd-signature-symbol">&gt;</span></h5>
+								</li>
+								<li>
+									<h5>view: <span class="tsd-signature-type">Readonly</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureViewDescriptor</span><span class="tsd-signature-symbol">&gt;</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Required</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Omit</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">GPUTextureViewDescriptor</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;label&quot;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
+					<a name="viewdimensionsfortexturedimension" class="tsd-anchor"></a>
+					<h3>view<wbr>Dimensions<wbr>For<wbr>Texture<wbr>Dimension</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
+						<li class="tsd-signature tsd-kind-icon">view<wbr>Dimensions<wbr>For<wbr>Texture<wbr>Dimension<span class="tsd-signature-symbol">(</span>textureDimension<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUTextureDimension</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;1d&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;2d&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;2d-array&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;cube&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;cube-array&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;3d&quot;</span><span class="tsd-signature-symbol">]</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L92">src/webgpu/util/texture/base.ts:92</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns the possible valid view dimensions for a given texture dimension.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>textureDimension: <span class="tsd-signature-type">GPUTextureDimension</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;1d&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;2d&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;2d-array&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;cube&quot;</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">&quot;cube-array&quot;</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">readonly </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">&quot;3d&quot;</span><span class="tsd-signature-symbol">]</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
 					<a name="virtualmipsize" class="tsd-anchor"></a>
 					<h3>virtual<wbr>Mip<wbr>Size</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
@@ -166,7 +286,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/4ab1145/src/webgpu/util/texture/base.ts#L52">src/webgpu/util/texture/base.ts:52</a></li>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/texture/base.ts#L52">src/webgpu/util/texture/base.ts:52</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -206,10 +326,22 @@
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
 					<li class=" tsd-kind-function tsd-parent-kind-module">
+						<a href="webgpu_util_texture_base.html#gettexturedimensionfromview" class="tsd-kind-icon">get<wbr>Texture<wbr>Dimension<wbr>From<wbr>View</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="webgpu_util_texture_base.html#maxmiplevelcount" class="tsd-kind-icon">max<wbr>Mip<wbr>Level<wbr>Count</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="webgpu_util_texture_base.html#physicalmipsize" class="tsd-kind-icon">physical<wbr>Mip<wbr>Size</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-module">
+						<a href="webgpu_util_texture_base.html#reifytexturedescriptor" class="tsd-kind-icon">reify<wbr>Texture<wbr>Descriptor</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-module">
+						<a href="webgpu_util_texture_base.html#reifytextureviewdescriptor" class="tsd-kind-icon">reify<wbr>Texture<wbr>View<wbr>Descriptor</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-module">
+						<a href="webgpu_util_texture_base.html#viewdimensionsfortexturedimension" class="tsd-kind-icon">view<wbr>Dimensions<wbr>For<wbr>Texture<wbr>Dimension</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="webgpu_util_texture_base.html#virtualmipsize" class="tsd-kind-icon">virtual<wbr>Mip<wbr>Size</a>
@@ -232,15 +364,14 @@
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
-				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
-				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
-			</ul>
-			<ul class="tsd-legend">
 				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
 				<li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
 			</ul>
 		</div>
 	</div>

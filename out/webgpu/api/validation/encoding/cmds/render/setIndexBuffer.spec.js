@@ -4,13 +4,10 @@
 Validation tests for setIndexBuffer on render pass and render bundle.
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUConst } from '../../../../../constants.js';
+import { kResourceStates } from '../../../../../gpu_test.js';
 import { ValidationTest } from '../../../validation_test.js';
 
-import {
-kRenderEncodeTypeParams,
-kBufferStates,
-buildBufferOffsetAndSizeOOBTestParams } from
-'./render.js';
+import { kRenderEncodeTypeParams, buildBufferOffsetAndSizeOOBTestParams } from './render.js';
 
 export const g = makeTestGroup(ValidationTest);
 
@@ -20,7 +17,22 @@ desc(
 Tests index buffer must be valid.
   `).
 
-paramsSubcasesOnly(kRenderEncodeTypeParams.combine('state', kBufferStates)).
+paramsSubcasesOnly(kRenderEncodeTypeParams.combine('state', kResourceStates)).
+fn(t => {
+  const { encoderType, state } = t.params;
+  const indexBuffer = t.createBufferWithState(state, {
+    size: 16,
+    usage: GPUBufferUsage.INDEX });
+
+
+  const { encoder, validateFinishAndSubmitGivenState } = t.createEncoder(encoderType);
+  encoder.setIndexBuffer(indexBuffer, 'uint32');
+  validateFinishAndSubmitGivenState(state);
+});
+
+g.test('index_buffer,device_mismatch').
+desc('Tests setIndexBuffer cannot be called with an index buffer created from another device').
+paramsSubcasesOnly(kRenderEncodeTypeParams.combine('mismatched', [true, false])).
 unimplemented();
 
 g.test('index_buffer_usage').
@@ -36,7 +48,17 @@ GPUConst.BufferUsage.COPY_DST,
 GPUConst.BufferUsage.COPY_DST | GPUConst.BufferUsage.INDEX])).
 
 
-unimplemented();
+fn(t => {
+  const { encoderType, usage } = t.params;
+  const indexBuffer = t.device.createBuffer({
+    size: 16,
+    usage });
+
+
+  const { encoder, validateFinish } = t.createEncoder(encoderType);
+  encoder.setIndexBuffer(indexBuffer, 'uint32');
+  validateFinish((usage & GPUBufferUsage.INDEX) !== 0);
+});
 
 g.test('offset_alignment').
 desc(
@@ -51,7 +73,20 @@ expand('offset', p => {
   return p.indexFormat === 'uint16' ? [0, 1, 2] : [0, 2, 4];
 })).
 
-unimplemented();
+fn(t => {
+  const { encoderType, indexFormat, offset } = t.params;
+  const indexBuffer = t.device.createBuffer({
+    size: 16,
+    usage: GPUBufferUsage.INDEX });
+
+
+  const { encoder, validateFinish } = t.createEncoder(encoderType);
+  encoder.setIndexBuffer(indexBuffer, indexFormat, offset);
+
+  const alignment =
+  indexFormat === 'uint16' ? Uint16Array.BYTES_PER_ELEMENT : Uint32Array.BYTES_PER_ELEMENT;
+  validateFinish(offset % alignment === 0);
+});
 
 g.test('offset_and_size_oob').
 desc(
@@ -60,5 +95,15 @@ Tests offset and size cannot be larger than index buffer size.
   `).
 
 paramsSubcasesOnly(buildBufferOffsetAndSizeOOBTestParams(4, 256)).
-unimplemented();
+fn(t => {
+  const { encoderType, offset, size, _valid } = t.params;
+  const indexBuffer = t.device.createBuffer({
+    size: 256,
+    usage: GPUBufferUsage.INDEX });
+
+
+  const { encoder, validateFinish } = t.createEncoder(encoderType);
+  encoder.setIndexBuffer(indexBuffer, 'uint32', offset, size);
+  validateFinish(_valid);
+});
 //# sourceMappingURL=setIndexBuffer.spec.js.map

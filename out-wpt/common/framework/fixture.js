@@ -24,6 +24,7 @@ export class Fixture {
 
   eventualExpectations = [];
   numOutstandingAsyncExpectations = 0;
+  objectsToCleanUp = [];
 
   /** @internal */
   constructor(rec, params) {
@@ -65,6 +66,18 @@ export class Fixture {
         this.rec.threw(ex);
       }
     }
+
+    // And clean up any objects now that they're done being used.
+    for (const o of this.objectsToCleanUp) {
+      if ('getExtension' in o) {
+        const WEBGL_lose_context = o.getExtension('WEBGL_lose_context');
+        if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
+      } else if ('destroy' in o) {
+        o.destroy();
+      } else {
+        o.close();
+      }
+    }
   }
 
   /** @internal */
@@ -75,6 +88,31 @@ export class Fixture {
   /** @internal */
   doFinalize() {
     return this.finalize();
+  }
+
+  /**
+   * Tracks an object to be cleaned up after the test finishes.
+   *
+   * TODO: Use this in more places. (Will be easier once .destroy() is allowed on invalid objects.)
+   */
+  trackForCleanup(o) {
+    this.objectsToCleanUp.push(o);
+    return o;
+  }
+
+  /** Tracks an object, if it's destroyable, to be cleaned up after the test finishes. */
+  tryTrackForCleanup(o) {
+    if (typeof o === 'object' && o !== null) {
+      if (
+        'destroy' in o ||
+        'close' in o ||
+        o instanceof WebGLRenderingContext ||
+        o instanceof WebGL2RenderingContext
+      ) {
+        this.objectsToCleanUp.push(o);
+      }
+    }
+    return o;
   }
 
   /** Log a debug message. */
@@ -118,15 +156,15 @@ export class Fixture {
     return promise;
   }
 
-  expectErrorValue(expectedName, ex, niceStack) {
+  expectErrorValue(expectedError, ex, niceStack) {
     if (!(ex instanceof Error)) {
       niceStack.message = `THREW non-error value, of type ${typeof ex}: ${ex}`;
       this.rec.expectationFailed(niceStack);
       return;
     }
     const actualName = ex.name;
-    if (actualName !== expectedName) {
-      niceStack.message = `THREW ${actualName}, instead of ${expectedName}: ${ex}`;
+    if (expectedError !== true && actualName !== expectedError) {
+      niceStack.message = `THREW ${actualName}, instead of ${expectedError}: ${ex}`;
       this.rec.expectationFailed(niceStack);
     } else {
       niceStack.message = `OK: threw ${actualName}: ${ex.message}`;
@@ -163,14 +201,25 @@ export class Fixture {
     });
   }
 
-  /** Expect that the provided function throws, with the provided exception name. */
-  shouldThrow(expectedName, fn, msg) {
+  /**
+   * Expect that the provided function throws.
+   * If an `expectedName` is provided, expect that the throw exception has that name.
+   */
+  shouldThrow(expectedError, fn, msg) {
     const m = msg ? ': ' + msg : '';
     try {
       fn();
-      this.rec.expectationFailed(new Error('DID NOT THROW' + m));
+      if (expectedError === false) {
+        this.rec.debug(new Error('did not throw, as expected' + m));
+      } else {
+        this.rec.expectationFailed(new Error('unexpectedly did not throw' + m));
+      }
     } catch (ex) {
-      this.expectErrorValue(expectedName, ex, new Error(m));
+      if (expectedError === false) {
+        this.rec.expectationFailed(new Error('threw unexpectedly' + m));
+      } else {
+        this.expectErrorValue(expectedError, ex, new Error(m));
+      }
     }
   }
 

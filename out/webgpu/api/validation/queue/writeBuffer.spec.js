@@ -158,4 +158,9 @@ fn(async t => {
     t.device.queue.writeBuffer(buffer, 0, data, 0, data.length);
   }, !_valid);
 });
+
+g.test('buffer,device_mismatch').
+desc('Tests writeBuffer cannot be called with a buffer created from another device').
+paramsSubcasesOnly(u => u.combine('mismatched', [true, false])).
+unimplemented();
 //# sourceMappingURL=writeBuffer.spec.js.map

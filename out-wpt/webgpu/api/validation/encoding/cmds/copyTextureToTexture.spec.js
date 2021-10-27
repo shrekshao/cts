@@ -101,6 +101,17 @@ g.test('copy_with_invalid_texture').fn(async t => {
   );
 });
 
+g.test('texture,device_mismatch')
+  .desc(
+    'Tests copyTextureToTexture cannot be called with src texture or dst texture created from another device'
+  )
+  .paramsSubcasesOnly([
+    { srcMismatched: false, dstMismatched: false }, // control case
+    { srcMismatched: true, dstMismatched: false },
+    { srcMismatched: false, dstMismatched: true },
+  ])
+  .unimplemented();
+
 g.test('mipmap_level')
   .paramsSubcasesOnly([
     { srcLevelCount: 1, dstLevelCount: 1, srcCopyLevel: 0, dstCopyLevel: 0 },

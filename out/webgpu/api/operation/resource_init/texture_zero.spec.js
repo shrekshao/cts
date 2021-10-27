@@ -148,10 +148,10 @@ readMethod)
       usage |= GPUConst.TextureUsage.COPY_SRC;
       break;
     case ReadMethod.Sample:
-      usage |= GPUConst.TextureUsage.SAMPLED;
+      usage |= GPUConst.TextureUsage.TEXTURE_BINDING;
       break;
     case ReadMethod.Storage:
-      usage |= GPUConst.TextureUsage.STORAGE;
+      usage |= GPUConst.TextureUsage.STORAGE_BINDING;
       break;
     case ReadMethod.DepthTest:
     case ReadMethod.StencilTest:
@@ -407,7 +407,7 @@ export class TextureZeroInitTest extends GPUTest {
           colorAttachments: [
           {
             view: texture.createView(desc),
-            storeOp: 'clear',
+            storeOp: 'discard',
             loadValue: 'load' }] }).
 
 
@@ -419,9 +419,9 @@ export class TextureZeroInitTest extends GPUTest {
           colorAttachments: [],
           depthStencilAttachment: {
             view: texture.createView(desc),
-            depthStoreOp: 'clear',
+            depthStoreOp: 'discard',
             depthLoadValue: 'load',
-            stencilStoreOp: 'clear',
+            stencilStoreOp: 'discard',
             stencilLoadValue: 'load' } }).
 
 
@@ -507,7 +507,7 @@ unless(({ format, sampleCount, uninitializeMethod, readMethod }) => {
 
   return (
     (usage & GPUConst.TextureUsage.RENDER_ATTACHMENT) !== 0 && !info.renderable ||
-    (usage & GPUConst.TextureUsage.STORAGE) !== 0 && !info.storage);
+    (usage & GPUConst.TextureUsage.STORAGE_BINDING) !== 0 && !info.storage);
 
 }).
 combine('nonPowerOfTwo', [false, true]).

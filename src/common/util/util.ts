@@ -7,7 +7,7 @@ import { timeout } from './timeout.js';
  * The extra data is omitted if not running the test in debug mode (`?debug=1`).
  */
 export class ErrorWithExtra extends Error {
-  readonly extra: {};
+  readonly extra: { [k: string]: unknown };
 
   /**
    * `extra` function is only called if in debug mode.
@@ -104,7 +104,16 @@ export function rejectOnTimeout(ms: number, msg: string): Promise<never> {
  * and otherwise passes the result through.
  */
 export function raceWithRejectOnTimeout<T>(p: Promise<T>, ms: number, msg: string): Promise<T> {
-  return Promise.race([p, rejectOnTimeout(ms, msg)]);
+  // Setup a promise that will reject after `ms` milliseconds. We cancel this timeout when
+  // `p` is finalized, so the JavaScript VM doesn't hang around waiting for the timer to
+  // complete, once the test runner has finished executing the tests.
+  const timeoutPromise = new Promise((_resolve, reject) => {
+    const handle = timeout(() => {
+      reject(new PromiseTimeoutError(msg));
+    }, ms);
+    p = p.finally(() => clearTimeout(handle));
+  });
+  return Promise.race([p, timeoutPromise]) as Promise<T>;
 }
 
 /**
@@ -186,3 +195,27 @@ export type TypedArrayBufferViewConstructor<
   from<T>(arrayLike: ArrayLike<T>, mapfn: (v: T, k: number) => number, thisArg?: any): A;
   of(...items: number[]): A;
 };
+
+function subarrayAsU8(
+  buf: ArrayBuffer | TypedArrayBufferView,
+  { start = 0, length }: { start?: number; length?: number }
+): Uint8Array {
+  if (buf instanceof ArrayBuffer) {
+    return new Uint8Array(buf, start, length);
+  } else {
+    const sub = buf.subarray(start, length !== undefined ? start + length : undefined);
+    return new Uint8Array(sub.buffer, sub.byteOffset, sub.byteLength);
+  }
+}
+
+/**
+ * Copy a range of bytes from one ArrayBuffer or TypedArray to another.
+ *
+ * `start`/`length` are in elements (or in bytes, if ArrayBuffer).
+ */
+export function memcpy(
+  src: { src: ArrayBuffer | TypedArrayBufferView; start?: number; length?: number },
+  dst: { dst: ArrayBuffer | TypedArrayBufferView; start?: number }
+): void {
+  subarrayAsU8(dst.dst, dst).set(subarrayAsU8(src.src, src));
+}

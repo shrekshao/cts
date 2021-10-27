@@ -4,22 +4,22 @@
 
   Test Coverage:
 
-  - Tests that color and depth-stencil store operations {'clear', 'store'} work correctly for a
+  - Tests that color and depth-stencil store operations {'discard', 'store'} work correctly for a
     render pass with both a color attachment and depth-stencil attachment.
       TODO: use depth24plus-stencil8
 
-  - Tests that store operations {'clear', 'store'} work correctly for a render pass with multiple
+  - Tests that store operations {'discard', 'store'} work correctly for a render pass with multiple
     color attachments.
       TODO: test with more interesting loadOp values
 
-  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a color
+  - Tests that store operations {'discard', 'store'} work correctly for a render pass with a color
     attachment for:
       - All renderable color formats
       - mip level set to {'0', mip > '0'}
       - array layer set to {'0', layer > '1'} for 2D textures
       TODO: depth slice set to {'0', slice > '0'} for 3D textures
 
-  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a
+  - Tests that store operations {'discard', 'store'} work correctly for a render pass with a
     depth-stencil attachment for:
       - All renderable depth-stencil formats
       - mip level set to {'0', mip > '0'}
@@ -47,7 +47,7 @@ const kNumColorAttachments = [1, 2, 3, 4];
 // Test with a zero and non-zero array layer.
 const kArrayLayers = [0, 1];
 
-const kStoreOps = ['clear', 'store'];
+const kStoreOps = ['discard', 'store'];
 
 const kHeight = 2;
 const kWidth = 2;
@@ -107,7 +107,7 @@ fn(t => {
 
   // Check that the correct store operation occurred.
   let expectedColorValue = {};
-  if (t.params.colorStoreOperation === 'clear') {
+  if (t.params.colorStoreOperation === 'discard') {
     // If colorStoreOp was clear, the texture should now contain {0.0, 0.0, 0.0, 0.0}.
     expectedColorValue = { R: 0.0, G: 0.0, B: 0.0, A: 0.0 };
   } else if (t.params.colorStoreOperation === 'store') {
@@ -121,7 +121,7 @@ fn(t => {
 
   // Check that the correct store operation occurred.
   let expectedDepthValue = {};
-  if (t.params.depthStencilStoreOperation === 'clear') {
+  if (t.params.depthStencilStoreOperation === 'discard') {
     // If depthStencilStoreOperation was clear, the texture's depth component should be 0.0, and
     // the stencil component should be 0.0.
     expectedDepthValue = { Depth: 0.0 };
@@ -186,7 +186,7 @@ fn(t => {
 
   // Check that the correct store operation occurred.
   let expectedValue = {};
-  if (t.params.storeOperation === 'clear') {
+  if (t.params.storeOperation === 'discard') {
     // If colorStoreOp was clear, the texture should now contain {0.0, 0.0, 0.0, 0.0}.
     expectedValue = { R: 0.0, G: 0.0, B: 0.0, A: 0.0 };
   } else if (t.params.storeOperation === 'store') {
@@ -247,7 +247,7 @@ fn(t => {
   // Check that the correct store operation occurred.
   let expectedValue = {};
   for (let i = 0; i < t.params.colorAttachments; i++) {
-    if (renderPassColorAttachments[i].storeOp === 'clear') {
+    if (renderPassColorAttachments[i].storeOp === 'discard') {
       // If colorStoreOp was clear, the texture should now contain {0.0, 0.0, 0.0, 0.0}.
       expectedValue = { R: 0.0, G: 0.0, B: 0.0, A: 0.0 };
     } else if (renderPassColorAttachments[i].storeOp === 'store') {
@@ -314,7 +314,7 @@ fn(t => {
   t.device.queue.submit([encoder.finish()]);
 
   let expectedValue = {};
-  if (t.params.storeOperation === 'clear') {
+  if (t.params.storeOperation === 'discard') {
     // If depthStencilStoreOperation was clear, the texture's depth component should be 0.0,
     expectedValue = { Depth: 0.0 };
   } else if (t.params.storeOperation === 'store') {

@@ -12,7 +12,8 @@ Test Coverage:
     - Test calling pushDebugGroup with empty and non-empty strings.
     - Test inserting a debug marker with empty and non-empty strings.
 `;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { ValidationTest, kEncoderTypes } from '../../validation_test.js';
+import { kEncoderTypes } from '../../../../util/command_buffer_maker.js';
+import { ValidationTest } from '../../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);
 
@@ -25,18 +26,14 @@ combine('pushCount', [0, 1, 2]).
 combine('popCount', [0, 1, 2])).
 
 fn(t => {
-  const { encoder, finish } = t.createEncoder(t.params.encoderType);
+  const { encoder, validateFinishAndSubmit } = t.createEncoder(t.params.encoderType);
   for (let i = 0; i < t.params.pushCount; ++i) {
     encoder.pushDebugGroup(`${i}`);
   }
   for (let i = 0; i < t.params.popCount; ++i) {
     encoder.popDebugGroup();
   }
-  const shouldError = t.params.popCount !== t.params.pushCount;
-  t.expectValidationError(() => {
-    const commandBuffer = finish();
-    t.queue.submit([commandBuffer]);
-  }, shouldError);
+  validateFinishAndSubmit(t.params.pushCount === t.params.popCount, true);
 });
 
 g.test('debug_group').
@@ -47,11 +44,10 @@ beginSubcases().
 combine('label', ['', 'group'])).
 
 fn(t => {
-  const { encoder, finish } = t.createEncoder(t.params.encoderType);
+  const { encoder, validateFinishAndSubmit } = t.createEncoder(t.params.encoderType);
   encoder.pushDebugGroup(t.params.label);
   encoder.popDebugGroup();
-  const commandBuffer = finish();
-  t.queue.submit([commandBuffer]);
+  validateFinishAndSubmit(true, true);
 });
 
 g.test('debug_marker').
@@ -62,9 +58,8 @@ beginSubcases().
 combine('label', ['', 'marker'])).
 
 fn(t => {
-  const maker = t.createEncoder(t.params.encoderType);
-  maker.encoder.insertDebugMarker(t.params.label);
-  const commandBuffer = maker.finish();
-  t.queue.submit([commandBuffer]);
+  const { encoder, validateFinishAndSubmit } = t.createEncoder(t.params.encoderType);
+  encoder.insertDebugMarker(t.params.label);
+  validateFinishAndSubmit(true, true);
 });
 //# sourceMappingURL=debug.spec.js.map

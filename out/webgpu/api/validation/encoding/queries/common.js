@@ -1,7 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
-export function createQuerySetWithType(
+**/export function createQuerySetWithType(
 t,
 type,
 count)
@@ -35,21 +34,6 @@ querySet)
 
 
     occlusionQuerySet: querySet });
-
-}
-
-export function createRenderEncoderWithQuerySet(
-t,
-querySet)
-{
-  const commandEncoder = t.device.createCommandEncoder();
-  const encoder = beginRenderPassWithQuerySet(t, commandEncoder, querySet);
-  return {
-    encoder,
-    finish: () => {
-      encoder.endPass();
-      return commandEncoder.finish();
-    } };
 
 }
 //# sourceMappingURL=common.js.map

@@ -24,7 +24,7 @@ function doTest(t) {
   const texture = t.device.createTexture({
     format,
     size: [1, 1, 1],
-    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED,
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
   });
 
   t.device.queue.writeTexture(

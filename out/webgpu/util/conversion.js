@@ -190,4 +190,157 @@ export function gammaDecompress(n) {
   n = n <= 0.04045 ? n * 25 / 323 : Math.pow((200 * n + 11) / 211, 12 / 5);
   return clamp(n, { min: 0, max: 1 });
 }
+
+/** Converts a 32-bit float value to a 32-bit unsigned integer value */
+export function float32ToUint32(f32) {
+  const f32Arr = new Float32Array(1);
+  f32Arr[0] = f32;
+  const u32Arr = new Uint32Array(f32Arr.buffer);
+  return u32Arr[0];
+}
+
+/** Converts a 32-bit unsigned integer value to a 32-bit float value */
+export function uint32ToFloat32(u32) {
+  const u32Arr = new Uint32Array(1);
+  u32Arr[0] = u32;
+  const f32Arr = new Float32Array(u32Arr.buffer);
+  return f32Arr[0];
+}
+
+/** Converts a 32-bit float value to a 32-bit signed integer value */
+export function float32ToInt32(f32) {
+  const f32Arr = new Float32Array(1);
+  f32Arr[0] = f32;
+  const i32Arr = new Int32Array(f32Arr.buffer);
+  return i32Arr[0];
+}
+
+/** Converts a 32-bit unsigned integer value to a 32-bit signed integer value */
+export function uint32ToInt32(u32) {
+  const u32Arr = new Uint32Array(1);
+  u32Arr[0] = u32;
+  const i32Arr = new Int32Array(u32Arr.buffer);
+  return i32Arr[0];
+}
+
+/** A type of number representable by NumberRepr. */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+                                                      * Class that encapsulates a single number of various types. Exposes:
+                                                      * - the actual numeric value (as a JS `number`, or `bigint` if it's u64/i64)
+                                                      * - the bit representation of the number, as a TypedArray of size 1 with the appropriate type.
+                                                      */
+export class NumberRepr {
+
+
+
+  constructor(value, bits) {
+    this.value = value;
+    this.bits = bits;
+  }
+
+  /** Create an f64 from a numeric value, a JS `number`. */
+  static fromF64(value) {
+    return new NumberRepr(value, new BigUint64Array(new Float64Array([value]).buffer));
+  }
+  /** Create an f32 from a numeric value, a JS `number`. */
+  static fromF32(value) {
+    return new NumberRepr(value, new Uint32Array(new Float32Array([value]).buffer));
+  }
+
+  /** Create an f64 from a bit representation, a uint64 represented as a JS `bigint`. */
+  static fromF64Bits(bits) {
+    const abv = new BigUint64Array([bits]);
+    return new NumberRepr(new Float64Array(abv.buffer)[0], abv);
+  }
+  /** Create an f32 from a bit representation, a uint32 represented as a JS `number`. */
+  static fromF32Bits(bits) {
+    const abv = new Uint32Array([bits]);
+    return new NumberRepr(new Float32Array(abv.buffer)[0], abv);
+  }
+  /** Create an f16 from a bit representation, a uint16 represented as a JS `number`. */
+  static fromF16Bits(bits) {
+    return new NumberRepr(float16BitsToFloat32(bits), new Uint16Array(bits));
+  }
+
+  /** Create an i32 from a numeric value, a JS `number`. */
+  static fromI32(value) {
+    return new NumberRepr(value, new Uint32Array(new Int32Array([value]).buffer));
+  }
+  /** Create an i16 from a numeric value, a JS `number`. */
+  static fromI16(value) {
+    return new NumberRepr(value, new Uint16Array(new Int16Array([value]).buffer));
+  }
+  /** Create an i8 from a numeric value, a JS `number`. */
+  static fromI8(value) {
+    return new NumberRepr(value, new Uint8Array(new Int8Array([value]).buffer));
+  }
+
+  /** Create an i32 from a bit representation, a uint32 represented as a JS `number`. */
+  static fromI32Bits(bits) {
+    const abv = new Uint32Array([bits]);
+    return new NumberRepr(new Int32Array(abv.buffer)[0], abv);
+  }
+  /** Create an i16 from a bit representation, a uint16 represented as a JS `number`. */
+  static fromI16Bits(bits) {
+    const abv = new Uint16Array([bits]);
+    return new NumberRepr(new Int16Array(abv.buffer)[0], abv);
+  }
+  /** Create an i8 from a bit representation, a uint8 represented as a JS `number`. */
+  static fromI8Bits(bits) {
+    const abv = new Uint8Array([bits]);
+    return new NumberRepr(new Int8Array(abv.buffer)[0], abv);
+  }
+
+  /** Create a u32 from a numeric value, a JS `number`. */
+  static fromU32(value) {
+    return new NumberRepr(value, new Uint32Array(value));
+  }
+  /** Create a u16 from a numeric value, a JS `number`. */
+  static fromU16(value) {
+    return new NumberRepr(value, new Uint16Array(value));
+  }
+  /** Create a u8 from a numeric value, a JS `number`. */
+  static fromU8(value) {
+    return new NumberRepr(value, new Uint8Array(value));
+  }
+
+  /** Create a u32 from a bit representation, a uint32 represented as a JS `number`. */
+  static fromU32Bits(bits) {
+    const abv = new Uint32Array([bits]);
+    return new NumberRepr(new Uint32Array(abv.buffer)[0], abv);
+  }
+  /** Create a u16 from a bit representation, a uint16 represented as a JS `number`. */
+  static fromU16Bits(bits) {
+    const abv = new Uint16Array([bits]);
+    return new NumberRepr(new Uint16Array(abv.buffer)[0], abv);
+  }
+  /** Create a u8 from a bit representation, a uint8 represented as a JS `number`. */
+  static fromU8Bits(bits) {
+    const abv = new Uint8Array([bits]);
+    return new NumberRepr(new Uint8Array(abv.buffer)[0], abv);
+  }}
 //# sourceMappingURL=conversion.js.map

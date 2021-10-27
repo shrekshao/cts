@@ -102,8 +102,8 @@ g.test('a_render_pass_with_only_one_depth_attachment_is_ok').fn(t => {
 
 g.test('OOB_color_attachment_indices_are_handled')
   .paramsSimple([
-    { colorAttachmentsCount: 4, _success: true }, // Control case
-    { colorAttachmentsCount: 5, _success: false }, // Out of bounds
+    { colorAttachmentsCount: 8, _success: true }, // Control case
+    { colorAttachmentsCount: 9, _success: false }, // Out of bounds
   ])
   .fn(async t => {
     const { colorAttachmentsCount, _success } = t.params;
@@ -394,7 +394,7 @@ g.test('it_is_invalid_to_use_a_resolve_target_with_array_layer_count_greater_tha
     const resolveTargetTexture = t.createTexture({ arrayLayerCount: 2 });
 
     const colorAttachment = t.getColorAttachment(multisampledColorTexture);
-    colorAttachment.resolveTarget = resolveTargetTexture.createView();
+    colorAttachment.resolveTarget = resolveTargetTexture.createView({ dimension: '2d-array' });
 
     const descriptor: GPURenderPassDescriptor = {
       colorAttachments: [colorAttachment],

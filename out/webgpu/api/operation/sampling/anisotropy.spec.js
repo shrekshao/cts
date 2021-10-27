@@ -176,7 +176,7 @@ fn(async t => {
     mipLevelCount: 1,
     size: { width: textureSize, height: textureSize, depthOrArrayLayers: 1 },
     format: kTextureFormat,
-    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING });
 
 
   const textureEncoder = t.device.createCommandEncoder();

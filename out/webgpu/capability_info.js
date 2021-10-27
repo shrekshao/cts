@@ -9,6 +9,9 @@ import { assert, unreachable } from '../common/util/util.js';
 
 import { GPUConst } from './constants.js';
 
+
+// Base device limits can be found in constants.ts.
+
 // Queries
 
 /** Maximum number of queries in GPUQuerySet, by spec. */
@@ -59,83 +62,85 @@ export const kBufferUsages = numericKeysOf(kBufferUsageInfo);
 
 // Note that we repeat the header multiple times in order to make it easier to read.
 const kRegularTextureFormatInfo = makeTable(
-['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'],
-[,, true, false, false,, true, true,, 1, 1], {
+['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'sampleType', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'],
+[,, true, false, false,, true, true,,, 1, 1], {
   // 8-bit formats
-  'r8unorm': [true, true,,,, false,,, 1],
-  'r8snorm': [false, false,,,, false,,, 1],
-  'r8uint': [true, true,,,, false,,, 1],
-  'r8sint': [true, true,,,, false,,, 1],
+  'r8unorm': [true, true,,,, false,,, 'float', 1],
+  'r8snorm': [false, false,,,, false,,, 'float', 1],
+  'r8uint': [true, true,,,, false,,, 'uint', 1],
+  'r8sint': [true, true,,,, false,,, 'sint', 1],
   // 16-bit formats
-  'r16uint': [true, true,,,, false,,, 2],
-  'r16sint': [true, true,,,, false,,, 2],
-  'r16float': [true, true,,,, false,,, 2],
-  'rg8unorm': [true, true,,,, false,,, 2],
-  'rg8snorm': [false, false,,,, false,,, 2],
-  'rg8uint': [true, true,,,, false,,, 2],
-  'rg8sint': [true, true,,,, false,,, 2],
+  'r16uint': [true, true,,,, false,,, 'uint', 2],
+  'r16sint': [true, true,,,, false,,, 'sint', 2],
+  'r16float': [true, true,,,, false,,, 'float', 2],
+  'rg8unorm': [true, true,,,, false,,, 'float', 2],
+  'rg8snorm': [false, false,,,, false,,, 'float', 2],
+  'rg8uint': [true, true,,,, false,,, 'uint', 2],
+  'rg8sint': [true, true,,,, false,,, 'sint', 2],
   // 32-bit formats
-  'r32uint': [true, true,,,, true,,, 4],
-  'r32sint': [true, true,,,, true,,, 4],
-  'r32float': [true, true,,,, true,,, 4],
-  'rg16uint': [true, true,,,, false,,, 4],
-  'rg16sint': [true, true,,,, false,,, 4],
-  'rg16float': [true, true,,,, false,,, 4],
-  'rgba8unorm': [true, true,,,, true,,, 4],
-  'rgba8unorm-srgb': [true, true,,,, false,,, 4],
-  'rgba8snorm': [false, false,,,, true,,, 4],
-  'rgba8uint': [true, true,,,, true,,, 4],
-  'rgba8sint': [true, true,,,, true,,, 4],
-  'bgra8unorm': [true, true,,,, false,,, 4],
-  'bgra8unorm-srgb': [true, true,,,, false,,, 4],
+  'r32uint': [true, true,,,, true,,, 'uint', 4],
+  'r32sint': [true, true,,,, true,,, 'sint', 4],
+  'r32float': [true, true,,,, true,,, 'float', 4],
+  'rg16uint': [true, true,,,, false,,, 'uint', 4],
+  'rg16sint': [true, true,,,, false,,, 'sint', 4],
+  'rg16float': [true, true,,,, false,,, 'float', 4],
+  'rgba8unorm': [true, true,,,, true,,, 'float', 4],
+  'rgba8unorm-srgb': [true, true,,,, false,,, 'float', 4],
+  'rgba8snorm': [false, false,,,, true,,, 'float', 4],
+  'rgba8uint': [true, true,,,, true,,, 'uint', 4],
+  'rgba8sint': [true, true,,,, true,,, 'sint', 4],
+  'bgra8unorm': [true, true,,,, false,,, 'float', 4],
+  'bgra8unorm-srgb': [true, true,,,, false,,, 'float', 4],
   // Packed 32-bit formats
-  'rgb10a2unorm': [true, true,,,, false,,, 4],
-  'rg11b10ufloat': [false, false,,,, false,,, 4],
-  'rgb9e5ufloat': [false, false,,,, false,,, 4],
+  'rgb10a2unorm': [true, true,,,, false,,, 'float', 4],
+  'rg11b10ufloat': [false, false,,,, false,,, 'float', 4],
+  'rgb9e5ufloat': [false, false,,,, false,,, 'float', 4],
   // 64-bit formats
-  'rg32uint': [true, true,,,, true,,, 8],
-  'rg32sint': [true, true,,,, true,,, 8],
-  'rg32float': [true, true,,,, true,,, 8],
-  'rgba16uint': [true, true,,,, true,,, 8],
-  'rgba16sint': [true, true,,,, true,,, 8],
-  'rgba16float': [true, true,,,, true,,, 8],
+  'rg32uint': [true, true,,,, true,,, 'uint', 8],
+  'rg32sint': [true, true,,,, true,,, 'sint', 8],
+  'rg32float': [true, true,,,, true,,, 'float', 8],
+  'rgba16uint': [true, true,,,, true,,, 'uint', 8],
+  'rgba16sint': [true, true,,,, true,,, 'sint', 8],
+  'rgba16float': [true, true,,,, true,,, 'float', 8],
   // 128-bit formats
-  'rgba32uint': [true, true,,,, true,,, 16],
-  'rgba32sint': [true, true,,,, true,,, 16],
-  'rgba32float': [true, true,,,, true,,, 16] });
+  'rgba32uint': [true, true,,,, true,,, 'uint', 16],
+  'rgba32sint': [true, true,,,, true,,, 'sint', 16],
+  'rgba32float': [true, true,,,, true,,, 'float', 16] });
 
 
-const kTexFmtInfoHeader = ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'];
+const kTexFmtInfoHeader = ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'sampleType', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'];
 const kSizedDepthStencilFormatInfo = makeTable(kTexFmtInfoHeader,
-[true, true, false,,, false, false, false,, 1, 1], {
-  'depth32float': [,,, true, false,,,, 4],
-  'depth16unorm': [,,, true, false,,,, 2],
-  'stencil8': [,,, false, true,,,, 1] });
+[true, true, false,,, false, false, false,,, 1, 1], {
+  'depth32float': [,,, true, false,,,, 'depth', 4],
+  'depth16unorm': [,,, true, false,,,, 'depth', 2],
+  'stencil8': [,,, false, true,,,, 'uint', 1] });
 
+
+// Multi aspect sample type are now set to their first aspect
 const kUnsizedDepthStencilFormatInfo = makeTable(kTexFmtInfoHeader,
-[true, true, false,,, false, false, false, undefined, 1, 1], {
-  'depth24plus': [,,, true, false,,,],
-  'depth24plus-stencil8': [,,, true, true,,,],
+[true, true, false,,, false, false, false,, undefined, 1, 1], {
+  'depth24plus': [,,, true, false,,,, 'depth'],
+  'depth24plus-stencil8': [,,, true, true,,,, 'depth'],
   // These should really be sized formats; see below TODO about multi-aspect formats.
-  'depth24unorm-stencil8': [,,, true, true,,,,,,, 'depth24unorm-stencil8'],
-  'depth32float-stencil8': [,,, true, true,,,,,,, 'depth32float-stencil8'] });
+  'depth24unorm-stencil8': [,,, true, true,,,, 'depth',,,, 'depth24unorm-stencil8'],
+  'depth32float-stencil8': [,,, true, true,,,, 'depth',,,, 'depth32float-stencil8'] });
 
 const kCompressedTextureFormatInfo = makeTable(kTexFmtInfoHeader,
-[false, false, true, false, false, false, true, true,, 4, 4], {
-  'bc1-rgba-unorm': [,,,,,,,, 8, 4, 4, 'texture-compression-bc'],
-  'bc1-rgba-unorm-srgb': [,,,,,,,, 8, 4, 4, 'texture-compression-bc'],
-  'bc2-rgba-unorm': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc2-rgba-unorm-srgb': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc3-rgba-unorm': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc3-rgba-unorm-srgb': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc4-r-unorm': [,,,,,,,, 8, 4, 4, 'texture-compression-bc'],
-  'bc4-r-snorm': [,,,,,,,, 8, 4, 4, 'texture-compression-bc'],
-  'bc5-rg-unorm': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc5-rg-snorm': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc6h-rgb-ufloat': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc6h-rgb-float': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc7-rgba-unorm': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'],
-  'bc7-rgba-unorm-srgb': [,,,,,,,, 16, 4, 4, 'texture-compression-bc'] });
+[false, false, true, false, false, false, true, true,,, 4, 4], {
+  'bc1-rgba-unorm': [,,,,,,,, 'float', 8, 4, 4, 'texture-compression-bc'],
+  'bc1-rgba-unorm-srgb': [,,,,,,,, 'float', 8, 4, 4, 'texture-compression-bc'],
+  'bc2-rgba-unorm': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc2-rgba-unorm-srgb': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc3-rgba-unorm': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc3-rgba-unorm-srgb': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc4-r-unorm': [,,,,,,,, 'float', 8, 4, 4, 'texture-compression-bc'],
+  'bc4-r-snorm': [,,,,,,,, 'float', 8, 4, 4, 'texture-compression-bc'],
+  'bc5-rg-unorm': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc5-rg-snorm': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc6h-rgb-ufloat': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc6h-rgb-float': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc7-rgba-unorm': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'],
+  'bc7-rgba-unorm-srgb': [,,,,,,,, 'float', 16, 4, 4, 'texture-compression-bc'] });
 
 
 // Definitions for use locally. To access the table entries, use `kTextureFormatInfo`.
@@ -179,6 +184,12 @@ export const kEncodableTextureFormats = keysOf(kEncodableTextureFormatInfo);
 export const kSizedTextureFormats = keysOf(kSizedTextureFormatInfo);
 export const kDepthStencilFormats = keysOf(kDepthStencilFormatInfo);
 export const kUncompressedTextureFormats = keysOf(kUncompressedTextureFormatInfo);
+export const kAllTextureFormats = keysOf(kAllTextureFormatInfo);
+
+// CompressedTextureFormat are unrenderable so filter from RegularTextureFormats for color targets is enough
+export const kRenderableColorTextureFormats = kRegularTextureFormats.filter(
+v => kColorTextureFormatInfo[v].renderable);
+
 
 /** Per-GPUTextureFormat info. */
 // Exists just for documentation. Otherwise could be inferred by `makeTable`.
@@ -225,7 +236,7 @@ kAllTextureFormatInfo;
 export const kTextureFormats = keysOf(kAllTextureFormatInfo);
 
 /** Valid GPUTextureFormats for `copyExternalImageToTexture`, by spec. */
-export const kValidTextureFormatsForCopyIB2T = [
+export const kValidTextureFormatsForCopyE2T = [
 'rgba8unorm',
 'rgba8unorm-srgb',
 'bgra8unorm',
@@ -298,15 +309,28 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
 
 
 /**
-                                                                   * Computes whether a copy between a depth/stencil texture aspect and a buffer is supported, by spec.
+                                                                   * Gets all copyable aspects for copies between texture and buffer for specified depth/stencil format and copy type, by spec.
                                                                    */
+export function depthStencilFormatCopyableAspects(
+type,
+format)
+{
+  const appliedType = type === 'WriteTexture' ? 'CopyB2T' : type;
+  return kDepthStencilFormatCapabilityInBufferTextureCopy[format][appliedType];
+}
+
+/**
+   * Computes whether a copy between a depth/stencil texture aspect and a buffer is supported, by spec.
+   */
 export function depthStencilBufferTextureCopySupported(
 type,
 format,
 aspect)
 {
-  const supportedAspects =
-  kDepthStencilFormatCapabilityInBufferTextureCopy[format][type];
+  const supportedAspects = depthStencilFormatCopyableAspects(
+  type,
+  format);
+
   return supportedAspects.includes(aspect);
 }
 
@@ -345,8 +369,8 @@ export const kTextureUsageInfo =
 {
   [GPUConst.TextureUsage.COPY_SRC]: {},
   [GPUConst.TextureUsage.COPY_DST]: {},
-  [GPUConst.TextureUsage.SAMPLED]: {},
-  [GPUConst.TextureUsage.STORAGE]: {},
+  [GPUConst.TextureUsage.TEXTURE_BINDING]: {},
+  [GPUConst.TextureUsage.STORAGE_BINDING]: {},
   [GPUConst.TextureUsage.RENDER_ATTACHMENT]: {} };
 
 /** List of all GPUTextureUsage values. */
@@ -387,45 +411,59 @@ export const kTextureViewDimensions = keysOf(kTextureViewDimensionInfo);
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /** Per-GPUVertexFormat info. */
 export const kVertexFormatInfo =
 
 makeTable(
-['bytesPerComponent', 'type', 'componentCount'],
-[,,], {
+['bytesPerComponent', 'type', 'componentCount', 'wgslType'],
+[,,,], {
   // 8 bit components
-  'uint8x2': [1, 'uint', 2],
-  'uint8x4': [1, 'uint', 4],
-  'sint8x2': [1, 'sint', 2],
-  'sint8x4': [1, 'sint', 4],
-  'unorm8x2': [1, 'unorm', 2],
-  'unorm8x4': [1, 'unorm', 4],
-  'snorm8x2': [1, 'snorm', 2],
-  'snorm8x4': [1, 'snorm', 4],
+  'uint8x2': [1, 'uint', 2, 'vec2<u32>'],
+  'uint8x4': [1, 'uint', 4, 'vec4<u32>'],
+  'sint8x2': [1, 'sint', 2, 'vec2<i32>'],
+  'sint8x4': [1, 'sint', 4, 'vec4<i32>'],
+  'unorm8x2': [1, 'unorm', 2, 'vec2<f32>'],
+  'unorm8x4': [1, 'unorm', 4, 'vec4<f32>'],
+  'snorm8x2': [1, 'snorm', 2, 'vec2<f32>'],
+  'snorm8x4': [1, 'snorm', 4, 'vec4<f32>'],
   // 16 bit components
-  'uint16x2': [2, 'uint', 2],
-  'uint16x4': [2, 'uint', 4],
-  'sint16x2': [2, 'sint', 2],
-  'sint16x4': [2, 'sint', 4],
-  'unorm16x2': [2, 'unorm', 2],
-  'unorm16x4': [2, 'unorm', 4],
-  'snorm16x2': [2, 'snorm', 2],
-  'snorm16x4': [2, 'snorm', 4],
-  'float16x2': [2, 'float', 2],
-  'float16x4': [2, 'float', 4],
+  'uint16x2': [2, 'uint', 2, 'vec2<u32>'],
+  'uint16x4': [2, 'uint', 4, 'vec4<u32>'],
+  'sint16x2': [2, 'sint', 2, 'vec2<i32>'],
+  'sint16x4': [2, 'sint', 4, 'vec4<i32>'],
+  'unorm16x2': [2, 'unorm', 2, 'vec2<f32>'],
+  'unorm16x4': [2, 'unorm', 4, 'vec4<f32>'],
+  'snorm16x2': [2, 'snorm', 2, 'vec2<f32>'],
+  'snorm16x4': [2, 'snorm', 4, 'vec4<f32>'],
+  'float16x2': [2, 'float', 2, 'vec2<f32>'],
+  'float16x4': [2, 'float', 4, 'vec4<f32>'],
   // 32 bit components
-  'float32': [4, 'float', 1],
-  'float32x2': [4, 'float', 2],
-  'float32x3': [4, 'float', 3],
-  'float32x4': [4, 'float', 4],
-  'uint32': [4, 'uint', 1],
-  'uint32x2': [4, 'uint', 2],
-  'uint32x3': [4, 'uint', 3],
-  'uint32x4': [4, 'uint', 4],
-  'sint32': [4, 'sint', 1],
-  'sint32x2': [4, 'sint', 2],
-  'sint32x3': [4, 'sint', 3],
-  'sint32x4': [4, 'sint', 4] });
+  'float32': [4, 'float', 1, 'f32'],
+  'float32x2': [4, 'float', 2, 'vec2<f32>'],
+  'float32x3': [4, 'float', 3, 'vec3<f32>'],
+  'float32x4': [4, 'float', 4, 'vec4<f32>'],
+  'uint32': [4, 'uint', 1, 'u32'],
+  'uint32x2': [4, 'uint', 2, 'vec2<u32>'],
+  'uint32x3': [4, 'uint', 3, 'vec3<u32>'],
+  'uint32x4': [4, 'uint', 4, 'vec4<u32>'],
+  'sint32': [4, 'sint', 1, 'i32'],
+  'sint32x2': [4, 'sint', 2, 'vec2<i32>'],
+  'sint32x3': [4, 'sint', 3, 'vec3<i32>'],
+  'sint32x4': [4, 'sint', 4, 'vec4<i32>'] });
 
 /** List of all GPUVertexFormat values. */
 export const kVertexFormats = keysOf(kVertexFormatInfo);
@@ -501,7 +539,7 @@ export const kPerStageBindingLimits =
   'storageBuf': { class: 'storageBuf', max: 8 },
   'sampler': { class: 'sampler', max: 16 },
   'sampledTex': { class: 'sampledTex', max: 16 },
-  'storageTex': { class: 'storageTex', max: 8 } };
+  'storageTex': { class: 'storageTex', max: 4 } };
 
 
 /**
@@ -583,9 +621,9 @@ assertTypeTrue();
 export function sampledTextureBindingTypeInfo(d) {
 
   if (d.multisampled) {
-    return { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTexMS, ...kValidStagesAll };
+    return { usage: GPUConst.TextureUsage.TEXTURE_BINDING, ...kBindingKind.sampledTexMS, ...kValidStagesAll };
   } else {
-    return { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTex, ...kValidStagesAll };
+    return { usage: GPUConst.TextureUsage.TEXTURE_BINDING, ...kBindingKind.sampledTex, ...kValidStagesAll };
   }
 }
 /** List of all GPUTextureSampleType values. */
@@ -601,9 +639,9 @@ assertTypeTrue();
 /** Binding type info (including class limits) for the specified GPUStorageTextureBindingLayout. */
 export function storageTextureBindingTypeInfo(d) {
 
-  switch (d.access) {
-    case 'read-only':return { usage: GPUConst.TextureUsage.STORAGE, ...kBindingKind.storageTex, ...kValidStagesAll };
-    case 'write-only':return { usage: GPUConst.TextureUsage.STORAGE, ...kBindingKind.storageTex, ...kValidStagesStorageWrite };}
+  switch (d.access ?? 'write-only') {
+    case 'read-only':return { usage: GPUConst.TextureUsage.STORAGE_BINDING, ...kBindingKind.storageTex, ...kValidStagesAll };
+    case 'write-only':return { usage: GPUConst.TextureUsage.STORAGE_BINDING, ...kBindingKind.storageTex, ...kValidStagesStorageWrite };}
 
 }
 /** List of all GPUStorageTextureAccess values. */
@@ -667,10 +705,7 @@ export function textureBindingEntries(includeUndefined) {
    * Note: Generates different `access` options, but not `format` or `viewDimension` options.
    */
 export function storageTextureBindingEntries(format) {
-  return [
-  { storageTexture: { access: 'read-only', format } },
-  { storageTexture: { access: 'write-only', format } }];
-
+  return [{ storageTexture: { access: 'write-only', format } }];
 }
 /** Generate a list of possible texture-or-storageTexture-typed BGLEntry values. */
 export function sampledAndStorageBindingEntries(

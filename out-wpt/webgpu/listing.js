@@ -30,6 +30,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "adapter",
+      "requestDevice_limits"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "async_ordering"
     ],
     "readme": "Test ordering of async resolutions between promises returned by the following calls (and possibly\nbetween multiple of the same call), where there are constraints on the ordering.\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
@@ -48,6 +56,14 @@ export const listing = [
       "operation",
       "buffers",
       "map"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "buffers",
+      "map_ArrayBuffer"
     ]
   },
   {
@@ -301,6 +317,14 @@ export const listing = [
       "api",
       "operation",
       "render_pipeline",
+      "pipeline_output_targets"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pipeline",
       "primitive_topology"
     ]
   },
@@ -310,6 +334,14 @@ export const listing = [
       "operation",
       "render_pipeline",
       "sample_mask"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pipeline",
+      "vertex_only_render_pipeline"
     ]
   },
   {
@@ -334,6 +366,14 @@ export const listing = [
       "operation",
       "rendering",
       "depth"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "depth_clip_clamp"
     ]
   },
   {
@@ -685,6 +725,16 @@ export const listing = [
       "encoding",
       "cmds",
       "render",
+      "draw"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
       "dynamic_state"
     ]
   },
@@ -830,7 +880,15 @@ export const listing = [
       "validation",
       "image_copy"
     ],
-    "readme": "writeTexture + copyBufferToTexture + copyTextureToBuffer validation tests.\n\nTest coverage:\n* resource usages:\n\t- texture_usage_must_be_valid: for GPUTextureUsage::COPY_SRC, GPUTextureUsage::COPY_DST flags.\n\t- TODO: buffer_usage_must_be_valid\n\n* textureCopyView:\n\t- texture_must_be_valid: for valid, destroyed, error textures.\n\t- sample_count_must_be_1: for sample count 1 and 4.\n\t- mip_level_must_be_in_range: for various combinations of mipLevel and mipLevelCount.\n\t- texel_block_alignment_on_origin: for all formats and coordinates.\n\n* bufferCopyView:\n\t- TODO: buffer_must_be_valid\n\t- TODO: bytes_per_row_alignment\n\n* linear texture data:\n\t- bound_on_rows_per_image: for various combinations of copyDepth (1, >1), copyHeight, rowsPerImage.\n\t- offset_plus_required_bytes_in_copy_overflow\n\t- required_bytes_in_copy: testing minimal data size and data size too small for various combinations of bytesPerRow, rowsPerImage, copyExtent and offset. for the copy method, bytesPerRow is computed as bytesInACompleteRow aligned to be a multiple of 256 + bytesPerRowPadding * 256.\n\t- texel_block_alignment_on_rows_per_image: for all formats.\n\t- texel_block_alignment_on_offset: for all formats.\n\t- bound_on_bytes_per_row: for all formats and various combinations of bytesPerRow and copyExtent. for writeTexture, bytesPerRow is computed as (blocksPerRow * blockWidth * bytesPerBlock + additionalBytesPerRow) and copyExtent.width is computed as copyWidthInBlocks * blockWidth. for the copy methods, both values are mutliplied by 256.\n\t- bound_on_offset: for various combinations of offset and dataSize.\n\n* texture copy range:\n\t- 1d_texture: copyExtent.height isn't 1, copyExtent.depthOrArrayLayers isn't 1.\n\t- texel_block_alignment_on_size: for all formats and coordinates.\n\t- texture_range_conditons: for all coordinate and various combinations of origin, copyExtent, textureSize and mipLevel.\n\nTODO: more test coverage for 1D and 3D textures."
+    "readme": "writeTexture + copyBufferToTexture + copyTextureToBuffer validation tests.\n\nTest coverage:\n* resource usages:\n\t- texture_usage_must_be_valid: for GPUTextureUsage::COPY_SRC, GPUTextureUsage::COPY_DST flags.\n\t- buffer_usage_must_be_valid: for GPUBufferUsage::COPY_SRC, GPUBufferUsage::COPY_DST flags.\n\n* textureCopyView:\n\t- texture_must_be_valid: for valid, destroyed, error textures.\n\t- sample_count_must_be_1: for sample count 1 and 4.\n\t- mip_level_must_be_in_range: for various combinations of mipLevel and mipLevelCount.\n\t- format: for all formats with full and non-full copies on width, height, and depth.\n\t- texel_block_alignment_on_origin: for all formats and coordinates.\n\n* bufferCopyView:\n\t- buffer_must_be_valid: for valid, destroyed, error buffers.\n\t- bytes_per_row_alignment: for bytesPerRow to be 256-byte aligned or not, and bytesPerRow is required or not.\n\n* linear texture data:\n\t- bound_on_rows_per_image: for various combinations of copyDepth (1, >1), copyHeight, rowsPerImage.\n\t- offset_plus_required_bytes_in_copy_overflow\n\t- required_bytes_in_copy: testing minimal data size and data size too small for various combinations of bytesPerRow, rowsPerImage, copyExtent and offset. for the copy method, bytesPerRow is computed as bytesInACompleteRow aligned to be a multiple of 256 + bytesPerRowPadding * 256.\n\t- texel_block_alignment_on_rows_per_image: for all formats.\n\t- offset_alignment: for all formats.\n\t- bound_on_bytes_per_row: for all formats and various combinations of bytesPerRow and copyExtent. for writeTexture, bytesPerRow is computed as (blocksPerRow * blockWidth * bytesPerBlock + additionalBytesPerRow) and copyExtent.width is computed as copyWidthInBlocks * blockWidth. for the copy methods, both values are mutliplied by 256.\n\t- bound_on_offset: for various combinations of offset and dataSize.\n\n* texture copy range:\n\t- 1d_texture: copyExtent.height isn't 1, copyExtent.depthOrArrayLayers isn't 1.\n\t- texel_block_alignment_on_size: for all formats and coordinates.\n\t- texture_range_conditons: for all coordinate and various combinations of origin, copyExtent, textureSize and mipLevel.\n\nTODO: more test coverage for 1D and 3D textures."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "image_copy",
+      "buffer_related"
+    ]
   },
   {
     "file": [
@@ -901,7 +959,7 @@ export const listing = [
       "validation",
       "queue",
       "copyToTexture",
-      "ImageBitmap"
+      "CopyExternalImageToTexture"
     ]
   },
   {
@@ -929,6 +987,14 @@ export const listing = [
       "queue",
       "destroyed",
       "texture"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "queue",
+      "submit"
     ]
   },
   {
@@ -1019,24 +1085,8 @@ export const listing = [
     "file": [
       "api",
       "validation",
-      "state",
-      "device_mismatched"
-    ],
-    "readme": "Tests of behavior on one device using objects from another device.\n\n- x= every place in the API where an object is passed (as this, an arg, or a dictionary member).\n\nTODO: implement"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
       "texture",
       "destroy"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "vertex_access"
     ]
   },
   {
@@ -1081,6 +1131,54 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "builtin",
+      "abs"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "ceil"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "float_built_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "integer_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "logical_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "value_testing_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "robust_access"
     ]
   },
@@ -1089,6 +1187,21 @@ export const listing = [
       "shader",
       "execution",
       "robust_access_vertex"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "shader_io",
+      "compute_builtins"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "zero_init"
     ]
   },
   {
@@ -1131,7 +1244,7 @@ export const listing = [
     "file": [
       "web_platform"
     ],
-    "readme": "Tests for Web platform-specific interactions like GPUSwapChain and canvas, WebXR,\nImageBitmaps, and video APIs."
+    "readme": "Tests for Web platform-specific interactions like GPUCanvasContext and canvas, WebXR,\nImageBitmaps, and video APIs."
   },
   {
     "file": [
@@ -1144,7 +1257,7 @@ export const listing = [
     "file": [
       "web_platform",
       "canvas",
-      "configureSwapChain"
+      "configure"
     ]
   },
   {
@@ -1165,7 +1278,14 @@ export const listing = [
     "file": [
       "web_platform",
       "canvas",
-      "getSwapChainPreferredFormat"
+      "getPreferredFormat"
+    ]
+  },
+  {
+    "file": [
+      "web_platform",
+      "canvas",
+      "readbackFromWebGPUCanvas"
     ]
   },
   {
@@ -1222,6 +1342,6 @@ export const listing = [
       "web_platform",
       "reftests"
     ],
-    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO: Test all possible output texture formats (currently only testing bgra8unorm).\nTODO: Test all possible ways to write into those formats (currently only testing B2T copy)."
+    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO: Test all possible output texture formats (currently only testing bgra8unorm).\nTODO: Test all possible ways to write into those formats (currently only testing B2T copy).\n\nTODO: Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
   }
 ];

@@ -1,35 +1,95 @@
-import { assert, unreachable } from '../../../common/util/util.js';
-import { BindableResource, kMaxQueryCount } from '../../capability_info.js';
-import { GPUTest } from '../../gpu_test.js';
+import { attemptGarbageCollection } from '../../../common/util/collect_garbage.js';
+import { assert } from '../../../common/util/util.js';
+import { ValidBindableResource, BindableResource, kMaxQueryCount } from '../../capability_info.js';
+import { GPUTest, ResourceState, initUncanonicalizedDeviceDescriptor } from '../../gpu_test.js';
+import {
+  DevicePool,
+  DeviceProvider,
+  TestOOMedShouldAttemptGC,
+  UncanonicalizedDeviceDescriptor,
+} from '../../util/device_pool.js';
 
-export const kRenderEncodeTypes = ['render pass', 'render bundle'] as const;
-export type RenderEncodeType = typeof kRenderEncodeTypes[number];
-export const kProgrammableEncoderTypes = ['compute pass', ...kRenderEncodeTypes] as const;
-export type ProgrammableEncoderType = typeof kProgrammableEncoderTypes[number];
-export const kEncoderTypes = ['non-pass', ...kProgrammableEncoderTypes] as const;
-export type EncoderType = typeof kEncoderTypes[number];
-
-export interface CommandBufferMaker<T extends EncoderType> {
-  // Look up the type of the encoder based on `T`. If `T` is a union, this will be too!
-  readonly encoder: {
-    'non-pass': GPUCommandEncoder;
-    'compute pass': GPUComputePassEncoder;
-    'render pass': GPURenderPassEncoder;
-    'render bundle': GPURenderBundleEncoder;
-  }[T];
-  finish(): GPUCommandBuffer;
-}
+// TODO: When DevicePool becomes able to provide multiple devices at once, use the usual one instead of a new one.
+const mismatchedDevicePool = new DevicePool();
 
 /**
  * Base fixture for WebGPU validation tests.
  */
 export class ValidationTest extends GPUTest {
+  // Device mismatched validation tests require another GPUDevice different from the default
+  // GPUDevice of GPUTest. It is only used to create device mismatched objects.
+  private mismatchedProvider: DeviceProvider | undefined;
+  private mismatchedAcquiredDevice: GPUDevice | undefined;
+
+  /** GPUDevice for creating mismatched objects required by device mismatched validation tests. */
+  get mismatchedDevice(): GPUDevice {
+    assert(
+      this.mismatchedProvider !== undefined,
+      'No provider available right now; did you "await" selectMismatchedDeviceOrSkipTestCase?'
+    );
+    if (!this.mismatchedAcquiredDevice) {
+      this.mismatchedAcquiredDevice = this.mismatchedProvider.acquire();
+    }
+    return this.mismatchedAcquiredDevice;
+  }
+
+  /**
+   * Create other device different with current test device, which could be got by `.mismatchedDevice`.
+   * A `descriptor` may be undefined, which returns a `default` mismatched device.
+   * If the request descriptor or feature name can't be supported, throws an exception to skip the entire test case.
+   */
+  async selectMismatchedDeviceOrSkipTestCase(
+    descriptor:
+      | UncanonicalizedDeviceDescriptor
+      | GPUFeatureName
+      | undefined
+      | Array<GPUFeatureName | undefined>
+  ): Promise<void> {
+    assert(
+      this.mismatchedProvider === undefined,
+      "Can't selectMismatchedDeviceOrSkipTestCase() multiple times"
+    );
+
+    this.mismatchedProvider =
+      descriptor === undefined
+        ? await mismatchedDevicePool.reserve()
+        : await mismatchedDevicePool.reserve(initUncanonicalizedDeviceDescriptor(descriptor));
+
+    this.mismatchedAcquiredDevice = this.mismatchedProvider.acquire();
+  }
+
+  protected async finalize(): Promise<void> {
+    await super.finalize();
+
+    if (this.mismatchedProvider) {
+      // TODO(kainino0x): Deduplicate this with code in GPUTest.finalize
+      let threw: undefined | Error;
+      {
+        const provider = this.mismatchedProvider;
+        this.mismatchedProvider = undefined;
+        try {
+          await mismatchedDevicePool.release(provider);
+        } catch (ex) {
+          threw = ex;
+        }
+      }
+
+      if (threw) {
+        if (threw instanceof TestOOMedShouldAttemptGC) {
+          // Try to clean up, in case there are stray GPU resources in need of collection.
+          await attemptGarbageCollection();
+        }
+        throw threw;
+      }
+    }
+  }
+
   /**
    * Create a GPUTexture in the specified state.
    * A `descriptor` may optionally be passed, which is used when `state` is not `'invalid'`.
    */
   createTextureWithState(
-    state: 'valid' | 'invalid' | 'destroyed',
+    state: ResourceState,
     descriptor?: Readonly<GPUTextureDescriptor>
   ): GPUTexture {
     descriptor = descriptor ?? {
@@ -38,14 +98,14 @@ export class ValidationTest extends GPUTest {
       usage:
         GPUTextureUsage.COPY_SRC |
         GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.SAMPLED |
-        GPUTextureUsage.STORAGE |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.STORAGE_BINDING |
         GPUTextureUsage.RENDER_ATTACHMENT,
     };
 
     switch (state) {
       case 'valid':
-        return this.device.createTexture(descriptor);
+        return this.trackForCleanup(this.device.createTexture(descriptor));
       case 'invalid':
         return this.getErrorTexture();
       case 'destroyed': {
@@ -61,7 +121,7 @@ export class ValidationTest extends GPUTest {
    * if `state` is `'invalid'`, it will be modified to add an invalid combination of usages.
    */
   createBufferWithState(
-    state: 'valid' | 'invalid' | 'destroyed',
+    state: ResourceState,
     descriptor?: Readonly<GPUBufferDescriptor>
   ): GPUBuffer {
     descriptor = descriptor ?? {
@@ -71,7 +131,7 @@ export class ValidationTest extends GPUTest {
 
     switch (state) {
       case 'valid':
-        return this.device.createBuffer(descriptor);
+        return this.trackForCleanup(this.device.createBuffer(descriptor));
 
       case 'invalid': {
         // Make the buffer invalid because of an invalid combination of usages but keep the
@@ -97,26 +157,18 @@ export class ValidationTest extends GPUTest {
    * A `descriptor` may optionally be passed, which is used when `state` is not `'invalid'`.
    */
   createQuerySetWithState(
-    state: 'valid' | 'invalid' | 'destroyed',
-    descriptor?: Readonly<GPUQuerySetDescriptor>
+    state: ResourceState,
+    desc?: Readonly<GPUQuerySetDescriptor>
   ): GPUQuerySet {
-    descriptor = descriptor ?? {
-      type: 'occlusion',
-      count: 2,
-    };
+    const descriptor = { type: 'occlusion' as const, count: 2, ...desc };
 
     switch (state) {
       case 'valid':
-        return this.device.createQuerySet(descriptor);
+        return this.trackForCleanup(this.device.createQuerySet(descriptor));
       case 'invalid': {
         // Make the queryset invalid because of the count out of bounds.
-        this.device.pushErrorScope('validation');
-        const queryset = this.device.createQuerySet({
-          type: 'occlusion',
-          count: kMaxQueryCount + 1,
-        });
-        this.device.popErrorScope();
-        return queryset;
+        descriptor.count = kMaxQueryCount + 1;
+        return this.expectGPUError('validation', () => this.device.createQuerySet(descriptor));
       }
       case 'destroyed': {
         const queryset = this.device.createQuerySet(descriptor);
@@ -128,12 +180,16 @@ export class ValidationTest extends GPUTest {
 
   /** Create an arbitrarily-sized GPUBuffer with the STORAGE usage. */
   getStorageBuffer(): GPUBuffer {
-    return this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE });
+    return this.trackForCleanup(
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE })
+    );
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the UNIFORM usage. */
   getUniformBuffer(): GPUBuffer {
-    return this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM });
+    return this.trackForCleanup(
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM })
+    );
   }
 
   /** Return an invalid GPUBuffer. */
@@ -150,33 +206,40 @@ export class ValidationTest extends GPUTest {
   }
 
   /**
-   * Return an arbitrarily-configured GPUTexture with the `SAMPLED` usage and specified sampleCount.
+   * Return an arbitrarily-configured GPUTexture with the `TEXTURE_BINDING` usage and specified sampleCount.
    */
   getSampledTexture(sampleCount: number = 1): GPUTexture {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.SAMPLED,
-      sampleCount,
-    });
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING,
+        sampleCount,
+      })
+    );
   }
 
-  /** Return an arbitrarily-configured GPUTexture with the `STORAGE` usage. */
+  /** Return an arbitrarily-configured GPUTexture with the `STORAGE_BINDING` usage. */
   getStorageTexture(): GPUTexture {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE,
-    });
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.STORAGE_BINDING,
+      })
+    );
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `RENDER_ATTACHMENT` usage. */
-  getRenderTexture(): GPUTexture {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+  getRenderTexture(sampleCount: number = 1): GPUTexture {
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        sampleCount,
+      })
+    );
   }
 
   /** Return an invalid GPUTexture. */
@@ -185,7 +248,7 @@ export class ValidationTest extends GPUTest {
     const texture = this.device.createTexture({
       size: { width: 0, height: 0, depthOrArrayLayers: 0 },
       format: 'rgba8unorm',
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     });
     this.device.popErrorScope();
     return texture;
@@ -230,6 +293,80 @@ export class ValidationTest extends GPUTest {
     }
   }
 
+  /** Create an arbitrarily-sized GPUBuffer with the STORAGE usage from mismatched device. */
+  getDeviceMismatchedStorageBuffer(): GPUBuffer {
+    return this.trackForCleanup(
+      this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE })
+    );
+  }
+
+  /** Create an arbitrarily-sized GPUBuffer with the UNIFORM usage from mismatched device. */
+  getDeviceMismatchedUniformBuffer(): GPUBuffer {
+    return this.trackForCleanup(
+      this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.UNIFORM })
+    );
+  }
+
+  /** Return a GPUTexture with descriptor from mismatched device. */
+  getDeviceMismatchedTexture(descriptor: GPUTextureDescriptor): GPUTexture {
+    return this.trackForCleanup(this.mismatchedDevice.createTexture(descriptor));
+  }
+
+  /** Return an arbitrarily-configured GPUTexture with the `SAMPLED` usage from mismatched device. */
+  getDeviceMismatchedSampledTexture(sampleCount: number = 1): GPUTexture {
+    return this.getDeviceMismatchedTexture({
+      size: { width: 4, height: 4, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING,
+      sampleCount,
+    });
+  }
+
+  /** Return an arbitrarily-configured GPUTexture with the `STORAGE` usage from mismatched device. */
+  getDeviceMismatchedStorageTexture(): GPUTexture {
+    return this.getDeviceMismatchedTexture({
+      size: { width: 4, height: 4, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.STORAGE_BINDING,
+    });
+  }
+
+  /** Return an arbitrarily-configured GPUTexture with the `RENDER_ATTACHMENT` usage from mismatched device. */
+  getDeviceMismatchedRenderTexture(sampleCount: number = 1): GPUTexture {
+    return this.getDeviceMismatchedTexture({
+      size: { width: 4, height: 4, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      sampleCount,
+    });
+  }
+
+  getDeviceMismatchedBindingResource(bindingType: ValidBindableResource): GPUBindingResource {
+    switch (bindingType) {
+      case 'uniformBuf':
+        return { buffer: this.getDeviceMismatchedStorageBuffer() };
+      case 'storageBuf':
+        return { buffer: this.getDeviceMismatchedUniformBuffer() };
+      case 'filtSamp':
+        return this.mismatchedDevice.createSampler({ minFilter: 'linear' });
+      case 'nonFiltSamp':
+        return this.mismatchedDevice.createSampler();
+      case 'compareSamp':
+        return this.mismatchedDevice.createSampler({ compare: 'never' });
+      case 'sampledTex':
+        return this.getDeviceMismatchedSampledTexture(1).createView();
+      case 'sampledTexMS':
+        return this.getDeviceMismatchedSampledTexture(4).createView();
+      case 'storageTex':
+        return this.getDeviceMismatchedStorageTexture().createView();
+    }
+  }
+
+  /** Create a GPURenderPipeline in the specified state. */
+  createRenderPipelineWithState(state: 'valid' | 'invalid'): GPURenderPipeline {
+    return state === 'valid' ? this.createNoOpRenderPipeline() : this.createErrorRenderPipeline();
+  }
+
   /** Return a GPURenderPipeline with default options and no-op vertex and fragment shaders. */
   createNoOpRenderPipeline(): GPURenderPipeline {
     return this.device.createRenderPipeline({
@@ -246,15 +383,31 @@ export class ValidationTest extends GPUTest {
           code: '[[stage(fragment)]] fn main() {}',
         }),
         entryPoint: 'main',
-        targets: [{ format: 'rgba8unorm' }],
+        targets: [{ format: 'rgba8unorm', writeMask: 0 }],
       },
       primitive: { topology: 'triangle-list' },
     });
   }
 
+  /** Return an invalid GPURenderPipeline. */
+  createErrorRenderPipeline(): GPURenderPipeline {
+    this.device.pushErrorScope('validation');
+    const pipeline = this.device.createRenderPipeline({
+      vertex: {
+        module: this.device.createShaderModule({
+          code: '',
+        }),
+        entryPoint: '',
+      },
+    });
+    this.device.popErrorScope();
+    return pipeline;
+  }
+
   /** Return a GPUComputePipeline with a no-op shader. */
-  createNoOpComputePipeline(): GPUComputePipeline {
+  createNoOpComputePipeline(layout?: GPUPipelineLayout): GPUComputePipeline {
     return this.device.createComputePipeline({
+      layout,
       compute: {
         module: this.device.createShaderModule({
           code: '[[stage(compute), workgroup_size(1)]] fn main() {}',
@@ -277,145 +430,5 @@ export class ValidationTest extends GPUTest {
     });
     this.device.popErrorScope();
     return pipeline;
-  }
-
-  /**
-   * Returns a GPUCommandEncoder, GPUComputePassEncoder, GPURenderPassEncoder, or
-   * GPURenderBundleEncoder, and a `finish` method returning a GPUCommandBuffer.
-   * Allows testing methods which have the same signature across multiple encoder interfaces.
-   *
-   * TODO(https://github.com/gpuweb/cts/pull/489#issuecomment-812283347):
-   * Make this have stricter validation to ensure errors are generated in the right API call.
-   *
-   * @example
-   * ```
-   * g.test('popDebugGroup')
-   *   .params(u => u.combine('encoderType', kEncoderTypes))
-   *   .fn(t => {
-   *     const { encoder, finish } = t.createEncoder(t.params.encoderType);
-   *     encoder.popDebugGroup();
-   *   });
-   *
-   * g.test('writeTimestamp')
-   *   .params(u => u.combine('encoderType', ['non-pass', 'compute pass', 'render pass'] as const)
-   *   .fn(t => {
-   *     const { encoder, finish } = t.createEncoder(t.params.encoderType);
-   *     // Encoder type is inferred, so `writeTimestamp` can be used even though it doesn't exist
-   *     // on GPURenderBundleEncoder.
-   *     encoder.writeTimestamp(args);
-   *   });
-   * ```
-   */
-  createEncoder<T extends EncoderType>(encoderType: T): CommandBufferMaker<T> {
-    const colorFormat = 'rgba8unorm';
-    switch (encoderType) {
-      case 'non-pass': {
-        const encoder = this.device.createCommandEncoder();
-        // TypeScript introduces an intersection type here where it seems like there shouldn't be
-        // one. Maybe there is a soundness issue here, but I don't think there is one in practice.
-        return {
-          encoder,
-          finish: () => {
-            return encoder.finish();
-          },
-        } as CommandBufferMaker<T>;
-      }
-      case 'render bundle': {
-        const device = this.device;
-        const encoder = device.createRenderBundleEncoder({
-          colorFormats: [colorFormat],
-        });
-        const pass = this.createEncoder('render pass');
-        return {
-          encoder,
-          finish: () => {
-            const bundle = encoder.finish();
-            pass.encoder.executeBundles([bundle]);
-            return pass.finish();
-          },
-        } as CommandBufferMaker<T>;
-      }
-      case 'compute pass': {
-        const commandEncoder = this.device.createCommandEncoder();
-        const encoder = commandEncoder.beginComputePass();
-        return {
-          encoder,
-          finish: () => {
-            encoder.endPass();
-            return commandEncoder.finish();
-          },
-        } as CommandBufferMaker<T>;
-      }
-      case 'render pass': {
-        const commandEncoder = this.device.createCommandEncoder();
-        const view = this.device
-          .createTexture({
-            format: colorFormat,
-            size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-            usage: GPUTextureUsage.RENDER_ATTACHMENT,
-          })
-          .createView();
-        const encoder = commandEncoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view,
-              loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
-              storeOp: 'store',
-            },
-          ],
-        });
-        return {
-          encoder,
-          finish: () => {
-            encoder.endPass();
-            return commandEncoder.finish();
-          },
-        } as CommandBufferMaker<T>;
-      }
-    }
-    unreachable();
-  }
-
-  /**
-   * Expect a validation error inside the callback.
-   *
-   * Tests should always do just one WebGPU call in the callback, to make sure that's what's tested.
-   */
-  expectValidationError(fn: () => void, shouldError: boolean = true): void {
-    // If no error is expected, we let the scope surrounding the test catch it.
-    if (shouldError) {
-      this.device.pushErrorScope('validation');
-    }
-
-    // Note: A return value is not allowed for the callback function. This is to avoid confusion
-    // about what the actual behavior would be; either of the following could be reasonable:
-    //   - Make expectValidationError async, and have it await on fn(). This causes an async split
-    //     between pushErrorScope and popErrorScope, so if the caller doesn't `await` on
-    //     expectValidationError (either accidentally or because it doesn't care to do so), then
-    //     other test code will be (nondeterministically) caught by the error scope.
-    //   - Make expectValidationError NOT await fn(), but just execute its first block (until the
-    //     first await) and return the return value (a Promise). This would be confusing because it
-    //     would look like the error scope includes the whole async function, but doesn't.
-    // If we do decide we need to return a value, we should use the latter semantic.
-    const returnValue = fn() as unknown;
-    assert(
-      returnValue === undefined,
-      'expectValidationError callback should not return a value (or be async)'
-    );
-
-    if (shouldError) {
-      const promise = this.device.popErrorScope();
-
-      this.eventualAsyncExpectation(async niceStack => {
-        const gpuValidationError = await promise;
-        if (!gpuValidationError) {
-          niceStack.message = 'Validation succeeded unexpectedly.';
-          this.rec.validationFailed(niceStack);
-        } else if (gpuValidationError instanceof GPUValidationError) {
-          niceStack.message = `Validation failed, as expected - ${gpuValidationError.message}`;
-          this.rec.debug(niceStack);
-        }
-      });
-    }
   }
 }

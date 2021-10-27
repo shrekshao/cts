@@ -84,13 +84,13 @@
 					<a name="makebufferwithcontents" class="tsd-anchor"></a>
 					<h3>make<wbr>Buffer<wbr>With<wbr>Contents</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
-						<li class="tsd-signature tsd-kind-icon">make<wbr>Buffer<wbr>With<wbr>Contents<span class="tsd-signature-symbol">(</span>device<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUDevice</span>, dataArray<span class="tsd-signature-symbol">: </span><a href="common_util_util.html#typedarraybufferview" class="tsd-signature-type" data-tsd-kind="Type alias">TypedArrayBufferView</a>, usage<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUBufferUsageFlags</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUBuffer</span></li>
+						<li class="tsd-signature tsd-kind-icon">make<wbr>Buffer<wbr>With<wbr>Contents<span class="tsd-signature-symbol">(</span>device<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUDevice</span>, dataArray<span class="tsd-signature-symbol">: </span><a href="common_util_util.html#typedarraybufferview" class="tsd-signature-type" data-tsd-kind="Type alias">TypedArrayBufferView</a>, usage<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUBufferUsageFlags</span>, opts<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-symbol">{ </span>padToMultipleOf4<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">GPUBuffer</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/4ab1145/src/webgpu/util/buffer.ts#L6">src/webgpu/util/buffer.ts:6</a></li>
+									<li>Defined in <a href="https://github.com/shrekshao/cts/blob/04292d3/src/webgpu/util/buffer.ts#L8">src/webgpu/util/buffer.ts:8</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -108,6 +108,14 @@
 								</li>
 								<li>
 									<h5>usage: <span class="tsd-signature-type">GPUBufferUsageFlags</span></h5>
+								</li>
+								<li>
+									<h5>opts: <span class="tsd-signature-symbol">{ </span>padToMultipleOf4<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol"> = {}</span></h5>
+									<ul class="tsd-parameters">
+										<li class="tsd-parameter">
+											<h5><span class="tsd-flag ts-flagOptional">Optional</span> pad<wbr>ToMultiple<wbr>Of4<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span></h5>
+										</li>
+									</ul>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">GPUBuffer</span></h4>
@@ -150,15 +158,14 @@
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
-				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
-				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
-			</ul>
-			<ul class="tsd-legend">
 				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
 				<li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
 			</ul>
 		</div>
 	</div>

@@ -1,6 +1,11 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { kTextureFormatInfo } from '../../../capability_info.js';import { ValidationTest } from '../validation_test.js';
+**/import { kTextureFormatInfo,
+
+depthStencilFormatCopyableAspects } from
+'../../../capability_info.js';
+
+import { ValidationTest } from '../validation_test.js';
 
 export class ImageCopyTest extends ValidationTest {
   testRun(
@@ -36,6 +41,7 @@ export class ImageCopyTest extends ValidationTest {
             size: dataSize,
             usage: GPUBufferUsage.COPY_SRC });
 
+          this.trackForCleanup(buffer);
 
           const encoder = this.device.createCommandEncoder();
           encoder.copyBufferToTexture({ buffer, ...textureDataLayout }, textureCopyView, size);
@@ -58,6 +64,7 @@ export class ImageCopyTest extends ValidationTest {
             size: dataSize,
             usage: GPUBufferUsage.COPY_DST });
 
+          this.trackForCleanup(buffer);
 
           const encoder = this.device.createCommandEncoder();
           encoder.copyTextureToBuffer(textureCopyView, { buffer, ...textureDataLayout }, size);
@@ -83,7 +90,8 @@ export class ImageCopyTest extends ValidationTest {
   createAlignedTexture(
   format,
   copySize = { width: 1, height: 1, depthOrArrayLayers: 1 },
-  origin = { x: 0, y: 0, z: 0 })
+  origin = { x: 0, y: 0, z: 0 },
+  dimension = '2d')
   {
     const info = kTextureFormatInfo[format];
     return this.device.createTexture({
@@ -92,8 +100,55 @@ export class ImageCopyTest extends ValidationTest {
         height: Math.max(1, copySize.height + origin.y) * info.blockHeight,
         depthOrArrayLayers: Math.max(1, copySize.depthOrArrayLayers + origin.z) },
 
+      dimension,
       format,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST });
+
+  }
+
+  testBuffer(
+  buffer,
+  texture,
+  textureDataLayout,
+  size,
+  {
+    method,
+    dataSize,
+    success,
+    submit = true })
+
+
+
+
+
+
+
+
+  {
+    switch (method) {
+      case 'WriteTexture':{
+          const data = new Uint8Array(dataSize);
+
+          this.expectValidationError(() => {
+            this.device.queue.writeTexture({ texture }, data, textureDataLayout, size);
+          }, !success);
+
+          break;
+        }
+      case 'CopyB2T':{
+          const { encoder, validateFinishAndSubmit } = this.createEncoder('non-pass');
+          encoder.copyBufferToTexture({ buffer, ...textureDataLayout }, { texture }, size);
+          validateFinishAndSubmit(success, submit);
+
+          break;
+        }
+      case 'CopyT2B':{
+          const { encoder, validateFinishAndSubmit } = this.createEncoder('non-pass');
+          encoder.copyTextureToBuffer({ texture }, { buffer, ...textureDataLayout }, size);
+          validateFinishAndSubmit(success, submit);
+
+          break;
+        }}
 
   }}
 
@@ -120,8 +175,13 @@ function valuesToTestDivisibilityBy(number) {
 
 
 
-// This is a helper function used for expanding test parameters for texel block alignment tests on offset
+// This is a helper function used for expanding test parameters for offset alignment, by spec
 export function texelBlockAlignmentTestExpanderForOffset({ format }) {
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    return valuesToTestDivisibilityBy(4);
+  }
+
   return valuesToTestDivisibilityBy(kTextureFormatInfo[format].bytesPerBlock);
 }
 
@@ -152,10 +212,34 @@ export function texelBlockAlignmentTestExpanderForValueToCoordinate({
 
 // This is a helper function used for filtering test parameters
 export function formatCopyableWithMethod({ format, method }) {
-  if (method === 'CopyTextureToBuffer') {
-    return kTextureFormatInfo[format].copySrc;
-  } else {
-    return kTextureFormatInfo[format].copyDst;
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    const supportedAspects = depthStencilFormatCopyableAspects(
+    method,
+    format);
+
+    return supportedAspects.length > 0;
   }
+  if (method === 'CopyT2B') {
+    return info.copySrc;
+  } else {
+    return info.copyDst;
+  }
+}
+
+// This is a helper function used for filtering test parameters
+export function getACopyableAspectWithMethod({
+  format,
+  method })
+{
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    const supportedAspects = depthStencilFormatCopyableAspects(
+    method,
+    format);
+
+    return supportedAspects[0];
+  }
+  return 'all';
 }
 //# sourceMappingURL=image_copy.js.map

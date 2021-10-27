@@ -58,7 +58,7 @@ class F extends GPUTest {
     const outputTexture = this.device.createTexture({
       format: 'rgba8unorm',
       size: [1, 1, 1],
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.STORAGE });
+      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.STORAGE_BINDING });
 
     const bindGroup = this.device.createBindGroup({
       layout: computePipeline.getBindGroupLayout(0),
@@ -832,7 +832,10 @@ fn(async t => {
   const outputTexture = t.device.createTexture({
     format: 'rgba8unorm',
     size: [1, 1, 1],
-    usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.STORAGE });
+    usage:
+    GPUTextureUsage.COPY_SRC |
+    GPUTextureUsage.RENDER_ATTACHMENT |
+    GPUTextureUsage.STORAGE_BINDING });
 
 
   // Initialize outputTexture to green.

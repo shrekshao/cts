@@ -137,7 +137,7 @@ Test various validation behaviors when a resolveTarget is provided.
           renderPassColorAttachmentDescriptors.push({
             view: resolveSourceColorAttachment.createView(),
             loadValue: 'load',
-            storeOp: 'clear',
+            storeOp: 'discard',
             resolveTarget: resolveTarget.createView({
               dimension: resolveTargetViewArrayLayerCount === 1 ? '2d' : '2d-array',
               mipLevelCount: resolveTargetViewMipCount,
@@ -176,7 +176,7 @@ Test various validation behaviors when a resolveTarget is provided.
           renderPassColorAttachmentDescriptors.push({
             view: colorAttachment.createView(),
             loadValue: 'load',
-            storeOp: 'clear',
+            storeOp: 'discard',
             resolveTarget: resolveTarget.createView(),
           });
         }

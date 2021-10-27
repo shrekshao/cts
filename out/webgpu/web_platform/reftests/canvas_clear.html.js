@@ -3,13 +3,13 @@
 **/import { runRefTest } from './gpu_ref_test.js';runRefTest(async t => {
   const canvas = document.getElementById('gpucanvas');
 
-  const ctx = canvas.getContext('gpupresent');
-  const swapChain = ctx.configureSwapChain({
+  const ctx = canvas.getContext('webgpu');
+  ctx.configure({
     device: t.device,
     format: 'bgra8unorm' });
 
 
-  const colorAttachment = swapChain.getCurrentTexture();
+  const colorAttachment = ctx.getCurrentTexture();
   const colorAttachmentView = colorAttachment.createView();
 
   const encoder = t.device.createCommandEncoder();

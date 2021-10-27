@@ -102,4 +102,43 @@ g.test('number_of_bind_group_layouts_exceeds_the_maximum_value').fn(async t => {
     t.device.createPipelineLayout(badPipelineLayoutDescriptor);
   });
 });
+
+g.test('bind_group_layouts,device_mismatch').
+desc(
+`
+    Tests createPipelineLayout cannot be called with bind group layouts created from another device
+    Test with two layouts to make sure all layouts can be validated:
+    - layout0 and layout1 from same device
+    - layout0 and layout1 from different device
+    `).
+
+paramsSubcasesOnly([
+{ layout0Mismatched: false, layout1Mismatched: false }, // control case
+{ layout0Mismatched: true, layout1Mismatched: false },
+{ layout0Mismatched: false, layout1Mismatched: true }]).
+
+fn(async t => {
+  const { layout0Mismatched, layout1Mismatched } = t.params;
+
+  const mismatched = layout0Mismatched || layout1Mismatched;
+
+  if (mismatched) {
+    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+  }
+
+  const bglDescriptor = {
+    entries: [] };
+
+
+  const layout0 = layout0Mismatched ?
+  t.mismatchedDevice.createBindGroupLayout(bglDescriptor) :
+  t.device.createBindGroupLayout(bglDescriptor);
+  const layout1 = layout1Mismatched ?
+  t.mismatchedDevice.createBindGroupLayout(bglDescriptor) :
+  t.device.createBindGroupLayout(bglDescriptor);
+
+  t.expectValidationError(() => {
+    t.device.createPipelineLayout({ bindGroupLayouts: [layout0, layout1] });
+  }, mismatched);
+});
 //# sourceMappingURL=createPipelineLayout.spec.js.map
