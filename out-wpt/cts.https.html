@@ -14,7 +14,7 @@
     generate your own variants list from your suppression list.
     See `tools/gen_wpt_cts_html` to do this.
 
-    When run under browser CI, the original cts.html should be skipped, and
+    When run under browser CI, the original cts.https.html should be skipped, and
     this alternate version should be run instead, under a non-exported WPT test
     directory (e.g. Chromium's wpt_internal).
 -->
@@ -358,7 +358,6 @@
 <meta name=variant content='webgpu:api,validation,encoding,cmds,setBindGroup:dynamic_offsets_match_expectations_in_pass_encoder:*'>
 <meta name=variant content='webgpu:api,validation,encoding,cmds,setBindGroup:u32array_start_and_length:*'>
 <meta name=variant content='webgpu:api,validation,encoding,programmable,pipeline_bind_group_compat:bind_groups_and_pipeline_layout_mismatch:*'>
-<meta name=variant content='webgpu:api,validation,encoding,programmable,pipeline_bind_group_compat:it_is_invalid_to_draw_in_a_render_pass_with_missing_bind_groups:*'>
 <meta name=variant content='webgpu:api,validation,encoding,programmable,pipeline_bind_group_compat:buffer_binding,render_pipeline:*'>
 <meta name=variant content='webgpu:api,validation,encoding,programmable,pipeline_bind_group_compat:sampler_binding,render_pipeline:*'>
 <meta name=variant content='webgpu:api,validation,encoding,programmable,pipeline_bind_group_compat:bgl_binding_mismatch:*'>
@@ -498,7 +497,7 @@
 <meta name=variant content='webgpu:examples:gpu,async:*'>
 <meta name=variant content='webgpu:examples:gpu,buffers:*'>
 <meta name=variant content='webgpu:examples:gpu,with_texture_compression,bc:*'>
-<meta name=variant content='webgpu:examples:gpu,with_texture_compression,etc:*'>
+<meta name=variant content='webgpu:examples:gpu,with_texture_compression,etc2:*'>
 <meta name=variant content='webgpu:idl,constants,flags:BufferUsage,count:*'>
 <meta name=variant content='webgpu:idl,constants,flags:BufferUsage,values:*'>
 <meta name=variant content='webgpu:idl,constants,flags:TextureUsage,count:*'>
@@ -510,13 +509,15 @@
 <meta name=variant content='webgpu:shader,execution,builtin,abs:integer_builtin_functions,abs_unsigned:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,abs:integer_builtin_functions,abs_signed:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,abs:float_builtin_functions,abs_float:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,all:logical_builtin_functions,vector_all:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,any:logical_builtin_functions,vector_any:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,atan:float_builtin_functions,atan:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,ceil:float_builtin_functions,ceil:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,cos:float_builtin_functions,cos:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,acos:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,asin:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,atan:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,atan2:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,clamp:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,cos:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,cosh:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,vector_case_cross:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,float_built_functions:float_builtin_functions,distance:*'>
@@ -559,22 +560,43 @@
 <meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,count_1_bits:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,unsigned_max:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,signed_max:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,unsigned_min:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,signed_min:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,integer_built_in_functions:integer_builtin_functions,bit_reversal:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,logical_built_in_functions:logical_builtin_functions,vector_all:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,logical_built_in_functions:logical_builtin_functions,vector_any:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,logical_built_in_functions:logical_builtin_functions,scalar_select:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,logical_built_in_functions:logical_builtin_functions,vector_select:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,value_testing_built_in_functions:value_testing_builtin_functions,isNan:*'>
-<meta name=variant content='webgpu:shader,execution,builtin,value_testing_built_in_functions:value_testing_builtin_functions,isInf:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,min:integer_builtin_functions,unsigned_min:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,min:integer_builtin_functions,signed_min:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,select:logical_builtin_functions,scalar_select:*'>
+<meta name=variant content='webgpu:shader,execution,builtin,select:logical_builtin_functions,vector_select:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,value_testing_built_in_functions:value_testing_builtin_functions,isFinite:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,value_testing_built_in_functions:value_testing_builtin_functions,isNormal:*'>
 <meta name=variant content='webgpu:shader,execution,builtin,value_testing_built_in_functions:value_testing_builtin_functions,runtime_sized_array_length:*'>
 <meta name=variant content='webgpu:shader,execution,robust_access:linear_memory:*'>
 <meta name=variant content='webgpu:shader,execution,robust_access_vertex:vertex_buffer_access:*'>
+<meta name=variant content='webgpu:shader,execution,sampling,gradients_in_varying_loop:derivative_in_varying_loop:*'>
 <meta name=variant content='webgpu:shader,execution,shader_io,compute_builtins:inputs:*'>
+<meta name=variant content='webgpu:shader,execution,shader_io,shared_structs:shared_with_buffer:*'>
+<meta name=variant content='webgpu:shader,execution,shader_io,shared_structs:shared_between_stages:*'>
+<meta name=variant content='webgpu:shader,execution,shader_io,shared_structs:shared_with_non_entry_point_function:*'>
 <meta name=variant content='webgpu:shader,execution,zero_init:compute,zero_init:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,builtins:stage_inout:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,builtins:type:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,builtins:nesting:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,builtins:duplicates:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,builtins:missing_vertex_position:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,generic:missing_attribute_on_param:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,generic:missing_attribute_on_param_struct:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,generic:missing_attribute_on_return_type:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,generic:missing_attribute_on_return_type_struct:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,interpolate:type_and_sampling:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,interpolate:require_location:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,interpolate:integral_types:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,invariant:valid_only_with_vertex_position_builtin:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,invariant:not_valid_on_user_defined_io:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,invariant:invalid_use_of_parameters:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,locations:stage_inout:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,locations:type:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,locations:nesting:*'>
+<meta name=variant content='webgpu:shader,validation,shader_io,locations:duplicates:*'>
 <meta name=variant content='webgpu:shader,validation,variable_and_const:initializer_type:*'>
 <meta name=variant content='webgpu:shader,validation,variable_and_const:io_shareable_type:*'>
 <meta name=variant content='webgpu:shader,validation,wgsl,basic:trivial:*'>
