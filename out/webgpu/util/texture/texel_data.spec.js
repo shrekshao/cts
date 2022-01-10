@@ -55,7 +55,7 @@ t)
   const shader = `
   [[group(0), binding(0)]] var tex : texture_2d<${shaderType}>;
 
-  [[block]] struct Output {
+  struct Output {
     ${rep.componentOrder.map(C => `result${C} : ${shaderType};`).join('\n')}
   };
   [[group(0), binding(1)]] var<storage, read_write> output : Output;
@@ -266,6 +266,10 @@ expand('componentData', ({ format }) => {
 fn(doTest);
 
 g.test('float_texel_data_in_shader').
+desc(
+`
+TODO: Test NaN, Infinity, -Infinity [1]`).
+
 params((u) =>
 u.
 combine('format', kEncodableTextureFormats).
@@ -282,7 +286,7 @@ expand('componentData', ({ format }) => {
   // Test extrema
   makeParam(format, () => 0),
 
-  // TODO: Test NaN, Infinity, -Infinity
+  // [1]: Test NaN, Infinity, -Infinity
 
   // Test some values
   makeParam(format, () => 0.1199951171875),
@@ -302,6 +306,10 @@ expand('componentData', ({ format }) => {
 fn(doTest);
 
 g.test('ufloat_texel_data_in_shader').
+desc(
+`
+TODO: Test NaN, Infinity [1]`).
+
 params((u) =>
 u.
 combine('format', kEncodableTextureFormats).
@@ -318,7 +326,7 @@ expand('componentData', ({ format }) => {
   // Test extrema
   makeParam(format, () => 0),
 
-  // TODO: Test NaN, Infinity
+  // [2]: Test NaN, Infinity
 
   // Test some values
   makeParam(format, () => 0.119140625),

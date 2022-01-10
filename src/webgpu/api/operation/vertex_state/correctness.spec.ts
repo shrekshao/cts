@@ -32,7 +32,7 @@ type VertexBuffer<V, A> = V & {
 type VertexState<V, A> = VertexBuffer<V, A>[];
 
 type VertexLayoutState<V, A> = VertexState<
-  { stepMode: GPUInputStepMode; arrayStride: number } & V,
+  { stepMode: GPUVertexStepMode; arrayStride: number } & V,
   { format: GPUVertexFormat; offset: number } & A
 >;
 
@@ -77,7 +77,7 @@ class VertexStateTest extends GPUTest {
   // a negative number corresponding to the check number (in case you need to debug a failure).
   makeTestWGSL(
     buffers: VertexState<
-      { stepMode: GPUInputStepMode },
+      { stepMode: GPUVertexStepMode },
       {
         format: GPUVertexFormat;
         shaderBaseType: string;
@@ -127,7 +127,7 @@ class VertexStateTest extends GPUTest {
         }
 
         vsInputs += `  [[location(${i})]] attrib${i} : ${shaderType};\n`;
-        vsBindings += `[[block]] struct S${i} { data : array<vec4<${a.shaderBaseType}>, ${maxCount}>; };\n`;
+        vsBindings += `struct S${i} { data : array<vec4<${a.shaderBaseType}>, ${maxCount}>; };\n`;
         vsBindings += `[[group(0), binding(${i})]] var<${storageType}> providedData${i} : S${i};\n`;
 
         // Generate the all the checks for the attributes.
@@ -222,7 +222,7 @@ struct VSOutputs {
 
   makeTestPipeline(
     buffers: VertexState<
-      { stepMode: GPUInputStepMode; arrayStride: number },
+      { stepMode: GPUVertexStepMode; arrayStride: number },
       {
         offset: number;
         format: GPUVertexFormat;
@@ -307,7 +307,7 @@ struct VSOutputs {
   }
 
   // Generate TestData for the format with interesting test values.
-  // TODO cache the result on the fixture?
+  // MAINTENANCE_TODO cache the result on the fixture?
   // Note that the test data always starts with an interesting value, so that using the first
   // test value in a test is still meaningful.
   generateTestData(format: GPUVertexFormat): TestData {
@@ -748,7 +748,7 @@ g.test('buffers_with_varying_step_mode')
   )
   .fn(t => {
     const { stepModes } = t.params;
-    const state = (stepModes as GPUInputStepMode[]).map((stepMode, i) => ({
+    const state = (stepModes as GPUVertexStepMode[]).map((stepMode, i) => ({
       slot: i,
       arrayStride: 4,
       stepMode,

@@ -57,7 +57,6 @@ import { ValidationTest } from '../../validation_test.js';
 const kTextureBindingTypes = [
   'sampled-texture',
   'multisampled-texture',
-  'readonly-storage-texture',
   'writeonly-storage-texture',
 ];
 
@@ -93,10 +92,6 @@ class TextureUsageTracking extends ValidationTest {
         break;
       case 'multisampled-texture':
         entry = { texture: { viewDimension, multisampled: true, sampleType } };
-        break;
-      case 'readonly-storage-texture':
-        assert(format !== undefined);
-        entry = { storageTexture: { access: 'read-only', format, viewDimension } };
         break;
       case 'writeonly-storage-texture':
         assert(format !== undefined);
@@ -222,12 +217,8 @@ g.test('subresources_and_binding_types_combination_for_color')
       .combine('compute', [false, true])
       .combineWithParams([
         { _usageOK: true, type0: 'sampled-texture', type1: 'sampled-texture' },
-        { _usageOK: true, type0: 'sampled-texture', type1: 'readonly-storage-texture' },
         { _usageOK: false, type0: 'sampled-texture', type1: 'writeonly-storage-texture' },
         { _usageOK: false, type0: 'sampled-texture', type1: 'render-target' },
-        { _usageOK: true, type0: 'readonly-storage-texture', type1: 'readonly-storage-texture' },
-        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'writeonly-storage-texture' },
-        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'render-target' },
         // Race condition upon multiple writable storage texture is valid.
         { _usageOK: true, type0: 'writeonly-storage-texture', type1: 'writeonly-storage-texture' },
         { _usageOK: false, type0: 'writeonly-storage-texture', type1: 'render-target' },
@@ -383,9 +374,9 @@ g.test('subresources_and_binding_types_combination_for_color')
       ])
       .unless(
         p =>
-          // Every color attachment can use only one single subresource.
-          (p.type0 === 'render-target' && (p.levelCount0 !== 1 || p.layerCount0 !== 1)) ||
-          (p.type1 === 'render-target' && (p.levelCount1 !== 1 || p.layerCount1 !== 1)) ||
+          // Every color attachment or storage texture can use only one single subresource.
+          (p.type0 !== 'sampled-texture' && (p.levelCount0 !== 1 || p.layerCount0 !== 1)) ||
+          (p.type1 !== 'sampled-texture' && (p.levelCount1 !== 1 || p.layerCount1 !== 1)) ||
           // All color attachments' size should be the same.
           (p.type0 === 'render-target' &&
             p.type1 === 'render-target' &&
@@ -794,7 +785,6 @@ g.test('replaced_binding')
       .combine('callDrawOrDispatch', [false, true])
       .combine('entry', [
         { texture: {} },
-        { storageTexture: { access: 'read-only', format: 'rgba8unorm' } },
         { storageTexture: { access: 'write-only', format: 'rgba8unorm' } },
       ])
   )
@@ -846,7 +836,7 @@ g.test('replaced_binding')
     pass.setBindGroup(0, bindGroup1);
     pass.endPass();
 
-    // TODO: If the Compatible Usage List (https://gpuweb.github.io/gpuweb/#compatible-usage-list)
+    // MAINTENANCE_TODO: If the Compatible Usage List (https://gpuweb.github.io/gpuweb/#compatible-usage-list)
     // gets programmatically defined in capability_info, use it here, instead of this logic, for clarity.
     let success = entry.storageTexture?.access !== 'write-only';
     // Replaced bindings should not be validated in compute pass, because validation only occurs
@@ -872,7 +862,6 @@ g.test('bindings_in_bundle')
             case 'multisampled-texture':
             case 'sampled-texture':
               return 'TEXTURE_BINDING';
-            case 'readonly-storage-texture':
             case 'writeonly-storage-texture':
               return 'STORAGE_BINDING';
             case 'render-target':
@@ -965,7 +954,6 @@ g.test('bindings_in_bundle')
       switch (t) {
         case 'sampled-texture':
         case 'multisampled-texture':
-        case 'readonly-storage-texture':
           return true;
         default:
           return false;
@@ -1007,7 +995,7 @@ g.test('unused_bindings_in_pipeline')
       callDrawOrDispatch,
     } = t.params;
     const view = t.createTexture({ usage: GPUTextureUsage.STORAGE_BINDING }).createView();
-    const bindGroup0 = t.createBindGroup(0, view, 'readonly-storage-texture', '2d', {
+    const bindGroup0 = t.createBindGroup(0, view, 'sampled-texture', '2d', {
       format: 'rgba8unorm',
     });
 

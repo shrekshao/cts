@@ -103,6 +103,14 @@ export const listing = [
       "api",
       "operation",
       "command_buffer",
+      "clearBuffer"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "command_buffer",
       "copyBufferToBuffer"
     ]
   },
@@ -252,6 +260,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "pipeline",
+      "default_layout"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "queue",
       "writeBuffer"
     ]
@@ -263,6 +279,14 @@ export const listing = [
       "render_pass"
     ],
     "readme": "Render pass stuff other than commands (which are in command_buffer/)."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pass",
+      "clear_value"
+    ]
   },
   {
     "file": [
@@ -396,6 +420,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "rendering",
+      "robust_access_index"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "resource_init",
       "buffer"
     ]
@@ -469,14 +501,6 @@ export const listing = [
       "api",
       "operation",
       "uncapturederror"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "vertex_state",
-      "basic"
     ]
   },
   {
@@ -563,7 +587,7 @@ export const listing = [
       "validation",
       "capability_checks",
       "features",
-      "depth_clamping"
+      "depth_clip_control"
     ]
   },
   {
@@ -591,7 +615,7 @@ export const listing = [
       "capability_checks",
       "limits"
     ],
-    "readme": "Test everything that shouldn't be valid without a higher-than-specified limit.\n\n- x= that limit {default, max supported (if different), lower than default (TODO: if allowed)}\n\nOne file for each limit name.\n\nTODO: implement"
+    "readme": "Test everything that shouldn't be valid without a higher-than-specified limit.\n\n- x= that limit {default, max supported (if different), lower than default (TODO: if allowed)}\n\nOne file for each limit name.\n\nTODO: implement\nTODO: Also test that \"alignment\" limits require a power of 2."
   },
   {
     "file": [
@@ -671,6 +695,15 @@ export const listing = [
       "encoding",
       "cmds",
       "buffer_texture_copies"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "clearBuffer"
     ]
   },
   {
@@ -1105,7 +1138,7 @@ export const listing = [
     "file": [
       "idl"
     ],
-    "readme": "Tests to check that the WebGPU IDL is correctly implemented, for examples that objects exposed\nexactly the correct members, and that methods throw when passed incomplete dictionaries.\n\nSee https://github.com/gpuweb/cts/issues/332"
+    "readme": "Tests to check that the WebGPU IDL is correctly implemented, for examples that objects exposed\nexactly the correct members, and that methods throw when passed incomplete dictionaries.\n\nSee https://github.com/gpuweb/cts/issues/332\n\nTODO: exposed.html.ts: Test all WebGPU interfaces instead of just some of them.\nTODO: Check prototype chains. (Add a helper in IDLTest for this.)"
   },
   {
     "file": [
@@ -1181,6 +1214,14 @@ export const listing = [
       "execution",
       "builtin",
       "float_built_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "floor"
     ]
   },
   {
@@ -1425,14 +1466,7 @@ export const listing = [
       "web_platform",
       "external_texture"
     ],
-    "readme": "Tests for external textures from video/canvas."
-  },
-  {
-    "file": [
-      "web_platform",
-      "external_texture",
-      "canvas"
-    ]
+    "readme": "Tests for external textures."
   },
   {
     "file": [

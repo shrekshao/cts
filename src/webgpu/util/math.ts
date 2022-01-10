@@ -1,4 +1,7 @@
 import { assert } from '../../common/util/util.js';
+import { kBit } from '../shader/execution/builtin/builtin.js';
+
+import { f32, f32Bits, Scalar } from './conversion.js';
 
 /**
  * A multiple of 8 guaranteed to be way too large to allocate (just under 8 pebibytes).
@@ -10,7 +13,7 @@ import { assert } from '../../common/util/util.js';
 export const kMaxSafeMultipleOf8 = Number.MAX_SAFE_INTEGER - 7;
 
 /** Round `n` up to the next multiple of `alignment` (inclusive). */
-// TODO: Rename to `roundUp`
+// MAINTENANCE_TODO: Rename to `roundUp`
 export function align(n: number, alignment: number): number {
   assert(Number.isInteger(n) && n >= 0, 'n must be a non-negative integer');
   assert(Number.isInteger(alignment) && alignment > 0, 'alignment must be a positive integer');
@@ -61,4 +64,104 @@ export function diffULP(a: number, b: number): number {
     return Math.max(bits_a, bits_b) - Math.min(bits_a, bits_b);
   }
   return bits_a + bits_b;
+}
+
+/**
+ * @returns the next single precision floating point value after |val|,
+ * towards +inf if |dir| is true, otherwise towards -inf.
+ * For -/+0 the nextAfter will be the closest subnormal in the correct
+ * direction, since -0 === +0.
+ * |val| must be expressible as a f32.
+ */
+export function nextAfter(val: number, dir: boolean = true): Scalar {
+  if (Number.isNaN(val)) {
+    return f32Bits(kBit.f32.nan.positive.s);
+  }
+
+  if (val === Number.POSITIVE_INFINITY) {
+    return f32Bits(kBit.f32.infinity.positive);
+  }
+
+  if (val === Number.NEGATIVE_INFINITY) {
+    return f32Bits(kBit.f32.infinity.negative);
+  }
+
+  // -/+0 === 0 returns true
+  if (val === 0) {
+    if (dir) {
+      return f32Bits(kBit.f32.subnormal.positive.min);
+    } else {
+      return f32Bits(kBit.f32.subnormal.negative.max);
+    }
+  }
+
+  // number is float64 internally, so need to test if value is expressible as a float32.
+  const converted: number = new Float32Array([val])[0];
+  assert(val === converted, `${val} is not expressible as a f32.`);
+
+  const u32_val = new Uint32Array(new Float32Array([val]).buffer)[0];
+  const is_positive = (u32_val & 0x80000000) === 0;
+  let result = u32_val;
+  if (dir === is_positive) {
+    result += 1;
+  } else {
+    result -= 1;
+  }
+
+  // Checking for overflow
+  if ((result & 0x7f800000) === 0x7f800000) {
+    if (dir) {
+      return f32Bits(kBit.f32.infinity.positive);
+    } else {
+      return f32Bits(kBit.f32.infinity.negative);
+    }
+  }
+  return f32Bits(result);
+}
+
+/**
+ * @returns if a test value is correctly rounded to an target value. Only
+ * defined for |test_values| being a float32. target values may be any number.
+ *
+ * Correctly rounded means that if the target value is precisely expressible
+ * as a float32, then |test_value| === |target|.
+ * Otherwise |test_value| needs to be either the closest expressible number greater
+ * or less than |target|.
+ */
+export function correctlyRounded(test_value: Scalar, target: number): boolean {
+  assert(test_value.type.kind === 'f32', `${test_value} is expected to be a 'f32'`);
+
+  if (Number.isNaN(target)) {
+    return Number.isNaN(test_value.value.valueOf() as number);
+  }
+
+  if (target === Number.POSITIVE_INFINITY) {
+    return test_value.value === f32Bits(kBit.f32.infinity.positive).value;
+  }
+
+  if (target === Number.NEGATIVE_INFINITY) {
+    return test_value.value === f32Bits(kBit.f32.infinity.negative).value;
+  }
+
+  const target32 = new Float32Array([target])[0];
+  const converted: number = target32;
+  if (target === converted) {
+    // expected is precisely expressible in float32
+    return test_value.value === f32(target32).value;
+  }
+
+  let after_target: Scalar;
+  let before_target: Scalar;
+
+  if (converted > target) {
+    // target32 is rounded towards +inf, so is after_target
+    after_target = f32(target32);
+    before_target = nextAfter(target32, false);
+  } else {
+    // target32 is rounded towards -inf, so is before_target
+    after_target = nextAfter(target32, true);
+    before_target = f32(target32);
+  }
+
+  return test_value.value === before_target.value || test_value.value === after_target.value;
 }

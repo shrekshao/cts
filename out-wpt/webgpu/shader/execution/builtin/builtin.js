@@ -2,6 +2,7 @@
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { Colors } from '../../../../common/util/colors.js';
 import {
+  f32,
   ScalarType,
   Scalar,
   Vector,
@@ -9,7 +10,7 @@ import {
   TypeU32,
   VectorType,
 } from '../../../util/conversion.js';
-import { diffULP } from '../../../util/math.js';
+import { correctlyRounded, diffULP } from '../../../util/math.js';
 
 /** Comparison describes the result of a Comparator function. */
 
@@ -39,6 +40,17 @@ export function ulpThreshold(ulp) {
       return true;
     }
     return diffULP(got, expected) <= ulp;
+  };
+}
+
+/**
+ * @returns a FloatMatch that returns true iff |expected| is a correctly round
+ * to |got|.
+ * |got| must be expressible as a float32.
+ */
+export function correctlyRoundedThreshold() {
+  return (got, expected) => {
+    return correctlyRounded(f32(got), expected);
   };
 }
 
@@ -244,12 +256,10 @@ ${parameterTypes
   .join('\n')}
 };
 
-[[block]]
 struct Inputs {
   test : array<Parameters, ${cases.length}>;
 };
 
-[[block]]
 struct Outputs {
   test : [[stride(${kValueStride})]] array<${storageType(returnType)}, ${cases.length}>;
 };
@@ -434,7 +444,7 @@ function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
   };
 }
 
-// TODO(sarahM0): Perhaps instead of kBit and kValue tables we could have one table
+// MAINTENANCE_TODO(sarahM0): Perhaps instead of kBit and kValue tables we could have one table
 // where every value is a Scalar instead of either bits or value?
 // Then tests wouldn't need most of the Scalar.fromX calls,
 // and you would probably need fewer table entries in total
@@ -476,6 +486,11 @@ export const kBit = {
       positive: {
         min: 0x0000_0001,
         max: 0x007f_ffff,
+      },
+
+      negative: {
+        max: 0x8000_0001,
+        min: 0x807f_ffff,
       },
     },
 
