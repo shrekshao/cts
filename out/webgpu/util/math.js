@@ -67,13 +67,57 @@ export function diffULP(a, b) {
 }
 
 /**
+   * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
+   */
+function flushSubnormalNumber(val) {
+  const u32_val = new Uint32Array(new Float32Array([val]).buffer)[0];
+  return (u32_val & 0x7f800000) === 0 ? 0 : val;
+}
+
+/**
+   * @returns 0 if |val| is a bit field for a subnormal f32 number, otherwise
+   * returns |val|
+   * |val| is assumed to be a u32 value representing a f32
+   */
+function flushSubnormalBits(val) {
+  return (val & 0x7f800000) === 0 ? 0 : val;
+}
+
+/**
+   * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
+   */
+function flushSubnormalScalar(val) {
+  return isSubnormalScalar(val) ? f32(0) : val;
+}
+
+/**
+   * @returns true if |val| is a subnormal f32 number, otherwise returns false
+   * 0 is considered a non-subnormal number by this function.
+   */
+export function isSubnormalScalar(val) {
+  if (val.type.kind !== 'f32') {
+    return false;
+  }
+
+  if (val === f32(0)) {
+    return false;
+  }
+
+  const u32_val = new Uint32Array(new Float32Array([val.value.valueOf()]).buffer)[0];
+  return (u32_val & 0x7f800000) === 0;
+}
+
+/**
    * @returns the next single precision floating point value after |val|,
    * towards +inf if |dir| is true, otherwise towards -inf.
-   * For -/+0 the nextAfter will be the closest subnormal in the correct
-   * direction, since -0 === +0.
+   * If |flush| is true, all subnormal values will be flushed to 0,
+   * before processing.
+   * If |flush| is false, the next subnormal will be calculated when appropriate,
+   * and for -/+0 the nextAfter will be the closest subnormal in the correct
+   * direction.
    * |val| must be expressible as a f32.
    */
-export function nextAfter(val, dir = true) {
+export function nextAfter(val, dir = true, flush) {
   if (Number.isNaN(val)) {
     return f32Bits(kBit.f32.nan.positive.s);
   }
@@ -86,12 +130,14 @@ export function nextAfter(val, dir = true) {
     return f32Bits(kBit.f32.infinity.negative);
   }
 
+  val = flush ? flushSubnormalNumber(val) : val;
+
   // -/+0 === 0 returns true
   if (val === 0) {
     if (dir) {
-      return f32Bits(kBit.f32.subnormal.positive.min);
+      return flush ? f32Bits(kBit.f32.positive.min) : f32Bits(kBit.f32.subnormal.positive.min);
     } else {
-      return f32Bits(kBit.f32.subnormal.negative.max);
+      return flush ? f32Bits(kBit.f32.negative.max) : f32Bits(kBit.f32.subnormal.negative.max);
     }
   }
 
@@ -107,6 +153,7 @@ export function nextAfter(val, dir = true) {
   } else {
     result -= 1;
   }
+  result = flush ? flushSubnormalBits(result) : result;
 
   // Checking for overflow
   if ((result & 0x7f800000) === 0x7f800000) {
@@ -125,10 +172,35 @@ export function nextAfter(val, dir = true) {
    *
    * Correctly rounded means that if the target value is precisely expressible
    * as a float32, then |test_value| === |target|.
-   * Otherwise |test_value| needs to be either the closest expressible number greater
-   * or less than |target|.
+   * Otherwise |test_value| needs to be either the closest expressible number
+   * greater or less than |target|.
+   *
+   * By default internally tests with both subnormals being flushed to 0 and not
+   * being flushed, but |accept_to_zero| and |accept_no_flush| can be used to
+   * control that behaviour. At least one accept flag must be true.
    */
-export function correctlyRounded(test_value, target) {
+export function correctlyRounded(
+test_value,
+target,
+accept_to_zero = true,
+accept_no_flush = true)
+{
+  assert(
+  accept_to_zero || accept_no_flush,
+  `At least one of |accept_to_zero| & |accept_no_flush| must be true`);
+
+
+  let result = false;
+  if (accept_to_zero) {
+    result = result || correctlyRoundedImpl(test_value, target, true);
+  }
+  if (accept_no_flush) {
+    result = result || correctlyRoundedImpl(test_value, target, false);
+  }
+  return result;
+}
+
+function correctlyRoundedImpl(test_value, target, flush) {
   assert(test_value.type.kind === 'f32', `${test_value} is expected to be a 'f32'`);
 
   if (Number.isNaN(target)) {
@@ -143,6 +215,9 @@ export function correctlyRounded(test_value, target) {
     return test_value.value === f32Bits(kBit.f32.infinity.negative).value;
   }
 
+  test_value = flush ? flushSubnormalScalar(test_value) : test_value;
+  target = flush ? flushSubnormalNumber(target) : target;
+
   const target32 = new Float32Array([target])[0];
   const converted = target32;
   if (target === converted) {
@@ -156,13 +231,80 @@ export function correctlyRounded(test_value, target) {
   if (converted > target) {
     // target32 is rounded towards +inf, so is after_target
     after_target = f32(target32);
-    before_target = nextAfter(target32, false);
+    before_target = nextAfter(target32, false, flush);
   } else {
     // target32 is rounded towards -inf, so is before_target
-    after_target = nextAfter(target32, true);
+    after_target = nextAfter(target32, true, flush);
     before_target = f32(target32);
   }
 
   return test_value.value === before_target.value || test_value.value === after_target.value;
+}
+
+/**
+   * Calculates the linear interpolation between two values of a given fractional.
+   *
+   * If |t| is 0, |a| is returned, if |t| is 1, |b| is returned, otherwise
+   * interpolation/extrapolation equivalent to a + t(b - a) is performed.
+   *
+   * Numerical stable version is adapted from http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0811r2.html
+   */
+export function lerp(a, b, t) {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    return Number.NaN;
+  }
+
+  if (a <= 0.0 && b >= 0.0 || a >= 0.0 && b <= 0.0) {
+    return t * b + (1 - t) * a;
+  }
+
+  if (t === 1.0) {
+    return b;
+  }
+
+  const x = a + t * (b - a);
+  return t > 1.0 === b > a ? Math.max(b, x) : Math.min(b, x);
+}
+
+/** Unwrap Scalar params into numbers and check preconditions */
+function unwrapRangeParams(min, max, num_steps) {
+  assert(min.type.kind === 'f32', '|min| needs to be a f32');
+  assert(max.type.kind === 'f32', '|max| needs to be a f32');
+  assert(num_steps.type.kind === 'u32', '|num_steps| needs to be a u32');
+
+  const f32_min = min.value;
+  const f32_max = max.value;
+  const u32_num_steps = num_steps.value;
+
+  assert(f32_max >= f32_min, '|max| must be greater than |min|');
+  assert(u32_num_steps > 0, '|num_steps| must be greater than 0');
+
+  return { f32_min, f32_max, u32_num_steps };
+}
+
+/** @returns a linear increasing range of numbers. */
+export function linearRange(min, max, num_steps) {
+  const { f32_min, f32_max, u32_num_steps } = unwrapRangeParams(min, max, num_steps);
+
+  return Array.from(Array(u32_num_steps).keys()).map((i) =>
+  lerp(f32_min, f32_max, i / (u32_num_steps - 1)));
+
+}
+
+/**
+   * @returns a non-linear increasing range of numbers, with a bias towards min.
+   *
+   * Generates a linear range on [0,1] with |num_steps|, then squares all the values to make the curve be quadratic,
+   * thus biasing towards 0, but remaining on the [0, 1] range.
+   * This biased range is then scaled to the desired range using lerp.
+   * Different curves could be generated by changing c, where greater values of c will bias more towards 0.
+   * */
+export function biasedRange(min, max, num_steps) {
+  const c = 2;
+  const { f32_min, f32_max, u32_num_steps } = unwrapRangeParams(min, max, num_steps);
+
+  return Array.from(Array(u32_num_steps).keys()).map((i) =>
+  lerp(f32_min, f32_max, Math.pow(lerp(0, 1, i / (u32_num_steps - 1)), c)));
+
 }
 //# sourceMappingURL=math.js.map

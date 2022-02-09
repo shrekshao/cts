@@ -146,7 +146,7 @@ export const listing = [
       "command_buffer",
       "queries"
     ],
-    "readme": "TODO: test the behavior of creating/using/resolving queries.\n- occlusion\n- pipeline statistics\n- timestamp\n- nested (e.g. timestamp or PS query inside occlusion query), if any such cases are valid. Try\n  writing to the same query set (at same or different indices), if valid. Check results make sense.\n- start a query (all types) with no draw calls"
+    "readme": "TODO: test the behavior of creating/using/resolving queries.\n- occlusion\n- pipeline statistics\n  TODO: pipeline statistics queries are removed from core; consider moving tests to another suite.\n- timestamp\n- nested (e.g. timestamp or PS query inside occlusion query), if any such cases are valid. Try\n  writing to the same query set (at same or different indices), if valid. Check results make sense.\n- start a query (all types) with no draw calls"
   },
   {
     "file": [
@@ -237,16 +237,7 @@ export const listing = [
       "operation",
       "memory_sync",
       "texture",
-      "rw_and_wr"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "memory_sync",
-      "texture",
-      "ww"
+      "same_subresource"
     ]
   },
   {
@@ -494,7 +485,7 @@ export const listing = [
       "operation",
       "threading"
     ],
-    "readme": "Tests for behavior with multiple threads (main thread + workers).\n\nTODO: plan and implement\n- Try postMessage'ing an object of every type (to same or different thread)\n    - {main -> main, main -> worker, worker -> main, worker1 -> worker1, worker1 -> worker2}\n    - through {global postMessage, MessageChannel}\n    - {in, not in} transferrable object list, when valid\n- Short tight loop doing many of an action from two threads at the same time\n    - e.g. {create {buffer, texture, shader, pipeline}}"
+    "readme": "Tests for behavior with multiple threads (main thread + workers).\n\nTODO: plan and implement\n- 'postMessage'\n  Try postMessage'ing an object of every type (to same or different thread)\n    - {main -> main, main -> worker, worker -> main, worker1 -> worker1, worker1 -> worker2}\n    - through {global postMessage, MessageChannel}\n    - {in, not in} transferrable object list, when valid\n- 'concurrency'\n  Short tight loop doing many of an action from two threads at the same time\n    - e.g. {create {buffer, texture, shader, pipeline}}"
   },
   {
     "file": [
@@ -1205,6 +1196,14 @@ export const listing = [
       "shader",
       "execution",
       "builtin",
+      "clamp"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
       "cos"
     ]
   },
@@ -1229,6 +1228,14 @@ export const listing = [
       "shader",
       "execution",
       "builtin",
+      "fract"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
       "integer_built_in_functions"
     ]
   },
@@ -1237,7 +1244,23 @@ export const listing = [
       "shader",
       "execution",
       "builtin",
+      "inversesqrt"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
       "logical_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "builtin",
+      "max"
     ]
   },
   {
@@ -1262,6 +1285,38 @@ export const listing = [
       "execution",
       "builtin",
       "value_testing_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "memory_model",
+      "atomicity"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "memory_model",
+      "barrier"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "memory_model",
+      "coherence"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "memory_model",
+      "weak"
     ]
   },
   {
@@ -1389,7 +1444,7 @@ export const listing = [
     "file": [
       "web_platform"
     ],
-    "readme": "Tests for Web platform-specific interactions like GPUCanvasContext and canvas, WebXR,\nImageBitmaps, and video APIs."
+    "readme": "Tests for Web platform-specific interactions like GPUCanvasContext and canvas, WebXR,\nImageBitmaps, and video APIs.\n\nTODO(#922): Also hopefully tests for user-initiated readbacks from WebGPU canvases\n(printing, save image as, etc.)"
   },
   {
     "file": [
@@ -1480,6 +1535,6 @@ export const listing = [
       "web_platform",
       "reftests"
     ],
-    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO: Test all possible output texture formats (currently only testing bgra8unorm).\nTODO: Test all possible ways to write into those formats (currently only testing B2T copy).\n\nTODO: Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
+    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#915): Test all possible output texture formats (currently only testing bgra8unorm).\nTODO(#916): Test all possible ways to write into those formats (currently only testing B2T copy).\nTODO(#917): Test compositingAlphaMode options\nTODO(#918): Test all possible color spaces (once we have more than 1)\n\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
   }
 ];

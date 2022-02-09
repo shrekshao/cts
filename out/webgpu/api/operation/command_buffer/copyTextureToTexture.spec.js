@@ -1,11 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/export const description = `copyTexturetoTexture operation tests
-
-TODO: remove fragment stage in InitializeDepthAspect() when browsers support null fragment stage.
-TODO: 1d/3d texture tests [1]
-TODO: 1d texture tests
-`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
+**/export const description = `copyTexturetoTexture operation tests`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert, memcpy } from '../../../../common/util/util.js';
 import {
 kTextureFormatInfo,
@@ -16,7 +11,9 @@ depthStencilFormatAspectSize,
 
 kBufferSizeAlignment,
 kDepthStencilFormats,
-kMinDynamicBufferOffsetAlignment } from
+kMinDynamicBufferOffsetAlignment,
+kTextureDimensions,
+textureDimensionAndFormatCompatible } from
 '../../../capability_info.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
@@ -28,18 +25,18 @@ class F extends GPUTest {
   GetInitialData(byteSize) {
     const initialData = new Uint8Array(byteSize);
     for (let i = 0; i < initialData.length; ++i) {
-      initialData[i] = (i ** 3 + i) % 251;
+      initialData[i] = (i ** 3 + i) % 251 + 1; // Have all initialData be non zero.
     }
     return initialData;
   }
 
   GetInitialDataPerMipLevel(
+  dimension,
   textureSize,
   format,
   mipLevel)
   {
-    // [1]: Does not presently support 1d/3d textures.
-    const textureSizeAtLevel = physicalMipSize(textureSize, format, '2d', mipLevel);
+    const textureSizeAtLevel = physicalMipSize(textureSize, format, dimension, mipLevel);
     const bytesPerBlock = kTextureFormatInfo[format].bytesPerBlock;
     const blockWidthInTexel = kTextureFormatInfo[format].blockWidth;
     const blockHeightInTexel = kTextureFormatInfo[format].blockHeight;
@@ -67,9 +64,11 @@ class F extends GPUTest {
   }
 
   DoCopyTextureToTextureTest(
+  dimension,
   srcTextureSize,
   dstTextureSize,
-  format,
+  srcFormat,
+  dstFormat,
   copyBoxOffsets,
 
 
@@ -78,30 +77,42 @@ class F extends GPUTest {
   srcCopyLevel,
   dstCopyLevel)
   {
-    const kMipLevelCount = 4;
+    const mipLevelCount = dimension === '1d' ? 1 : 4;
 
     // Create srcTexture and dstTexture
     const srcTextureDesc = {
+      dimension,
       size: srcTextureSize,
-      format,
+      format: srcFormat,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
-      mipLevelCount: kMipLevelCount };
+      mipLevelCount };
 
     const srcTexture = this.device.createTexture(srcTextureDesc);
     const dstTextureDesc = {
+      dimension,
       size: dstTextureSize,
-      format,
+      format: dstFormat,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
-      mipLevelCount: kMipLevelCount };
+      mipLevelCount };
 
     const dstTexture = this.device.createTexture(dstTextureDesc);
 
     // Fill the whole subresource of srcTexture at srcCopyLevel with initialSrcData.
-    const initialSrcData = this.GetInitialDataPerMipLevel(srcTextureSize, format, srcCopyLevel);
-    const srcTextureSizeAtLevel = physicalMipSize(srcTextureSize, format, '2d', srcCopyLevel);
-    const bytesPerBlock = kTextureFormatInfo[format].bytesPerBlock;
-    const blockWidth = kTextureFormatInfo[format].blockWidth;
-    const blockHeight = kTextureFormatInfo[format].blockHeight;
+    const initialSrcData = this.GetInitialDataPerMipLevel(
+    dimension,
+    srcTextureSize,
+    srcFormat,
+    srcCopyLevel);
+
+    const srcTextureSizeAtLevel = physicalMipSize(
+    srcTextureSize,
+    srcFormat,
+    dimension,
+    srcCopyLevel);
+
+    const bytesPerBlock = kTextureFormatInfo[srcFormat].bytesPerBlock;
+    const blockWidth = kTextureFormatInfo[srcFormat].blockWidth;
+    const blockHeight = kTextureFormatInfo[srcFormat].blockHeight;
     const srcBlocksPerRow = srcTextureSizeAtLevel.width / blockWidth;
     const srcBlockRowsPerImage = srcTextureSizeAtLevel.height / blockHeight;
     this.device.queue.writeTexture(
@@ -115,19 +126,28 @@ class F extends GPUTest {
 
 
     // Copy the region specified by copyBoxOffsets from srcTexture to dstTexture.
-    const dstTextureSizeAtLevel = physicalMipSize(dstTextureSize, format, '2d', dstCopyLevel);
+    const dstTextureSizeAtLevel = physicalMipSize(
+    dstTextureSize,
+    dstFormat,
+    dimension,
+    dstCopyLevel);
+
     const minWidth = Math.min(srcTextureSizeAtLevel.width, dstTextureSizeAtLevel.width);
     const minHeight = Math.min(srcTextureSizeAtLevel.height, dstTextureSizeAtLevel.height);
+    const minDepth = Math.min(
+    srcTextureSizeAtLevel.depthOrArrayLayers,
+    dstTextureSizeAtLevel.depthOrArrayLayers);
+
 
     const appliedSrcOffset = {
       x: Math.min(copyBoxOffsets.srcOffset.x * blockWidth, minWidth),
       y: Math.min(copyBoxOffsets.srcOffset.y * blockHeight, minHeight),
-      z: copyBoxOffsets.srcOffset.z };
+      z: Math.min(copyBoxOffsets.srcOffset.z, minDepth) };
 
     const appliedDstOffset = {
       x: Math.min(copyBoxOffsets.dstOffset.x * blockWidth, minWidth),
       y: Math.min(copyBoxOffsets.dstOffset.y * blockHeight, minHeight),
-      z: copyBoxOffsets.dstOffset.z };
+      z: Math.min(copyBoxOffsets.dstOffset.z, minDepth) };
 
 
     const appliedCopyWidth = Math.max(
@@ -144,10 +164,12 @@ class F extends GPUTest {
 
     assert(appliedCopyWidth % blockWidth === 0 && appliedCopyHeight % blockHeight === 0);
 
-    const appliedCopyDepth =
-    srcTextureSize.depthOrArrayLayers +
+    const appliedCopyDepth = Math.max(
+    0,
+    minDepth +
     copyBoxOffsets.copyExtent.depthOrArrayLayers -
-    Math.max(appliedSrcOffset.z, appliedDstOffset.z);
+    Math.max(appliedSrcOffset.z, appliedDstOffset.z));
+
     assert(appliedCopyDepth >= 0);
 
     const encoder = this.device.createCommandEncoder();
@@ -314,9 +336,9 @@ class F extends GPUTest {
             struct Params {
               copyLayer: f32;
             };
-            [[group(0), binding(0)]] var<uniform> param: Params;
-            [[stage(vertex)]]
-            fn main([[builtin(vertex_index)]] VertexIndex : u32)-> [[builtin(position)]] vec4<f32> {
+            @group(0) @binding(0) var<uniform> param: Params;
+            @stage(vertex)
+            fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
               var depthValue = 0.5 + 0.2 * sin(param.copyLayer);
               var pos : array<vec3<f32>, 6> = array<vec3<f32>, 6>(
                   vec3<f32>(-1.0,  1.0, depthValue),
@@ -336,8 +358,8 @@ class F extends GPUTest {
       renderPipelineDescriptor.fragment = {
         module: this.device.createShaderModule({
           code: `
-            [[stage(fragment)]]
-            fn main() -> [[location(0)]] vec4<f32> {
+            @stage(fragment)
+            fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(0.0, 1.0, 0.0, 1.0);
             }` }),
 
@@ -614,41 +636,89 @@ desc(
   - covers the corners of the dstTexture
   - doesn't cover any texels that are on the edge of the dstTexture
   - covers the mipmap level > 0
+
+  Tests for all pairs of valid source/destination formats, and all texture dimensions.
   `).
 
 params((u) =>
 u.
-combine('format', kRegularTextureFormats).
+combine('srcFormat', kRegularTextureFormats).
+combine('dstFormat', kRegularTextureFormats).
+filter(({ srcFormat, dstFormat }) => {
+  const srcBaseFormat = kTextureFormatInfo[srcFormat].baseFormat;
+  const dstBaseFormat = kTextureFormatInfo[dstFormat].baseFormat;
+  return (
+    srcFormat === dstFormat ||
+    srcBaseFormat !== undefined &&
+    dstBaseFormat !== undefined &&
+    srcBaseFormat === dstBaseFormat);
+
+}).
+combine('dimension', kTextureDimensions).
+filter(
+({ dimension, srcFormat, dstFormat }) =>
+textureDimensionAndFormatCompatible(dimension, srcFormat) &&
+textureDimensionAndFormatCompatible(dimension, dstFormat)).
+
 beginSubcases().
-combine('textureSize', [
-{
-  srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
-  dstTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 } },
+expandWithParams(p => {
+  const params = [
+  {
+    srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
+    dstTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 } },
 
-{
-  srcTextureSize: { width: 31, height: 33, depthOrArrayLayers: 1 },
-  dstTextureSize: { width: 31, height: 33, depthOrArrayLayers: 1 } },
+  {
+    srcTextureSize: { width: 31, height: 33, depthOrArrayLayers: 1 },
+    dstTextureSize: { width: 31, height: 33, depthOrArrayLayers: 1 } },
 
-{
-  srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
-  dstTextureSize: { width: 64, height: 64, depthOrArrayLayers: 1 } },
+  {
+    srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
+    dstTextureSize: { width: 64, height: 64, depthOrArrayLayers: 1 } },
 
-{
-  srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
-  dstTextureSize: { width: 63, height: 61, depthOrArrayLayers: 1 } }]).
+  {
+    srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
+    dstTextureSize: { width: 63, height: 61, depthOrArrayLayers: 1 } }];
 
 
+  if (p.dimension === '1d') {
+    for (const param of params) {
+      param.srcTextureSize.height = 1;
+      param.dstTextureSize.height = 1;
+    }
+  }
+
+  return params;
+}).
 combine('copyBoxOffsets', kCopyBoxOffsetsForWholeDepth).
+unless(
+(p) =>
+p.dimension === '1d' && (
+p.copyBoxOffsets.copyExtent.height !== 0 ||
+p.copyBoxOffsets.srcOffset.y !== 0 ||
+p.copyBoxOffsets.dstOffset.y !== 0)).
+
 combine('srcCopyLevel', [0, 3]).
-combine('dstCopyLevel', [0, 3])).
+combine('dstCopyLevel', [0, 3]).
+unless(p => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
 
 fn(async t => {
-  const { textureSize, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
+  const {
+    dimension,
+    srcTextureSize,
+    dstTextureSize,
+    srcFormat,
+    dstFormat,
+    copyBoxOffsets,
+    srcCopyLevel,
+    dstCopyLevel } =
+  t.params;
 
   t.DoCopyTextureToTextureTest(
-  textureSize.srcTextureSize,
-  textureSize.dstTextureSize,
-  format,
+  dimension,
+  srcTextureSize,
+  dstTextureSize,
+  srcFormat,
+  dstFormat,
   copyBoxOffsets,
   srcCopyLevel,
   dstCopyLevel);
@@ -661,11 +731,30 @@ desc(
   Validate the correctness of the copy by filling the srcTexture with testable data and any
   compressed color format supported by WebGPU, doing CopyTextureToTexture() copy, and verifying
   the content of the whole dstTexture.
+
+  Tests for all pairs of valid source/destination formats, and all texture dimensions.
   `).
 
 params((u) =>
 u.
-combine('format', kCompressedTextureFormats).
+combine('srcFormat', kCompressedTextureFormats).
+combine('dstFormat', kCompressedTextureFormats).
+filter(({ srcFormat, dstFormat }) => {
+  const srcBaseFormat = kTextureFormatInfo[srcFormat].baseFormat;
+  const dstBaseFormat = kTextureFormatInfo[dstFormat].baseFormat;
+  return (
+    srcFormat === dstFormat ||
+    srcBaseFormat !== undefined &&
+    dstBaseFormat !== undefined &&
+    srcBaseFormat === dstBaseFormat);
+
+}).
+combine('dimension', kTextureDimensions).
+filter(
+({ dimension, srcFormat, dstFormat }) =>
+textureDimensionAndFormatCompatible(dimension, srcFormat) &&
+textureDimensionAndFormatCompatible(dimension, dstFormat)).
+
 beginSubcases().
 combine('textureSizeInBlocks', [
 // The heights and widths in blocks are all power of 2
@@ -688,22 +777,38 @@ combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
 fn(async t => {
-  const { textureSizeInBlocks, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
-  const { blockWidth, blockHeight } = kTextureFormatInfo[format];
+  const {
+    dimension,
+    textureSizeInBlocks,
+    srcFormat,
+    dstFormat,
+    copyBoxOffsets,
+    srcCopyLevel,
+    dstCopyLevel } =
+  t.params;
+  await t.selectDeviceOrSkipTestCase([
+  kTextureFormatInfo[srcFormat].feature,
+  kTextureFormatInfo[dstFormat].feature]);
+
+  const srcBlockWidth = kTextureFormatInfo[srcFormat].blockWidth;
+  const srcBlockHeight = kTextureFormatInfo[srcFormat].blockHeight;
+  const dstBlockWidth = kTextureFormatInfo[dstFormat].blockWidth;
+  const dstBlockHeight = kTextureFormatInfo[dstFormat].blockHeight;
 
   t.DoCopyTextureToTextureTest(
+  dimension,
   {
-    width: textureSizeInBlocks.src.width * blockWidth,
-    height: textureSizeInBlocks.src.height * blockHeight,
+    width: textureSizeInBlocks.src.width * srcBlockWidth,
+    height: textureSizeInBlocks.src.height * srcBlockHeight,
     depthOrArrayLayers: 1 },
 
   {
-    width: textureSizeInBlocks.dst.width * blockWidth,
-    height: textureSizeInBlocks.dst.height * blockHeight,
+    width: textureSizeInBlocks.dst.width * dstBlockWidth,
+    height: textureSizeInBlocks.dst.height * dstBlockHeight,
     depthOrArrayLayers: 1 },
 
-  format,
+  srcFormat,
+  dstFormat,
   copyBoxOffsets,
   srcCopyLevel,
   dstCopyLevel);
@@ -720,7 +825,24 @@ desc(
 
 params((u) =>
 u.
-combine('format', kRegularTextureFormats).
+combine('srcFormat', kRegularTextureFormats).
+combine('dstFormat', kRegularTextureFormats).
+filter(({ srcFormat, dstFormat }) => {
+  const srcBaseFormat = kTextureFormatInfo[srcFormat].baseFormat;
+  const dstBaseFormat = kTextureFormatInfo[dstFormat].baseFormat;
+  return (
+    srcFormat === dstFormat ||
+    srcBaseFormat !== undefined &&
+    dstBaseFormat !== undefined &&
+    srcBaseFormat === dstBaseFormat);
+
+}).
+combine('dimension', ['2d', '3d']).
+filter(
+({ dimension, srcFormat, dstFormat }) =>
+textureDimensionAndFormatCompatible(dimension, srcFormat) &&
+textureDimensionAndFormatCompatible(dimension, dstFormat)).
+
 beginSubcases().
 combine('textureSize', [
 {
@@ -729,7 +851,11 @@ combine('textureSize', [
 
 {
   srcTextureSize: { width: 31, height: 33, depthOrArrayLayers: 5 },
-  dstTextureSize: { width: 31, height: 33, depthOrArrayLayers: 5 } }]).
+  dstTextureSize: { width: 31, height: 33, depthOrArrayLayers: 5 } },
+
+{
+  srcTextureSize: { width: 31, height: 32, depthOrArrayLayers: 33 },
+  dstTextureSize: { width: 31, height: 32, depthOrArrayLayers: 33 } }]).
 
 
 
@@ -738,12 +864,22 @@ combine('srcCopyLevel', [0, 3]).
 combine('dstCopyLevel', [0, 3])).
 
 fn(async t => {
-  const { textureSize, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
+  const {
+    dimension,
+    textureSize,
+    srcFormat,
+    dstFormat,
+    copyBoxOffsets,
+    srcCopyLevel,
+    dstCopyLevel } =
+  t.params;
 
   t.DoCopyTextureToTextureTest(
+  dimension,
   textureSize.srcTextureSize,
   textureSize.dstTextureSize,
-  format,
+  srcFormat,
+  dstFormat,
   copyBoxOffsets,
   srcCopyLevel,
   dstCopyLevel);
@@ -756,11 +892,30 @@ desc(
   Validate the correctness of the texture-to-texture copy on 2D array textures by filling the
   srcTexture with testable data and any compressed color format supported by WebGPU, doing
   CopyTextureToTexture() copy, and verifying the content of the whole dstTexture.
+
+  Tests for all pairs of valid source/destination formats, and all texture dimensions.
   `).
 
 params((u) =>
 u.
-combine('format', kCompressedTextureFormats).
+combine('srcFormat', kCompressedTextureFormats).
+combine('dstFormat', kCompressedTextureFormats).
+filter(({ srcFormat, dstFormat }) => {
+  const srcBaseFormat = kTextureFormatInfo[srcFormat].baseFormat;
+  const dstBaseFormat = kTextureFormatInfo[dstFormat].baseFormat;
+  return (
+    srcFormat === dstFormat ||
+    srcBaseFormat !== undefined &&
+    dstBaseFormat !== undefined &&
+    srcBaseFormat === dstBaseFormat);
+
+}).
+combine('dimension', ['2d', '3d']).
+filter(
+({ dimension, srcFormat, dstFormat }) =>
+textureDimensionAndFormatCompatible(dimension, srcFormat) &&
+textureDimensionAndFormatCompatible(dimension, dstFormat)).
+
 beginSubcases().
 combine('textureSizeInBlocks', [
 // The heights and widths in blocks are all power of 2
@@ -773,22 +928,38 @@ combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
 fn(async t => {
-  const { textureSizeInBlocks, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
-  const { blockWidth, blockHeight } = kTextureFormatInfo[format];
+  const {
+    dimension,
+    textureSizeInBlocks,
+    srcFormat,
+    dstFormat,
+    copyBoxOffsets,
+    srcCopyLevel,
+    dstCopyLevel } =
+  t.params;
+  await t.selectDeviceOrSkipTestCase([
+  kTextureFormatInfo[srcFormat].feature,
+  kTextureFormatInfo[dstFormat].feature]);
+
+  const srcBlockWidth = kTextureFormatInfo[srcFormat].blockWidth;
+  const srcBlockHeight = kTextureFormatInfo[srcFormat].blockHeight;
+  const dstBlockWidth = kTextureFormatInfo[dstFormat].blockWidth;
+  const dstBlockHeight = kTextureFormatInfo[dstFormat].blockHeight;
 
   t.DoCopyTextureToTextureTest(
+  dimension,
   {
-    width: textureSizeInBlocks.src.width * blockWidth,
-    height: textureSizeInBlocks.src.height * blockHeight,
+    width: textureSizeInBlocks.src.width * srcBlockWidth,
+    height: textureSizeInBlocks.src.height * srcBlockHeight,
     depthOrArrayLayers: 5 },
 
   {
-    width: textureSizeInBlocks.dst.width * blockWidth,
-    height: textureSizeInBlocks.dst.height * blockHeight,
+    width: textureSizeInBlocks.dst.width * dstBlockWidth,
+    height: textureSizeInBlocks.dst.height * dstBlockHeight,
     depthOrArrayLayers: 5 },
 
-  format,
+  srcFormat,
+  dstFormat,
   copyBoxOffsets,
   srcCopyLevel,
   dstCopyLevel);
@@ -800,13 +971,19 @@ desc(
 `
   Validate the correctness of zero-sized copies (should be no-ops).
 
+  - For each texture dimension.
   - Copies that are zero-sized in only one dimension {x, y, z}, each touching the {lower, upper} end
   of that dimension.
   `).
 
 paramsSubcasesOnly((u) =>
 u //
-.combine('copyBoxOffset', [
+.combineWithParams([
+{ dimension: '1d', textureSize: { width: 32, height: 1, depthOrArrayLayers: 1 } },
+{ dimension: '2d', textureSize: { width: 32, height: 32, depthOrArrayLayers: 5 } },
+{ dimension: '3d', textureSize: { width: 32, height: 32, depthOrArrayLayers: 5 } }]).
+
+combine('copyBoxOffset', [
 // copyExtent.width === 0
 {
   srcOffset: { x: 0, y: 0, z: 0 },
@@ -862,19 +1039,29 @@ u //
   copyExtent: { width: 0, height: 0, depthOrArrayLayers: 0 } }]).
 
 
+unless(
+(p) =>
+p.dimension === '1d' && (
+p.copyBoxOffset.copyExtent.height !== 0 ||
+p.copyBoxOffset.srcOffset.y !== 0 ||
+p.copyBoxOffset.dstOffset.y !== 0)).
+
 combine('srcCopyLevel', [0, 3]).
-combine('dstCopyLevel', [0, 3])).
+combine('dstCopyLevel', [0, 3]).
+unless(p => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
 
 fn(async t => {
-  const { copyBoxOffset, srcCopyLevel, dstCopyLevel } = t.params;
+  const { dimension, textureSize, copyBoxOffset, srcCopyLevel, dstCopyLevel } = t.params;
 
-  const format = 'rgba8unorm';
-  const textureSize = { width: 64, height: 32, depthOrArrayLayers: 5 };
+  const srcFormat = 'rgba8unorm';
+  const dstFormat = 'rgba8unorm';
 
   t.DoCopyTextureToTextureTest(
+  dimension,
   textureSize,
   textureSize,
-  format,
+  srcFormat,
+  dstFormat,
   copyBoxOffset,
   srcCopyLevel,
   dstCopyLevel);
@@ -1047,8 +1234,8 @@ fn(async t => {
     vertex: {
       module: t.device.createShaderModule({
         code: `
-            [[stage(vertex)]]
-            fn main([[builtin(vertex_index)]] VertexIndex : u32) -> [[builtin(position)]] vec4<f32> {
+            @stage(vertex)
+            fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
               var pos = array<vec2<f32>, 3>(
                   vec2<f32>(-1.0,  1.0),
                   vec2<f32>( 1.0,  1.0),
@@ -1062,8 +1249,8 @@ fn(async t => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-            [[stage(fragment)]]
-            fn main() -> [[location(0)]] vec4<f32> {
+            @stage(fragment)
+            fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(0.3, 0.5, 0.8, 1.0);
             }` }),
 
@@ -1108,8 +1295,8 @@ fn(async t => {
     vertex: {
       module: t.device.createShaderModule({
         code: `
-          [[stage(vertex)]]
-          fn main([[builtin(vertex_index)]] VertexIndex : u32) -> [[builtin(position)]] vec4<f32> {
+          @stage(vertex)
+          fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
             var pos = array<vec2<f32>, 6>(
               vec2<f32>(-1.0,  1.0),
               vec2<f32>(-1.0, -1.0),
@@ -1125,10 +1312,10 @@ fn(async t => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-          [[group(0), binding(0)]] var sourceTexture : texture_multisampled_2d<f32>;
-          [[group(0), binding(1)]] var destinationTexture : texture_multisampled_2d<f32>;
-          [[stage(fragment)]]
-          fn main([[builtin(position)]] coord_in: vec4<f32>) -> [[location(0)]] vec4<f32> {
+          @group(0) @binding(0) var sourceTexture : texture_multisampled_2d<f32>;
+          @group(0) @binding(1) var destinationTexture : texture_multisampled_2d<f32>;
+          @stage(fragment)
+          fn main(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
             var coord_in_vec2 = vec2<i32>(i32(coord_in.x), i32(coord_in.y));
             for (var sampleIndex = 0; sampleIndex < ${kSampleCount};
               sampleIndex = sampleIndex + 1) {
@@ -1220,8 +1407,8 @@ fn(async t => {
   const vertexState = {
     module: t.device.createShaderModule({
       code: `
-          [[stage(vertex)]]
-          fn main([[builtin(vertex_index)]] VertexIndex : u32)-> [[builtin(position)]] vec4<f32> {
+          @stage(vertex)
+          fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
             var pos : array<vec3<f32>, 6> = array<vec3<f32>, 6>(
                 vec3<f32>(-1.0,  1.0, 0.5),
                 vec3<f32>(-1.0, -1.0, 0.0),
@@ -1285,8 +1472,8 @@ fn(async t => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-          [[stage(fragment)]]
-          fn main() -> [[location(0)]] vec4<f32> {
+          @stage(fragment)
+          fn main() -> @location(0) vec4<f32> {
             return vec4<f32>(0.0, 1.0, 0.0, 1.0);
           }` }),
 

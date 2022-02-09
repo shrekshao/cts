@@ -1,11 +1,11 @@
 export const description = `
 Tests for capability checking for features enabling optional texture formats.
 
-TODO:
-- x= every optional texture format.
-- x= every place in the API that takes a GPUTextureFormat (
-  GPUTextureViewDescriptor (format reinterpretation rules haven't been finalized),
-  maybe GPUSwapChainDescriptor (the supported swapchain format list can't be queried right now)).
+TODO(#902): test GPUTextureViewDescriptor.format
+TODO(#902): test GPUCanvasConfiguration.format (it doesn't allow any optional formats today but the
+  error might still be different - exception instead of validation.
+
+TODO(#920): test GPUTextureDescriptor.viewFormats (if/when it takes formats)
 `;
 
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
@@ -24,7 +24,7 @@ g.test('texture_descriptor')
   Test creating a texture with an optional texture format will fail if the required optional feature
   is not enabled.
 
-  TODO: Actually it should throw an exception, not fail with a validation error.
+  TODO(#919): Actually it should throw an exception, not fail with a validation error.
   `
   )
   .params(u =>
@@ -118,8 +118,8 @@ g.test('color_target_state')
         vertex: {
           module: t.device.createShaderModule({
             code: `
-              [[stage(vertex)]]
-              fn main()-> [[builtin(position)]] vec4<f32> {
+              @stage(vertex)
+              fn main()-> @builtin(position) vec4<f32> {
                 return vec4<f32>(0.0, 0.0, 0.0, 1.0);
               }`,
           }),
@@ -128,8 +128,8 @@ g.test('color_target_state')
         fragment: {
           module: t.device.createShaderModule({
             code: `
-              [[stage(fragment)]]
-              fn main() -> [[location(0)]] vec4<f32> {
+              @stage(fragment)
+              fn main() -> @location(0) vec4<f32> {
                 return vec4<f32>(0.0, 1.0, 0.0, 1.0);
               }`,
           }),
@@ -171,8 +171,8 @@ g.test('depth_stencil_state')
         vertex: {
           module: t.device.createShaderModule({
             code: `
-              [[stage(vertex)]]
-              fn main()-> [[builtin(position)]] vec4<f32> {
+              @stage(vertex)
+              fn main()-> @builtin(position) vec4<f32> {
                 return vec4<f32>(0.0, 0.0, 0.0, 1.0);
               }`,
           }),
@@ -184,8 +184,8 @@ g.test('depth_stencil_state')
         fragment: {
           module: t.device.createShaderModule({
             code: `
-              [[stage(fragment)]]
-              fn main() -> [[location(0)]] vec4<f32> {
+              @stage(fragment)
+              fn main() -> @location(0) vec4<f32> {
                 return vec4<f32>(0.0, 1.0, 0.0, 1.0);
               }`,
           }),

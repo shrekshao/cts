@@ -3,10 +3,8 @@
 **/export const description = `
 copyToTexture with HTMLCanvasElement and OffscreenCanvas sources.
 
-TODO: consider whether external_texture and copyToTexture video tests should be in the same file
 TODO: Add tests for flipY
 `;import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { assert, memcpy } from '../../../common/util/util.js';
 import {
 
 kTextureFormatInfo,
@@ -14,19 +12,6 @@ kValidTextureFormatsForCopyE2T } from
 '../../capability_info.js';
 import { CopyToTextureUtils, isFp16Format } from '../../util/copy_to_texture.js';
 import { allCanvasTypes, createCanvas } from '../../util/create_elements.js';
-import { kTexelRepresentationInfo } from '../../util/texture/texel_data.js';
-
-/**
-                                                                              * If the destination format specifies a transfer function,
-                                                                              * copyExternalImageToTexture (like B2T/T2T copies) should ignore it.
-                                                                              */
-function formatForExpectedPixels(format) {
-  return format === 'rgba8unorm-srgb' ?
-  'rgba8unorm' :
-  format === 'bgra8unorm-srgb' ?
-  'bgra8unorm' :
-  format;
-}
 
 class F extends CopyToTextureUtils {
   // MAINTENANCE_TODO: Cache the generated canvas to avoid duplicated initialization.
@@ -267,23 +252,7 @@ class F extends CopyToTextureUtils {
     const sourcePixels = new Uint8ClampedArray(width * height * bytesPerPixel);
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, sourcePixels);
 
-    const finalResult = new Uint8ClampedArray(width * height * bytesPerPixel);
-    for (let i = 0; i < height; ++i) {
-      for (let j = 0; j < width; ++j) {
-        const pixelPos = i * width + j;
-        // WebGL readPixel returns pixels from bottom-left origin. Using CopyExternalImageToTexture
-        // to copy from WebGL Canvas keeps top-left origin. So the expectation from webgl.readPixel should
-        // be flipped.
-        const dstPixelPos = (height - i - 1) * width + j;
-
-        memcpy(
-        { src: sourcePixels, start: pixelPos * bytesPerPixel, length: bytesPerPixel },
-        { dst: finalResult, start: dstPixelPos * bytesPerPixel });
-
-      }
-    }
-
-    return finalResult;
+    return this.doFlipY(sourcePixels, width, height, bytesPerPixel);
   }
 
   calculateSourceContentOnCPU(
@@ -319,57 +288,6 @@ class F extends CopyToTextureUtils {
     }
 
     return rgbaPixels;
-  }
-
-  getExpectedPixels(
-  sourcePixels,
-  width,
-  height,
-  format,
-  srcPremultiplied,
-  dstPremultiplied)
-  {
-    const bytesPerPixel = kTextureFormatInfo[format].bytesPerBlock;
-
-    const expectedPixels = new Uint8ClampedArray(bytesPerPixel * width * height);
-
-    // Generate expectedPixels
-    // Use getImageData and readPixels to get canvas contents.
-    const rep = kTexelRepresentationInfo[format];
-    const divide = 255.0;
-    let rgba;
-    for (let i = 0; i < height; ++i) {
-      for (let j = 0; j < width; ++j) {
-        const pixelPos = i * width + j;
-
-        rgba = {
-          R: sourcePixels[pixelPos * 4] / divide,
-          G: sourcePixels[pixelPos * 4 + 1] / divide,
-          B: sourcePixels[pixelPos * 4 + 2] / divide,
-          A: sourcePixels[pixelPos * 4 + 3] / divide };
-
-
-        if (!srcPremultiplied && dstPremultiplied) {
-          rgba.R *= rgba.A;
-          rgba.G *= rgba.A;
-          rgba.B *= rgba.A;
-        }
-
-        if (srcPremultiplied && !dstPremultiplied) {
-          assert(rgba.A !== 0.0);
-          rgba.R /= rgba.A;
-          rgba.G /= rgba.A;
-          rgba.B /= rgba.A;
-        }
-
-        memcpy(
-        { src: rep.pack(rep.encode(rgba)) },
-        { dst: expectedPixels, start: pixelPos * bytesPerPixel });
-
-      }
-    }
-
-    return expectedPixels;
   }}
 
 
@@ -388,12 +306,19 @@ desc(
   Then call copyExternalImageToTexture() to do a full copy to the 0 mipLevel
   of dst texture, and read the contents out to compare with the canvas contents.
 
+  Do premultiply alpha in advance if 'premultipliedAlpha' in 'GPUImageCopyTextureTagged'
+  is set to 'ture' and do unpremultiply alpha if it is set to 'false'.
+
+  If 'flipY' in 'GPUImageCopyExternalImage' is set to 'true', copy will ensure the result
+  is flipped.
+
   The tests covers:
   - Valid canvas type
   - Valid 2d context type
   - Valid dstColorFormat of copyExternalImageToTexture()
   - Valid dest alphaMode
-  - TODO: color space tests need to be added
+  - Valid 'flipY' config in 'GPUImageCopyExternalImage' (named 'srcDoFlipYDuringCopy' in cases)
+  - TODO(#913): color space tests need to be added
   - TODO: Add error tolerance for rgb10a2unorm dst texture format
 
   And the expected results are all passed.
@@ -404,12 +329,20 @@ u.
 combine('canvasType', allCanvasTypes).
 combine('dstColorFormat', kValidTextureFormatsForCopyE2T).
 combine('dstPremultiplied', [true, false]).
+combine('srcDoFlipYDuringCopy', [true, false]).
 beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
 fn(async t => {
-  const { width, height, canvasType, dstColorFormat, dstPremultiplied } = t.params;
+  const {
+    width,
+    height,
+    canvasType,
+    dstColorFormat,
+    dstPremultiplied,
+    srcDoFlipYDuringCopy } =
+  t.params;
 
   // When dst texture format is rgb10a2unorm, the generated expected value of the result
   // may have tiny errors compared to the actual result when the channel value is
@@ -440,7 +373,10 @@ fn(async t => {
 
   // Construct expected value for different dst color format
   const dstBytesPerPixel = kTextureFormatInfo[dstColorFormat].bytesPerBlock;
-  const format = formatForExpectedPixels(dstColorFormat);
+  const format =
+  kTextureFormatInfo[dstColorFormat].baseFormat !== undefined ?
+  kTextureFormatInfo[dstColorFormat].baseFormat :
+  dstColorFormat;
 
   // For 2d canvas, get expected pixels with getImageData(), which returns unpremultiplied
   // values.
@@ -451,11 +387,12 @@ fn(async t => {
   height,
   format,
   false,
-  dstPremultiplied);
+  dstPremultiplied,
+  srcDoFlipYDuringCopy);
 
 
   t.doTestAndCheckResult(
-  { source: canvas, origin: { x: 0, y: 0 } },
+  { source: canvas, origin: { x: 0, y: 0 }, flipY: srcDoFlipYDuringCopy },
   {
     texture: dst,
     origin: { x: 0, y: 0 },
@@ -484,12 +421,19 @@ desc(
   Then call copyExternalImageToTexture() to do a full copy to the 0 mipLevel
   of dst texture, and read the contents out to compare with the canvas contents.
 
+  Do premultiply alpha during copy if  'premultipliedAlpha' in 'GPUImageCopyTextureTagged'
+  is set to 'ture' and do unpremultiply alpha if it is set to 'false'.
+
+  If 'flipY' in 'GPUImageCopyExternalImage' is set to 'true', copy will ensure the result
+  is flipped.
+
   The tests covers:
   - Valid canvas type
   - Valid webgl/webgl2 context type
   - Valid dstColorFormat of copyExternalImageToTexture()
   - Valid source image alphaMode
   - Valid dest alphaMode
+  - Valid 'flipY' config in 'GPUImageCopyExternalImage'(named 'srcDoFlipYDuringCopy' in cases)
   - TODO: color space tests need to be added
   - TODO: Add error tolerance for rgb10a2unorm dst texture format
 
@@ -503,6 +447,7 @@ combine('contextName', ['webgl', 'webgl2']).
 combine('dstColorFormat', kValidTextureFormatsForCopyE2T).
 combine('srcPremultiplied', [true, false]).
 combine('dstPremultiplied', [true, false]).
+combine('srcDoFlipYDuringCopy', [true, false]).
 beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
@@ -515,7 +460,8 @@ fn(async t => {
     contextName,
     dstColorFormat,
     srcPremultiplied,
-    dstPremultiplied } =
+    dstPremultiplied,
+    srcDoFlipYDuringCopy } =
   t.params;
 
   // When dst texture format is rgb10a2unorm, the generated expected value of the result
@@ -549,7 +495,10 @@ fn(async t => {
 
   // Construct expected value for different dst color format
   const dstBytesPerPixel = kTextureFormatInfo[dstColorFormat].bytesPerBlock;
-  const format = formatForExpectedPixels(dstColorFormat);
+  const format =
+  kTextureFormatInfo[dstColorFormat].baseFormat !== undefined ?
+  kTextureFormatInfo[dstColorFormat].baseFormat :
+  dstColorFormat;
   const sourcePixels = t.getSourceCanvasGLContent(canvasContext, width, height);
   const expectedPixels = t.getExpectedPixels(
   sourcePixels,
@@ -557,11 +506,12 @@ fn(async t => {
   height,
   format,
   srcPremultiplied,
-  dstPremultiplied);
+  dstPremultiplied,
+  srcDoFlipYDuringCopy);
 
 
   t.doTestAndCheckResult(
-  { source: canvas, origin: { x: 0, y: 0 } },
+  { source: canvas, origin: { x: 0, y: 0 }, flipY: srcDoFlipYDuringCopy },
   {
     texture: dst,
     origin: { x: 0, y: 0 },
@@ -585,12 +535,18 @@ desc(
   Use writeTexture to copy pixels to back buffer. The results are:
   red rect for top-left, green rect for top-right, blue rect for bottom-left
   and white for bottom-right.
-  
+
   And do premultiply alpha in advance if the webgpu context is created
   with compositingAlphaMode="premultiplied".
 
   Then call copyExternalImageToTexture() to do a full copy to the 0 mipLevel
   of dst texture, and read the contents out to compare with the canvas contents.
+
+  Do premultiply alpha during copy if  'premultipliedAlpha' in 'GPUImageCopyTextureTagged'
+  is set to 'ture' and do unpremultiply alpha if it is set to 'false'.
+
+  If 'flipY' in 'GPUImageCopyExternalImage' is set to 'true', copy will ensure the result
+  is flipped.
 
   The tests covers:
   - Valid canvas type
@@ -598,6 +554,7 @@ desc(
   - Valid dstColorFormat of copyExternalImageToTexture()
   - Valid source image alphaMode
   - Valid dest alphaMode
+  - Valid 'flipY' config in 'GPUImageCopyExternalImage'(named 'srcDoFlipYDuringCopy' in cases)
   - TODO: color space tests need to be added
   - TODO: Add error tolerance for rgb10a2unorm dst texture format
 
@@ -611,6 +568,7 @@ combine('srcAndDstInSameGPUDevice', [true, false]).
 combine('dstColorFormat', kValidTextureFormatsForCopyE2T).
 combine('srcPremultiplied', [true]).
 combine('dstPremultiplied', [true, false]).
+combine('srcDoFlipYDuringCopy', [true, false]).
 beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
@@ -623,7 +581,8 @@ fn(async t => {
     srcAndDstInSameGPUDevice,
     dstColorFormat,
     srcPremultiplied,
-    dstPremultiplied } =
+    dstPremultiplied,
+    srcDoFlipYDuringCopy } =
   t.params;
 
   let device;
@@ -666,7 +625,7 @@ fn(async t => {
 
   // Construct expected value for different dst color format
   const dstBytesPerPixel = kTextureFormatInfo[dstColorFormat].bytesPerBlock;
-  const format = formatForExpectedPixels(dstColorFormat);
+  const format = kTextureFormatInfo[dstColorFormat].baseFormat ?? dstColorFormat;
   const sourcePixels = t.calculateSourceContentOnCPU(
   width,
   height,
@@ -679,11 +638,12 @@ fn(async t => {
   height,
   format,
   srcPremultiplied,
-  dstPremultiplied);
+  dstPremultiplied,
+  srcDoFlipYDuringCopy);
 
 
   t.doTestAndCheckResult(
-  { source: canvas, origin: { x: 0, y: 0 } },
+  { source: canvas, origin: { x: 0, y: 0 }, flipY: srcDoFlipYDuringCopy },
   {
     texture: dst,
     origin: { x: 0, y: 0 },

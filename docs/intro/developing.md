@@ -66,6 +66,12 @@ You can make local configuration changes in `.vscode/`, which is untracked by Gi
 
 ## Pull Requests
 
+When opening a pull request, fill out the PR checklist and attach the issue number.
+If an issue hasn't been opened, find the draft issue on the
+[project tracker](https://github.com/orgs/gpuweb/projects/3) and choose "Convert to issue":
+
+![convert to issue button screenshot](convert_to_issue.png)
+
 Opening a pull request will automatically notify reviewers.
 
 To make the review process smoother, once a reviewer has started looking at your change:
