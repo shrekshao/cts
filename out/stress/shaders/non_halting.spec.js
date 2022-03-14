@@ -14,7 +14,7 @@ desc(
 This is expected to hang for a bit, but it should ultimately result in graceful
 device loss.`).
 
-fn(async t => {
+fn(async (t) => {
   const data = new Uint32Array([0]);
   const buffer = t.makeBufferWithContents(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
   const module = t.device.createShaderModule({
@@ -41,7 +41,7 @@ fn(async t => {
 
   pass.setBindGroup(0, bindGroup);
   pass.dispatch(1);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   await t.device.lost;
 });
@@ -53,7 +53,7 @@ desc(
 This is expected to hang for a bit, but it should ultimately result in graceful
 device loss.`).
 
-fn(async t => {
+fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
         struct Data { counter: u32; increment: u32; };
@@ -103,7 +103,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -111,7 +112,7 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(1);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   await t.device.lost;
 });
@@ -123,7 +124,7 @@ desc(
 This is expected to hang for a bit, but it should ultimately result in graceful
 device loss.`).
 
-fn(async t => {
+fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
         struct Data { counter: u32; increment: u32; };
@@ -173,7 +174,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -181,7 +183,7 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(1);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   await t.device.lost;
 });

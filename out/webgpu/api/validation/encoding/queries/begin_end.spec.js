@@ -36,7 +36,7 @@ paramsSubcasesOnly([
 { begin: 1, end: 2 },
 { begin: 2, end: 1 }]).
 
-fn(async t => {
+fn(async (t) => {
   const { begin, end } = t.params;
 
   const occlusionQuerySet = createQuerySetWithType(t, 'occlusion', 2);
@@ -65,7 +65,7 @@ paramsSubcasesOnly([
 { calls: [0, 0, 'end', 'end'], _valid: false },
 { calls: [0, 1, 'end', 'end'], _valid: false }]).
 
-fn(async t => {
+fn(async (t) => {
   const { calls, _valid } = t.params;
 
   const occlusionQuerySet = createQuerySetWithType(t, 'occlusion', 2);
@@ -89,8 +89,8 @@ Tests that two disjoint occlusion queries cannot be begun with same query index 
 - call on {same (invalid), different (control case)} render pass
   `).
 
-paramsSubcasesOnly(u => u.combine('isOnSameRenderPass', [false, true])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('isOnSameRenderPass', [false, true])).
+fn(async (t) => {
   const querySet = createQuerySetWithType(t, 'occlusion', 1);
 
   const encoder = t.device.createCommandEncoder();
@@ -101,13 +101,13 @@ fn(async t => {
   if (t.params.isOnSameRenderPass) {
     pass.beginOcclusionQuery(0);
     pass.endOcclusionQuery();
-    pass.endPass();
+    pass.end();
   } else {
-    pass.endPass();
+    pass.end();
     const otherPass = beginRenderPassWithQuerySet(t, encoder, querySet);
     otherPass.beginOcclusionQuery(0);
     otherPass.endOcclusionQuery();
-    otherPass.endPass();
+    otherPass.end();
   }
 
   t.expectValidationError(() => {

@@ -4,11 +4,11 @@ import {
   f32,
   ScalarType,
   Scalar,
-  Vector,
-  Value,
   Type,
   TypeVec,
   TypeU32,
+  Value,
+  Vector,
   VectorType,
 } from '../../../util/conversion.js';
 import { correctlyRounded, diffULP } from '../../../util/math.js';
@@ -295,7 +295,7 @@ function runBatch(
   cmpFloats: FloatMatch
 ) {
   // returns the WGSL expression to load the ith parameter of the given type from the input buffer
-  const paramExpr = (ty: Type, i: number) => fromStorage(ty, `inputs.test[i].param${i}`);
+  const paramExpr = (ty: Type, i: number) => fromStorage(ty, `inputs[i].param${i}`);
 
   // resolves to the expression that calls the builtin
   const expr = toStorage(
@@ -303,39 +303,35 @@ function runBatch(
     builtin + '(' + parameterTypes.map(paramExpr).join(', ') + ')'
   );
 
+  const storage = storageClass === 'storage_r' ? 'read' : 'read_write';
+
   // the full WGSL shader source
   const source = `
-struct Parameters {
+struct Input {
 ${parameterTypes
   .map((ty, i) => `  @size(${kValueStride}) param${i} : ${storageType(ty)};`)
   .join('\n')}
 };
 
-struct Inputs {
-  test : array<Parameters, ${cases.length}>;
+struct Output {
+  @size(${kValueStride}) value : ${storageType(returnType)};
 };
 
-struct Outputs {
-  test : @stride(${kValueStride}) array<${storageType(returnType)}, ${cases.length}>;
-};
-
+@group(0) @binding(0)
 ${
   storageClass === 'uniform'
-    ? `@group(0) @binding(0) var<uniform> inputs : Inputs;`
-    : `@group(0) @binding(0) var<storage, ${
-        storageClass === 'storage_r' ? 'read' : 'read_write'
-      }> inputs : Inputs;`
+    ? `var<uniform> inputs : array<Input, ${cases.length}>;`
+    : `var<storage, ${storage}> inputs : array<Input, ${cases.length}>;`
 }
-@group(0) @binding(1) var<storage, write> outputs : Outputs;
+@group(0) @binding(1) var<storage, write> outputs : array<Output, ${cases.length}>;
 
 @stage(compute) @workgroup_size(1)
 fn main() {
   for(var i = 0; i < ${cases.length}; i = i + 1) {
-    outputs.test[i] = ${expr};
+    outputs[i].value = ${expr};
   }
 }
 `;
-
   const inputSize = cases.length * parameterTypes.length * kValueStride;
 
   // Holds all the parameter values for all cases
@@ -388,7 +384,7 @@ fn main() {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, group);
   pass.dispatch(1);
-  pass.endPass();
+  pass.end();
 
   t.queue.submit([encoder.finish()]);
 
@@ -707,7 +703,47 @@ export const kBit = {
   },
 } as const;
 
+/**
+ * Converts a 32-bit hex value to a 32-bit float value
+ *
+ * Using a locally defined function here, instead of uint32ToFloat32 or f32Bits
+ * functions, to avoid compile time dependency issues.
+ * */
+function hexToF32(hex: number): number {
+  return new Float32Array(new Uint32Array([hex]).buffer)[0];
+}
+
 export const kValue = {
+  // Limits of i32
+  i32: {
+    positive: {
+      min: 0,
+      max: 2147483647,
+    },
+    negative: {
+      min: -2147483648,
+      max: 0,
+    },
+  },
+
+  // Limits of uint32
+  u32: {
+    min: 0,
+    max: 4294967295,
+  },
+
+  // Limits of f32
+  f32: {
+    positive: {
+      min: hexToF32(kBit.f32.positive.min),
+      max: hexToF32(kBit.f32.positive.max),
+    },
+    negative: {
+      max: hexToF32(kBit.f32.negative.max),
+      min: hexToF32(kBit.f32.negative.min),
+    },
+  },
+
   powTwo: {
     to0: Math.pow(2, 0),
     to1: Math.pow(2, 1),

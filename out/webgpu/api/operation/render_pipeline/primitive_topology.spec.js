@@ -311,7 +311,8 @@ class PrimitiveTopologyTest extends GPUTest {
       colorAttachments: [
       {
         view: colorAttachment.createView(),
-        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
@@ -407,7 +408,7 @@ class PrimitiveTopologyTest extends GPUTest {
       }
     }
 
-    renderPass.endPass();
+    renderPass.end();
 
     this.device.queue.submit([encoder.finish()]);
 
@@ -450,10 +451,10 @@ u //
 combine('indirect', [false, true]).
 combine('primitiveRestart', [false, true]).
 unless(
-p => p.primitiveRestart && p.topology !== 'line-strip' && p.topology !== 'triangle-strip')).
+(p) => p.primitiveRestart && p.topology !== 'line-strip' && p.topology !== 'triangle-strip')).
 
 
-fn(t => {
+fn((t) => {
   t.run({
     ...t.params,
     testLocations: getDefaultTestLocations(t.params) });
@@ -487,7 +488,7 @@ expand('drawCount', function* (p) {
 
 })).
 
-fn(t => {
+fn((t) => {
   const testLocations = getDefaultTestLocations({ ...t.params, invalidateLastInList: true });
   t.run({
     ...t.params,

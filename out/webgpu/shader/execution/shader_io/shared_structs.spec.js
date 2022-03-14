@@ -16,7 +16,7 @@ desc(
      attributes should be ignored when used as an entry point IO parameter.
     `).
 
-fn(async t => {
+fn(async (t) => {
   // Set the dispatch parameters such that we get some interesting (non-zero) built-in variables.
   const wgsize = new Uint32Array([8, 4, 2]);
   const numGroups = new Uint32Array([4, 2, 8]);
@@ -72,11 +72,11 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.dispatch(numGroups[0], numGroups[1], numGroups[2]);
-  pass.endPass();
+  pass.end();
   t.queue.submit([encoder.finish()]);
 
   // Check the output values.
-  const checkOutput = outputs => {
+  const checkOutput = (outputs) => {
     if (checkElementsEqual(outputs.slice(0, 3), targetGroup)) {
       return new Error(
       `group_id comparison failed\n` +
@@ -100,7 +100,7 @@ fn(async t => {
     }
     return undefined;
   };
-  t.expectGPUBufferValuesPassCheck(outputBuffer, outputData => checkOutput(outputData), {
+  t.expectGPUBufferValuesPassCheck(outputBuffer, (outputData) => checkOutput(outputData), {
     type: Uint32Array,
     typedLength: bufferNumElements });
 
@@ -114,7 +114,7 @@ desc(
      shader and the input to a fragment shader.
     `).
 
-fn(async t => {
+fn(async (t) => {
   const size = [31, 31];
   const wgsl = `
       struct Interface {
@@ -175,14 +175,15 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
 
   pass.setPipeline(pipeline);
   pass.draw(3);
-  pass.endPass();
+  pass.end();
   t.queue.submit([encoder.finish()]);
 
   // Test a few points to make sure we rendered a half-red/half-green triangle.
@@ -227,7 +228,7 @@ desc(
      structures as parameter and return types for entry point functions and regular functions.
     `).
 
-fn(async t => {
+fn(async (t) => {
   // The test shader defines structures that contain members decorated with built-in variable
   // attributes and user-defined IO. These structures are passed to and returned from regular
   // functions.
@@ -311,7 +312,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -319,7 +321,7 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setVertexBuffer(0, vertexBuffer);
   pass.draw(3);
-  pass.endPass();
+  pass.end();
   t.queue.submit([encoder.finish()]);
 
   // Test a few points to make sure we rendered a red triangle.

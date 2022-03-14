@@ -160,7 +160,8 @@ class TextureUsageTracking extends ValidationTest {
       colorAttachments: [
       {
         view,
-        loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
@@ -424,7 +425,7 @@ p.type1 === 'render-target' &&
 p.baseLevel1 !== BASE_LEVEL)).
 
 
-fn(async t => {
+fn(async (t) => {
   const {
     compute,
     binding0InBundle,
@@ -476,17 +477,19 @@ fn(async t => {
       colorAttachments: [
       {
         view: view0,
-        loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear',
         storeOp: 'store' },
 
       {
         view: view1,
-        loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
 
-    pass.endPass();
+    pass.end();
   } else {
     const pass = compute ?
     encoder.beginComputePass() :
@@ -537,7 +540,7 @@ fn(async t => {
       t.device.createPipelineLayout({ bindGroupLayouts: bgls }));
 
     }
-    pass.endPass();
+    pass.end();
   }
 
   const success = _resourceSuccess || _usageOK;
@@ -615,7 +618,7 @@ unless(
 p.compute && (p.binding0InBundle || p.binding1InBundle || p.type1 === 'render-target'))).
 
 
-fn(async t => {
+fn(async (t) => {
   const {
     compute,
     binding0InBundle,
@@ -666,17 +669,20 @@ fn(async t => {
     colorAttachments: [
     {
       view: t.createTexture({ width: size, height: size }).createView(),
-      loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+      clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+      loadOp: 'clear',
       storeOp: 'store' }],
 
 
     depthStencilAttachment: depthStencilFormat ?
     {
       view: view1,
-      depthStoreOp: 'discard',
-      depthLoadValue: 'load',
-      stencilStoreOp: 'discard',
-      stencilLoadValue: 'load' } :
+      depthStoreOp: kTextureFormatInfo[depthStencilFormat].depth ? 'discard' : undefined,
+      depthLoadOp: kTextureFormatInfo[depthStencilFormat].depth ? 'load' : undefined,
+      stencilStoreOp: kTextureFormatInfo[depthStencilFormat].stencil ?
+      'discard' :
+      undefined,
+      stencilLoadOp: kTextureFormatInfo[depthStencilFormat].stencil ? 'load' : undefined } :
 
     undefined });
 
@@ -718,7 +724,7 @@ fn(async t => {
     }
   }
   if (compute) t.setComputePipelineAndCallDispatch(pass);
-  pass.endPass();
+  pass.end();
 
   const disjointAspects =
   aspect0 === 'depth-only' && aspect1 === 'stencil-only' ||
@@ -747,7 +753,7 @@ unless(
 p.compute && Boolean(p.writeVisibility & GPUConst.ShaderStage.VERTEX))).
 
 
-fn(async t => {
+fn(async (t) => {
   const { compute, readVisibility, writeVisibility } = t.params;
 
   // writeonly-storage-texture binding type is not supported in vertex stage. So, this test
@@ -794,7 +800,7 @@ fn(async t => {
 
 
   }
-  pass.endPass();
+  pass.end();
 
   // Texture usages in bindings with invisible shader stages should be validated. Invisible shader
   // stages include shader stage with visibility none, compute shader stage in render pass, and
@@ -817,7 +823,7 @@ combine('entry', [
 { storageTexture: { access: 'write-only', format: 'rgba8unorm' } }])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { compute, callDrawOrDispatch, entry } = t.params;
 
   const sampledView = t.createTexture().createView();
@@ -861,7 +867,7 @@ fn(async t => {
     t.issueDrawOrDispatch(pass, compute);
   }
   pass.setBindGroup(0, bindGroup1);
-  pass.endPass();
+  pass.end();
 
   // MAINTENANCE_TODO: If the Compatible Usage List (https://gpuweb.github.io/gpuweb/#compatible-usage-list)
   // gets programmatically defined in capability_info, use it here, instead of this logic, for clarity.
@@ -884,7 +890,7 @@ beginSubcases().
 combine('binding0InBundle', [false, true]).
 combine('binding1InBundle', [false, true]).
 expandWithParams(function* ({ type0, type1 }) {
-  const usageForType = type => {
+  const usageForType = (type) => {
     switch (type) {
       case 'multisampled-texture':
       case 'sampled-texture':
@@ -922,7 +928,7 @@ p.type0 === 'multisampled-texture' && p.type1 === 'sampled-texture' ||
 p.type0 === 'sampled-texture' && p.type1 === 'multisampled-texture')).
 
 
-fn(async t => {
+fn(async (t) => {
   const {
     binding0InBundle,
     binding1InBundle,
@@ -976,9 +982,9 @@ fn(async t => {
     }
   }
 
-  pass.endPass();
+  pass.end();
 
-  const isReadOnly = t => {
+  const isReadOnly = (t) => {
     switch (t) {
       case 'sampled-texture':
       case 'multisampled-texture':
@@ -1013,7 +1019,7 @@ combine('setBindGroupsOrder', ['common', 'reversed']).
 combine('setPipeline', ['before', 'middle', 'after', 'none']).
 combine('callDrawOrDispatch', [false, true])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     compute,
     useBindGroup0,
@@ -1088,7 +1094,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: t.createTexture().createView(),
-      loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+      clearValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -1101,7 +1108,7 @@ fn(async t => {
   pass.setBindGroup(index1, bindGroup1);
   if (setPipeline === 'after') t.setPipeline(pass, pipeline, compute);
   if (callDrawOrDispatch) t.issueDrawOrDispatch(pass, compute);
-  pass.endPass();
+  pass.end();
 
   // Resource usage validation scope is defined by the whole render pass or by dispatch calls.
   // Regardless of whether or not dispatch is called, in a compute pass, we always succeed
@@ -1121,15 +1128,15 @@ fn(async t => {
 });
 
 g.test('validation_scope,no_draw_or_dispatch').
-params(u => u.combine('compute', [false, true])).
-fn(async t => {
+params((u) => u.combine('compute', [false, true])).
+fn(async (t) => {
   const { compute } = t.params;
 
   const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);
   t.setPipeline(pass, pipeline, compute);
   pass.setBindGroup(0, bindGroup0);
   pass.setBindGroup(1, bindGroup1);
-  pass.endPass();
+  pass.end();
 
   // Resource usage validation scope is defined by dispatch calls. If dispatch is not called,
   // we don't need to do resource usage validation and no validation error to be reported.
@@ -1139,8 +1146,8 @@ fn(async t => {
 });
 
 g.test('validation_scope,same_draw_or_dispatch').
-params(u => u.combine('compute', [false, true])).
-fn(async t => {
+params((u) => u.combine('compute', [false, true])).
+fn(async (t) => {
   const { compute } = t.params;
 
   const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);
@@ -1148,7 +1155,7 @@ fn(async t => {
   pass.setBindGroup(0, bindGroup0);
   pass.setBindGroup(1, bindGroup1);
   t.issueDrawOrDispatch(pass, compute);
-  pass.endPass();
+  pass.end();
 
   t.expectValidationError(() => {
     encoder.finish();
@@ -1156,8 +1163,8 @@ fn(async t => {
 });
 
 g.test('validation_scope,different_draws_or_dispatches').
-params(u => u.combine('compute', [false, true])).
-fn(async t => {
+params((u) => u.combine('compute', [false, true])).
+fn(async (t) => {
   const { compute } = t.params;
   const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);
   t.setPipeline(pass, pipeline, compute);
@@ -1168,7 +1175,7 @@ fn(async t => {
   pass.setBindGroup(1, bindGroup1);
   t.issueDrawOrDispatch(pass, compute);
 
-  pass.endPass();
+  pass.end();
 
   // Note that bindGroup0 will be inherited in the second draw/dispatch.
   t.expectValidationError(() => {
@@ -1177,14 +1184,14 @@ fn(async t => {
 });
 
 g.test('validation_scope,different_passes').
-params(u => u.combine('compute', [false, true])).
-fn(async t => {
+params((u) => u.combine('compute', [false, true])).
+fn(async (t) => {
   const { compute } = t.params;
   const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);
   t.setPipeline(pass, pipeline, compute);
   pass.setBindGroup(0, bindGroup0);
   if (compute) t.setComputePipelineAndCallDispatch(pass);
-  pass.endPass();
+  pass.end();
 
   const pass1 = compute ?
   encoder.beginComputePass() :
@@ -1192,7 +1199,7 @@ fn(async t => {
   t.setPipeline(pass1, pipeline, compute);
   pass1.setBindGroup(1, bindGroup1);
   if (compute) t.setComputePipelineAndCallDispatch(pass1);
-  pass1.endPass();
+  pass1.end();
 
   // No validation error.
   encoder.finish();

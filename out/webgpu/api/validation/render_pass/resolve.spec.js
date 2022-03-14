@@ -73,7 +73,7 @@ paramsSimple([
 { resolveTargetHeight: 4, _valid: false },
 { resolveTargetWidth: 4, _valid: false }]).
 
-fn(async t => {
+fn(async (t) => {
   const {
     colorAttachmentFormat = 'rgba8unorm',
     resolveTargetFormat = 'rgba8unorm',
@@ -131,7 +131,7 @@ fn(async t => {
 
         renderPassColorAttachmentDescriptors.push({
           view: resolveSourceColorAttachment.createView(),
-          loadValue: 'load',
+          loadOp: 'load',
           storeOp: 'discard',
           resolveTarget: resolveTarget.createView({
             dimension: resolveTargetViewArrayLayerCount === 1 ? '2d' : '2d-array',
@@ -168,7 +168,7 @@ fn(async t => {
 
         renderPassColorAttachmentDescriptors.push({
           view: colorAttachment.createView(),
-          loadValue: 'load',
+          loadOp: 'load',
           storeOp: 'discard',
           resolveTarget: resolveTarget.createView() });
 
@@ -178,7 +178,7 @@ fn(async t => {
     const pass = encoder.beginRenderPass({
       colorAttachments: renderPassColorAttachmentDescriptors });
 
-    pass.endPass();
+    pass.end();
 
     t.expectValidationError(() => {
       encoder.finish();

@@ -49,7 +49,8 @@ class F extends ValidationTest {
       colorAttachments: [
       {
         view: colorAttachment.createView(),
-        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
@@ -72,7 +73,7 @@ class F extends ValidationTest {
     pass.setPipeline(pipeline);
     pass.setIndexBuffer(indexBuffer, 'uint32');
     pass.drawIndexed(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
-    pass.endPass();
+    pass.end();
 
     if (isSuccess) {
       this.device.queue.submit([encoder.finish()]);
@@ -120,7 +121,7 @@ combineWithParams([
 ]).
 combine('instanceCount', [1, 10000]) // normal and large instanceCount
 ).
-fn(t => {
+fn((t) => {
   const { indexCount, firstIndex, instanceCount } = t.params;
 
   const indexBuffer = t.createIndexBuffer([0, 1, 2, 3, 1, 2]);
@@ -150,7 +151,7 @@ combineWithParams([
 ]).
 combine('instanceCount', [1, 10000]) // normal and large instanceCount
 ).
-fn(t => {
+fn((t) => {
   const { indexCount, firstIndex, instanceCount } = t.params;
 
   const indexBuffer = t.createIndexBuffer([]);

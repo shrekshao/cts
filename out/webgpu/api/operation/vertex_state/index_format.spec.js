@@ -133,13 +133,18 @@ class IndexFormatTest extends GPUTest {
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [
-      { view: colorAttachment.createView(), loadValue: [0, 0, 0, 0], storeOp: 'store' }] });
+      {
+        view: colorAttachment.createView(),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store' }] });
+
 
 
     pass.setPipeline(pipeline);
     pass.setIndexBuffer(indexBuffer, indexFormat, indexOffset);
     pass.drawIndexed(indexCount);
-    pass.endPass();
+    pass.end();
     encoder.copyTextureToBuffer(
     { texture: colorAttachment },
     { buffer: result, bytesPerRow, rowsPerImage },
@@ -174,7 +179,7 @@ paramsSubcasesOnly([
 { indexOffset: 6, _indexCount: 6, _expectedShape: kBottomLeftTriangle },
 { indexOffset: 18, _indexCount: 0, _expectedShape: kNothing }]).
 
-fn(t => {
+fn((t) => {
   const { indexOffset, _indexCount, _expectedShape } = t.params;
 
   // If this is written as uint16 but interpreted as uint32, it will have index 1 and 2 be both 0
@@ -196,7 +201,7 @@ paramsSubcasesOnly([
 { indexOffset: 12, _indexCount: 7, _expectedShape: kBottomLeftTriangle },
 { indexOffset: 36, _indexCount: 0, _expectedShape: kNothing }]).
 
-fn(t => {
+fn((t) => {
   const { indexOffset, _indexCount, _expectedShape } = t.params;
 
   // If this is interpreted as uint16, then it would be 0, 1, 0, ... and would draw nothing.
@@ -358,7 +363,7 @@ combineWithParams([
 
 
 
-fn(t => {
+fn((t) => {
   const { indexFormat, primitiveTopology, _indices, _expectedShape } = t.params;
 
   const indexBuffer = t.CreateIndexBuffer(_indices, indexFormat);

@@ -18,7 +18,7 @@ paramsSimple([
 { storeOp: 'store', _expected: 1 }, //
 { storeOp: 'discard', _expected: 0 }]).
 
-fn(async t => {
+fn(async (t) => {
   const renderTexture = t.device.createTexture({
     size: { width: 1, height: 1, depthOrArrayLayers: 1 },
     format: 'r8unorm',
@@ -64,13 +64,14 @@ fn(async t => {
     {
       view: renderTexture.createView(),
       storeOp: t.params.storeOp,
-      loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 } }] });
+      clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+      loadOp: 'clear' }] });
 
 
 
   pass.setPipeline(renderPipeline);
   pass.draw(3);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
 
   // expect the buffer to be clear

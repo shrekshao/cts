@@ -39,7 +39,7 @@ subresourceRange) =>
     const indexExpression =
     componentCount === 1 ?
     componentOrder[0].toLowerCase() :
-    componentOrder.map(c => c.toLowerCase()).join('') + '[i]';
+    componentOrder.map((c) => c.toLowerCase()).join('') + '[i]';
 
     const _xd = '_' + params.dimension;
     const _multisampled = params.sampleCount > 1 ? '_multisampled' : '';
@@ -131,7 +131,7 @@ subresourceRange) =>
       pass.setPipeline(computePipeline);
       pass.setBindGroup(0, bindGroup);
       pass.dispatch(width, height, depth);
-      pass.endPass();
+      pass.end();
       t.queue.submit([commandEncoder.finish()]);
       ubo.destroy();
 

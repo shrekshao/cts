@@ -24,7 +24,7 @@ u //
 .combine('firstWriteOp', kAllWriteOps).
 combine('secondWriteOp', kAllWriteOps)).
 
-fn(async t => {
+fn(async (t) => {
   const { firstWriteOp, secondWriteOp } = t.params;
   const buffer = await t.createBufferWithValue(0);
 
@@ -43,7 +43,7 @@ u //
 .combine('firstWriteOp', kAllWriteOps).
 combine('secondWriteOp', kAllWriteOps)).
 
-fn(async t => {
+fn(async (t) => {
   const { firstWriteOp, secondWriteOp } = t.params;
   const buffer = await t.createBufferWithValue(0);
 
@@ -62,7 +62,7 @@ u //
 .combine('firstWriteOp', ['write-buffer', ...kAllWriteOps]).
 combine('secondWriteOp', ['write-buffer', ...kAllWriteOps])).
 
-fn(async t => {
+fn(async (t) => {
   const { firstWriteOp, secondWriteOp } = t.params;
   const buffer = await t.createBufferWithValue(0);
 
@@ -87,7 +87,7 @@ u //
 .combine('firstDrawUseBundle', [false, true]).
 combine('secondDrawUseBundle', [false, true])).
 
-fn(async t => {
+fn(async (t) => {
   const { firstDrawUseBundle, secondDrawUseBundle } = t.params;
   const buffer = await t.createBufferWithValue(0);
   const encoder = t.device.createCommandEncoder();
@@ -109,7 +109,7 @@ fn(async t => {
     passEncoder.executeBundles([renderEncoder.finish()]);
   }
 
-  passEncoder.endPass();
+  passEncoder.end();
   t.device.queue.submit([encoder.finish()]);
   t.verifyDataTwoValidValues(buffer, 1, 2);
 });
@@ -120,7 +120,7 @@ desc(
     a storage buffer. The second write will write 2 into the same buffer in the same pass. Expected
     data in buffer is either 1 or 2.`).
 
-fn(async t => {
+fn(async (t) => {
   const buffer = await t.createBufferWithValue(0);
   const encoder = t.device.createCommandEncoder();
   const passEncoder = t.beginSimpleRenderPass(encoder);
@@ -137,7 +137,7 @@ fn(async t => {
   }
 
   passEncoder.executeBundles([renderEncoder.finish()]);
-  passEncoder.endPass();
+  passEncoder.end();
   t.device.queue.submit([encoder.finish()]);
   t.verifyDataTwoValidValues(buffer, 1, 2);
 });
@@ -148,7 +148,7 @@ desc(
     a storage buffer. The second write will write 2 into the same buffer in the same pass. Expected
     data in buffer is 2.`).
 
-fn(async t => {
+fn(async (t) => {
   const buffer = await t.createBufferWithValue(0);
   const encoder = t.device.createCommandEncoder();
   const pass = encoder.beginComputePass();
@@ -161,7 +161,7 @@ fn(async t => {
     pass.dispatch(1);
   }
 
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   t.verifyData(buffer, 2);
 });

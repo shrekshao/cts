@@ -10,6 +10,7 @@ kTextureFormatInfo,
 textureDimensionAndFormatCompatible } from
 '../../../capability_info.js';
 import { GPUConst } from '../../../constants.js';
+import { kResourceStates } from '../../../gpu_test.js';
 import { align } from '../../../util/math.js';
 import { virtualMipSize } from '../../../util/texture/base.js';
 import { kImageCopyTypes } from '../../../util/texture/layout.js';
@@ -35,7 +36,7 @@ Test that the texture must be valid and not destroyed.
 params((u) =>
 u //
 .combine('method', kImageCopyTypes).
-combine('textureState', ['valid', 'destroyed', 'error']).
+combine('textureState', kResourceStates).
 combineWithParams([
 { dimension: '1d', size: [4, 1, 1] },
 { dimension: '2d', size: [4, 4, 1] },
@@ -43,30 +44,18 @@ combineWithParams([
 { dimension: '3d', size: [4, 4, 3] }])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { method, textureState, size, dimension } = t.params;
 
-  // A valid texture.
-  let texture = t.device.createTexture({
+  const texture = t.createTextureWithState(textureState, {
     size,
     dimension,
     format: 'rgba8unorm',
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST });
 
 
-  switch (textureState) {
-    case 'destroyed':{
-        texture.destroy();
-        break;
-      }
-    case 'error':{
-        texture = t.getErrorTexture();
-        break;
-      }}
-
-
   const success = textureState === 'valid';
-  const submit = textureState === 'destroyed';
+  const submit = textureState !== 'invalid';
 
   t.testRun(
   { texture },
@@ -116,7 +105,7 @@ GPUConst.TextureUsage.COPY_DST | GPUConst.TextureUsage.TEXTURE_BINDING,
 GPUConst.TextureUsage.COPY_SRC | GPUConst.TextureUsage.COPY_DST])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { usage, method, size, dimension } = t.params;
 
   const texture = t.device.createTexture({
@@ -155,7 +144,7 @@ u //
 beginSubcases().
 combine('sampleCount', [1, 4])).
 
-fn(async t => {
+fn(async (t) => {
   const { sampleCount, method } = t.params;
 
   const texture = t.device.createTexture({
@@ -195,10 +184,10 @@ combineWithParams([
 
 beginSubcases().
 combine('mipLevelCount', [1, 3, 5]).
-unless(p => p.dimension === '1d' && p.mipLevelCount !== 1).
+unless((p) => p.dimension === '1d' && p.mipLevelCount !== 1).
 combine('mipLevel', [0, 1, 3, 4])).
 
-fn(async t => {
+fn(async (t) => {
   const { mipLevelCount, mipLevel, method, size, dimension } = t.params;
 
   const texture = t.device.createTexture({
@@ -244,7 +233,7 @@ filter(({ dimension, format }) => textureDimensionAndFormatCompatible(dimension,
 filter(formatCopyableWithMethod).
 beginSubcases().
 combine('mipLevel', [0, 2]).
-unless(p => p.dimension === '1d' && p.mipLevel !== 0).
+unless((p) => p.dimension === '1d' && p.mipLevel !== 0).
 combine('copyWidthModifier', [0, -1]).
 combine('copyHeightModifier', [0, -1])
 // If the texture has multiple depth/array slices and it is not a 3D texture, which means it is an array texture,
@@ -254,7 +243,7 @@ combine('copyHeightModifier', [0, -1])
 // need to examine depth dimension via copyDepthModifier to determine whether it is a full copy for a 3D texture.
 .expand('copyDepthModifier', ({ dimension: d }) => d === '3d' ? [0, -1] : [0])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     method,
     depthOrArrayLayers,
@@ -339,10 +328,10 @@ combineWithParams([
 filter(({ dimension, format }) => textureDimensionAndFormatCompatible(dimension, format)).
 beginSubcases().
 combine('coordinateToTest', ['x', 'y', 'z']).
-unless(p => p.dimension === '1d' && p.coordinateToTest !== 'x').
+unless((p) => p.dimension === '1d' && p.coordinateToTest !== 'x').
 expand('valueToCoordinate', texelBlockAlignmentTestExpanderForValueToCoordinate)).
 
-fn(async t => {
+fn(async (t) => {
   const {
     valueToCoordinate,
     coordinateToTest,
@@ -400,10 +389,10 @@ combine('dimension', kTextureDimensions).
 filter(({ dimension, format }) => textureDimensionAndFormatCompatible(dimension, format)).
 beginSubcases().
 combine('coordinateToTest', ['width', 'height', 'depthOrArrayLayers']).
-unless(p => p.dimension === '1d' && p.coordinateToTest !== 'width').
+unless((p) => p.dimension === '1d' && p.coordinateToTest !== 'width').
 expand('valueToCoordinate', texelBlockAlignmentTestExpanderForValueToCoordinate)).
 
-fn(async t => {
+fn(async (t) => {
   const { valueToCoordinate, coordinateToTest, dimension, format, method } = t.params;
   const info = kTextureFormatInfo[format];
   await t.selectDeviceOrSkipTestCase(info.feature);
@@ -459,9 +448,9 @@ combine('copySizeValue', [7, 8]).
 combine('textureSizeValue', [14, 15]).
 combine('mipLevel', [0, 2]).
 combine('coordinateToTest', [0, 1, 2]).
-unless(p => p.dimension === '1d' && (p.coordinateToTest !== 0 || p.mipLevel !== 0))).
+unless((p) => p.dimension === '1d' && (p.coordinateToTest !== 0 || p.mipLevel !== 0))).
 
-fn(async t => {
+fn(async (t) => {
   const {
     originValue,
     copySizeValue,

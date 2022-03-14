@@ -446,16 +446,17 @@ class F extends GPUTest {
             baseMipLevel: srcCopyLevel,
             mipLevelCount: 1 }),
 
-          depthLoadValue: 0.0,
+          depthClearValue: 0.0,
+          depthLoadOp: 'clear',
           depthStoreOp: 'store',
-          stencilLoadValue: 'load',
+          stencilLoadOp: 'load',
           stencilStoreOp: 'store' } });
 
 
       renderPass.setBindGroup(0, bindGroup, [srcCopyLayer * kMinDynamicBufferOffsetAlignment]);
       renderPass.setPipeline(renderPipeline);
       renderPass.draw(6);
-      renderPass.endPass();
+      renderPass.end();
     }
     this.queue.submit([encoder.finish()]);
   }
@@ -493,7 +494,8 @@ class F extends GPUTest {
             baseArrayLayer: dstCopyLayer,
             arrayLayerCount: 1 }),
 
-          loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+          clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+          loadOp: 'clear',
           storeOp: 'store' }],
 
 
@@ -504,16 +506,16 @@ class F extends GPUTest {
             baseMipLevel: dstCopyLevel,
             mipLevelCount: 1 }),
 
-          depthLoadValue: 'load',
+          depthLoadOp: 'load',
           depthStoreOp: 'store',
-          stencilLoadValue: 'load',
+          stencilLoadOp: 'load',
           stencilStoreOp: 'store' } });
 
 
       renderPass.setBindGroup(0, bindGroup, [dstCopyLayer * kMinDynamicBufferOffsetAlignment]);
       renderPass.setPipeline(renderPipeline);
       renderPass.draw(6);
-      renderPass.endPass();
+      renderPass.end();
     }
     this.queue.submit([encoder.finish()]);
 
@@ -661,7 +663,7 @@ textureDimensionAndFormatCompatible(dimension, srcFormat) &&
 textureDimensionAndFormatCompatible(dimension, dstFormat)).
 
 beginSubcases().
-expandWithParams(p => {
+expandWithParams((p) => {
   const params = [
   {
     srcTextureSize: { width: 32, height: 32, depthOrArrayLayers: 1 },
@@ -699,9 +701,9 @@ p.copyBoxOffsets.dstOffset.y !== 0)).
 
 combine('srcCopyLevel', [0, 3]).
 combine('dstCopyLevel', [0, 3]).
-unless(p => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
+unless((p) => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
 
-fn(async t => {
+fn(async (t) => {
   const {
     dimension,
     srcTextureSize,
@@ -776,7 +778,7 @@ combine('copyBoxOffsets', kCopyBoxOffsetsForWholeDepth).
 combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     dimension,
     textureSizeInBlocks,
@@ -863,7 +865,7 @@ combine('copyBoxOffsets', kCopyBoxOffsetsFor2DArrayTextures).
 combine('srcCopyLevel', [0, 3]).
 combine('dstCopyLevel', [0, 3])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     dimension,
     textureSize,
@@ -927,7 +929,7 @@ combine('copyBoxOffsets', kCopyBoxOffsetsFor2DArrayTextures).
 combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     dimension,
     textureSizeInBlocks,
@@ -1048,9 +1050,9 @@ p.copyBoxOffset.dstOffset.y !== 0)).
 
 combine('srcCopyLevel', [0, 3]).
 combine('dstCopyLevel', [0, 3]).
-unless(p => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
+unless((p) => p.dimension === '1d' && (p.srcCopyLevel !== 0 || p.dstCopyLevel !== 0))).
 
-fn(async t => {
+fn(async (t) => {
   const { dimension, textureSize, copyBoxOffset, srcCopyLevel, dstCopyLevel } = t.params;
 
   const srcFormat = 'rgba8unorm';
@@ -1100,14 +1102,14 @@ combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2]).
 combine('srcCopyBaseArrayLayer', [0, 1]).
 combine('dstCopyBaseArrayLayer', [0, 1]).
-filter(t => {
+filter((t) => {
   return (
     t.srcTextureSize.depthOrArrayLayers > t.srcCopyBaseArrayLayer &&
     t.srcTextureSize.depthOrArrayLayers > t.dstCopyBaseArrayLayer);
 
 })).
 
-fn(async t => {
+fn(async (t) => {
   const {
     format,
     srcTextureSize,
@@ -1208,7 +1210,7 @@ desc(
     texture can only be 1.
   `).
 
-fn(async t => {
+fn(async (t) => {
   const textureSize = [32, 16, 1];
   const kColorFormat = 'rgba8unorm';
   const kSampleCount = 4;
@@ -1266,14 +1268,15 @@ fn(async t => {
     colorAttachments: [
     {
       view: sourceTexture.createView(),
-      loadValue: [1.0, 0.0, 0.0, 1.0],
+      clearValue: [1.0, 0.0, 0.0, 1.0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
 
   renderPassForInit.setPipeline(renderPipelineForInit);
   renderPassForInit.draw(3);
-  renderPassForInit.endPass();
+  renderPassForInit.end();
   t.queue.submit([initEncoder.finish()]);
 
   // Do the texture-to-texture copy
@@ -1357,7 +1360,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: expectedOutputTexture.createView(),
-      loadValue: [1.0, 0.0, 0.0, 1.0],
+      clearValue: [1.0, 0.0, 0.0, 1.0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -1365,7 +1369,7 @@ fn(async t => {
   renderPassForValidation.setPipeline(renderPipelineForValidation);
   renderPassForValidation.setBindGroup(0, bindGroup);
   renderPassForValidation.draw(6);
-  renderPassForValidation.endPass();
+  renderPassForValidation.end();
   t.queue.submit([validationEncoder.finish()]);
 
   t.expectSingleColor(expectedOutputTexture, 'rgba8unorm', {
@@ -1386,7 +1390,7 @@ desc(
     texture can only be 1.
   `).
 
-fn(async t => {
+fn(async (t) => {
   const textureSize = [32, 16, 1];
   const kDepthFormat = 'depth24plus';
   const kSampleCount = 4;
@@ -1440,15 +1444,14 @@ fn(async t => {
     colorAttachments: [],
     depthStencilAttachment: {
       view: sourceTexture.createView(),
-      depthLoadValue: 0.0,
-      depthStoreOp: 'store',
-      stencilLoadValue: 0,
-      stencilStoreOp: 'store' } });
+      depthClearValue: 0.0,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store' } });
 
 
   renderPassForInit.setPipeline(renderPipelineForInit);
   renderPassForInit.draw(6);
-  renderPassForInit.endPass();
+  renderPassForInit.end();
   t.queue.submit([encoderForInit.finish()]);
 
   // Do the texture-to-texture copy
@@ -1506,22 +1509,21 @@ fn(async t => {
     colorAttachments: [
     {
       view: multisampledColorTexture.createView(),
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      loadOp: 'clear',
       storeOp: 'discard',
       resolveTarget: colorTextureAsResolveTarget.createView() }],
 
 
     depthStencilAttachment: {
       view: destinationTexture.createView(),
-      depthLoadValue: 'load',
-      depthStoreOp: 'store',
-      stencilLoadValue: 0,
-      stencilStoreOp: 'store' } });
+      depthLoadOp: 'load',
+      depthStoreOp: 'store' } });
 
 
   renderPassForVerify.setPipeline(renderPipelineForVerify);
   renderPassForVerify.draw(6);
-  renderPassForVerify.endPass();
+  renderPassForVerify.end();
   t.queue.submit([encoderForVerify.finish()]);
 
   t.expectSingleColor(colorTextureAsResolveTarget, kColorFormat, {

@@ -86,9 +86,10 @@ class F extends CopyToTextureUtils {
   {
     const canvas = createCanvas(this, canvasType, width, height);
 
-    const gl = canvas.getContext(contextName, { premultipliedAlpha: premultiplied });
-
-
+    // MAINTENANCE_TODO: Workaround for @types/offscreencanvas missing an overload of
+    // `OffscreenCanvas.getContext` that takes `string` or a union of context types.
+    const gl = canvas.getContext(contextName, {
+      premultipliedAlpha: premultiplied });
 
 
     if (gl === null) {
@@ -334,7 +335,7 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     width,
     height,
@@ -452,7 +453,7 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     width,
     height,
@@ -573,7 +574,7 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     width,
     height,

@@ -41,19 +41,28 @@ class F extends ValidationTest {
   createColorAttachment(format, sampleCount) {
     return {
       view: this.createAttachmentTextureView(format, sampleCount),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store',
     };
   }
 
   createDepthAttachment(format, sampleCount) {
-    return {
+    const attachment = {
       view: this.createAttachmentTextureView(format, sampleCount),
-      depthLoadValue: 0,
-      depthStoreOp: 'discard',
-      stencilLoadValue: 1,
-      stencilStoreOp: 'discard',
     };
+
+    if (kTextureFormatInfo[format].depth) {
+      attachment.depthClearValue = 0;
+      attachment.depthLoadOp = 'clear';
+      attachment.depthStoreOp = 'discard';
+    }
+    if (kTextureFormatInfo[format].stencil) {
+      attachment.stencilClearValue = 1;
+      attachment.stencilLoadOp = 'clear';
+      attachment.stencilStoreOp = 'discard';
+    }
+    return attachment;
   }
 
   createRenderPipeline(targets, depthStencil, sampleCount) {
@@ -113,7 +122,7 @@ g.test('render_pass_and_bundle,color_format')
     });
 
     pass.executeBundles([bundle]);
-    pass.endPass();
+    pass.end();
     validateFinishAndSubmit(passFormat === bundleFormat, true);
   });
 
@@ -144,7 +153,7 @@ g.test('render_pass_and_bundle,color_count')
     });
 
     pass.executeBundles([bundle]);
-    pass.endPass();
+    pass.end();
     validateFinishAndSubmit(passCount === bundleCount, true);
   });
 
@@ -174,7 +183,7 @@ g.test('render_pass_and_bundle,depth_format')
     });
 
     pass.executeBundles([bundle]);
-    pass.endPass();
+    pass.end();
     validateFinishAndSubmit(passFormat === bundleFormat, true);
   });
 
@@ -199,7 +208,7 @@ g.test('render_pass_and_bundle,sample_count')
     });
 
     pass.executeBundles([bundle]);
-    pass.endPass();
+    pass.end();
     validateFinishAndSubmit(renderSampleCount === bundleSampleCount, true);
   });
 

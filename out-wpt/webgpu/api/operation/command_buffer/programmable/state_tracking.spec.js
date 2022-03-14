@@ -41,9 +41,17 @@ g.test('bind_group_indices')
 
     const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const bindGroups = {
-      a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-      out: t.createBindGroup(out),
+      a: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      b: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      out: t.createBindGroup(out, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -85,16 +93,24 @@ g.test('bind_group_order')
 
     const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const bindGroups = {
-      a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-      out: t.createBindGroup(out),
+      a: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      b: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      out: t.createBindGroup(out, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
     t.setPipeline(encoder, pipeline);
 
-    for (const group of setOrder) {
-      encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+    for (let i = 0; i < setOrder.length; ++i) {
+      encoder.setBindGroup(groupIndices[setOrder[i]], bindGroups[setOrder[i]]);
     }
 
     t.dispatchOrDraw(encoder);
@@ -127,21 +143,29 @@ g.test('bind_group_before_pipeline')
 
     const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const bindGroups = {
-      a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-      out: t.createBindGroup(out),
+      a: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      b: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      out: t.createBindGroup(out, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
 
-    for (const group of setBefore) {
-      encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+    for (let i = 0; i < setBefore.length; ++i) {
+      encoder.setBindGroup(groupIndices[setBefore[i]], bindGroups[setBefore[i]]);
     }
 
     t.setPipeline(encoder, pipeline);
 
-    for (const group of setAfter) {
-      encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+    for (let i = 0; i < setAfter.length; ++i) {
+      encoder.setBindGroup(groupIndices[setAfter[i]], bindGroups[setAfter[i]]);
     }
 
     t.dispatchOrDraw(encoder);
@@ -166,8 +190,12 @@ g.test('one_bind_group_multiple_slots')
 
     const out = t.makeBufferWithContents(new Int32Array([1]), kBufferUsage);
     const bindGroups = {
-      ab: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      out: t.createBindGroup(out),
+      ab: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      out: t.createBindGroup(out, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -200,11 +228,23 @@ g.test('bind_group_multiple_sets')
     const badOut = t.makeBufferWithContents(new Int32Array([-1]), kBufferUsage);
     const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const bindGroups = {
-      a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-      c: t.createBindGroup(t.makeBufferWithContents(new Int32Array([5]), kBufferUsage)),
-      badOut: t.createBindGroup(badOut),
-      out: t.createBindGroup(out),
+      a: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      b: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      c: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([5]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      badOut: t.createBindGroup(badOut, 'storage'),
+      out: t.createBindGroup(out, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -246,10 +286,18 @@ g.test('compatible_pipelines')
     const outA = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const outB = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
     const bindGroups = {
-      a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-      b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-      outA: t.createBindGroup(outA),
-      outB: t.createBindGroup(outB),
+      a: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      b: t.createBindGroup(
+        t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+        'read-only-storage'
+      ),
+
+      outA: t.createBindGroup(outA, 'storage'),
+      outB: t.createBindGroup(outB, 'storage'),
     };
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);

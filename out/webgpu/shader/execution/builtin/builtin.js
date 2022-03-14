@@ -4,11 +4,11 @@
 f32,
 ScalarType,
 Scalar,
-Vector,
-
 
 TypeVec,
 TypeU32,
+
+Vector,
 VectorType } from
 '../../../util/conversion.js';
 import { correctlyRounded, diffULP } from '../../../util/math.js';
@@ -31,9 +31,9 @@ import { correctlyRounded, diffULP } from '../../../util/math.js';
 
 
 /**
-                                                                  * @returns a FloatMatch that returns true iff the two numbers are equal to, or
-                                                                  * less than the specified absolute error threshold.
-                                                                  */
+ * @returns a FloatMatch that returns true iff the two numbers are equal to, or
+ * less than the specified absolute error threshold.
+ */
 export function absThreshold(diff) {
   return (got, expected) => {
     if (got === expected) {
@@ -47,9 +47,9 @@ export function absThreshold(diff) {
 }
 
 /**
-   * @returns a FloatMatch that returns true iff the two numbers are within or
-   * equal to the specified ULP threshold value.
-   */
+ * @returns a FloatMatch that returns true iff the two numbers are within or
+ * equal to the specified ULP threshold value.
+ */
 export function ulpThreshold(ulp) {
   return (got, expected) => {
     if (got === expected) {
@@ -60,10 +60,10 @@ export function ulpThreshold(ulp) {
 }
 
 /**
-   * @returns a FloatMatch that returns true iff |expected| is a correctly round
-   * to |got|.
-   * |got| must be expressible as a float32.
-   */
+ * @returns a FloatMatch that returns true iff |expected| is a correctly round
+ * to |got|.
+ * |got| must be expressible as a float32.
+ */
 export function correctlyRoundedThreshold() {
   return (got, expected) => {
     return correctlyRounded(f32(got), expected);
@@ -231,17 +231,17 @@ function toStorage(ty, expr) {
 const kValueStride = 16;
 
 /**
-                          * Runs the list of builtin tests, possibly splitting the tests into multiple
-                          * dispatches to keep the input data within the buffer binding limits.
-                          * run() will pack the scalar test cases into smaller set of vectorized tests
-                          * if `cfg.vectorize` is defined.
-                          * @param t the GPUTest
-                          * @param builtin the builtin being tested
-                          * @param parameterTypes the list of builtin parameter types
-                          * @param returnType the return type for the builtin overload
-                          * @param cfg test configuration values
-                          * @param cases list of test cases
-                          */
+ * Runs the list of builtin tests, possibly splitting the tests into multiple
+ * dispatches to keep the input data within the buffer binding limits.
+ * run() will pack the scalar test cases into smaller set of vectorized tests
+ * if `cfg.vectorize` is defined.
+ * @param t the GPUTest
+ * @param builtin the builtin being tested
+ * @param parameterTypes the list of builtin parameter types
+ * @param returnType the return type for the builtin overload
+ * @param cfg test configuration values
+ * @param cases list of test cases
+ */
 export function run(
 t,
 builtin,
@@ -275,16 +275,16 @@ cases)
 }
 
 /**
-   * Runs the list of builtin tests. The input data must fit within the buffer
-   * binding limits of the given storageClass.
-   * @param t the GPUTest
-   * @param builtin the builtin being tested
-   * @param parameterTypes the list of builtin parameter types
-   * @param returnType the return type for the builtin overload
-   * @param cases list of test cases that fit within the binding limits of the device
-   * @param storageClass the storage class to use for the input buffer
-   * @param cmpFloats the method to compare floating point numbers
-   */
+ * Runs the list of builtin tests. The input data must fit within the buffer
+ * binding limits of the given storageClass.
+ * @param t the GPUTest
+ * @param builtin the builtin being tested
+ * @param parameterTypes the list of builtin parameter types
+ * @param returnType the return type for the builtin overload
+ * @param cases list of test cases that fit within the binding limits of the device
+ * @param storageClass the storage class to use for the input buffer
+ * @param cmpFloats the method to compare floating point numbers
+ */
 function runBatch(
 t,
 builtin,
@@ -295,7 +295,7 @@ storageClass,
 cmpFloats)
 {
   // returns the WGSL expression to load the ith parameter of the given type from the input buffer
-  const paramExpr = (ty, i) => fromStorage(ty, `inputs.test[i].param${i}`);
+  const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
 
   // resolves to the expression that calls the builtin
   const expr = toStorage(
@@ -303,39 +303,35 @@ cmpFloats)
   builtin + '(' + parameterTypes.map(paramExpr).join(', ') + ')');
 
 
+  const storage = storageClass === 'storage_r' ? 'read' : 'read_write';
+
   // the full WGSL shader source
   const source = `
-struct Parameters {
+struct Input {
 ${parameterTypes.
   map((ty, i) => `  @size(${kValueStride}) param${i} : ${storageType(ty)};`).
   join('\n')}
 };
 
-struct Inputs {
-  test : array<Parameters, ${cases.length}>;
+struct Output {
+  @size(${kValueStride}) value : ${storageType(returnType)};
 };
 
-struct Outputs {
-  test : @stride(${kValueStride}) array<${storageType(returnType)}, ${cases.length}>;
-};
-
+@group(0) @binding(0)
 ${
   storageClass === 'uniform' ?
-  `@group(0) @binding(0) var<uniform> inputs : Inputs;` :
-  `@group(0) @binding(0) var<storage, ${
-  storageClass === 'storage_r' ? 'read' : 'read_write'
-  }> inputs : Inputs;`
+  `var<uniform> inputs : array<Input, ${cases.length}>;` :
+  `var<storage, ${storage}> inputs : array<Input, ${cases.length}>;`
   }
-@group(0) @binding(1) var<storage, write> outputs : Outputs;
+@group(0) @binding(1) var<storage, write> outputs : array<Output, ${cases.length}>;
 
 @stage(compute) @workgroup_size(1)
 fn main() {
   for(var i = 0; i < ${cases.length}; i = i + 1) {
-    outputs.test[i] = ${expr};
+    outputs[i].value = ${expr};
   }
 }
 `;
-
   const inputSize = cases.length * parameterTypes.length * kValueStride;
 
   // Holds all the parameter values for all cases
@@ -388,11 +384,11 @@ fn main() {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, group);
   pass.dispatch(1);
-  pass.endPass();
+  pass.end();
 
   t.queue.submit([encoder.finish()]);
 
-  const checkExpectation = outputData => {
+  const checkExpectation = (outputData) => {
     // Read the outputs from the output buffer
     const outputs = new Array(cases.length);
     for (let i = 0; i < cases.length; i++) {
@@ -424,12 +420,12 @@ fn main() {
 }
 
 /**
-   * Packs a list of scalar test cases into a smaller list of vector cases.
-   * Requires that all parameters of the builtin overload are of a scalar type,
-   * and the return type of the builtin overload is also a scalar type.
-   * If `cases.length` is not a multiple of `vectorWidth`, then the last scalar
-   * test case value is repeated to fill the vector value.
-   */
+ * Packs a list of scalar test cases into a smaller list of vector cases.
+ * Requires that all parameters of the builtin overload are of a scalar type,
+ * and the return type of the builtin overload is also a scalar type.
+ * If `cases.length` is not a multiple of `vectorWidth`, then the last scalar
+ * test case value is repeated to fill the vector value.
+ */
 function packScalarsToVector(
 parameterTypes,
 returnType,
@@ -452,10 +448,10 @@ vectorWidth)
   }
 
   const packedCases = [];
-  const packedParameterTypes = parameterTypes.map(p => TypeVec(vectorWidth, p));
+  const packedParameterTypes = parameterTypes.map((p) => TypeVec(vectorWidth, p));
   const packedReturnType = new VectorType(vectorWidth, returnType);
 
-  const clampCaseIdx = idx => Math.min(idx, cases.length - 1);
+  const clampCaseIdx = (idx) => Math.min(idx, cases.length - 1);
 
   let caseIdx = 0;
   while (caseIdx < cases.length) {
@@ -707,7 +703,47 @@ export const kBit = {
 
 
 
+/**
+ * Converts a 32-bit hex value to a 32-bit float value
+ *
+ * Using a locally defined function here, instead of uint32ToFloat32 or f32Bits
+ * functions, to avoid compile time dependency issues.
+ * */
+function hexToF32(hex) {
+  return new Float32Array(new Uint32Array([hex]).buffer)[0];
+}
+
 export const kValue = {
+  // Limits of i32
+  i32: {
+    positive: {
+      min: 0,
+      max: 2147483647 },
+
+    negative: {
+      min: -2147483648,
+      max: 0 } },
+
+
+
+  // Limits of uint32
+  u32: {
+    min: 0,
+    max: 4294967295 },
+
+
+  // Limits of f32
+  f32: {
+    positive: {
+      min: hexToF32(kBit.f32.positive.min),
+      max: hexToF32(kBit.f32.positive.max) },
+
+    negative: {
+      max: hexToF32(kBit.f32.negative.max),
+      min: hexToF32(kBit.f32.negative.min) } },
+
+
+
   powTwo: {
     to0: Math.pow(2, 0),
     to1: Math.pow(2, 1),

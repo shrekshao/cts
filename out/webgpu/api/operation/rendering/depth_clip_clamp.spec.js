@@ -3,10 +3,6 @@
 **/export const description = `
 Tests for depth clipping, depth clamping (at various points in the pipeline), and maybe extended
 depth ranges as well.
-
-TODO: Based on documentation and experimental results, depth should actually always be clamped.
-The depth-clamping feature here is actually used to toggle depth _clipping_. These tests need to be
-updated to say what they mean, once that's possible.
 `;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { kDepthStencilFormats, kTextureFormatInfo } from '../../../capability_info.js';
 import { GPUTest } from '../../../gpu_test.js';
@@ -40,15 +36,15 @@ have unexpected values then get drawn to the color buffer, which is later checke
 params((u) =>
 u //
 .combine('format', kDepthStencilFormats).
-filter(p => kTextureFormatInfo[p.format].depth).
-combine('clampDepth', [false, true]).
+filter((p) => kTextureFormatInfo[p.format].depth).
+combine('unclippedDepth', [undefined, false, true]).
 combine('writeDepth', [false, true]).
 combine('multisampled', [false, true])).
 
-fn(async t => {
-  const { format, clampDepth, writeDepth, multisampled } = t.params;
+fn(async (t) => {
+  const { format, unclippedDepth, writeDepth, multisampled } = t.params;
   await t.selectDeviceOrSkipTestCase([
-  clampDepth ? 'depth-clamping' : undefined,
+  unclippedDepth ? 'depth-clip-control' : undefined,
   kTextureFormatInfo[format].feature]);
 
   const info = kTextureFormatInfo[format];
@@ -154,7 +150,7 @@ fn(async t => {
 
         let expectedDepthWriteInput = ${writeDepth ? 'writtenDepth' : 'expFragPosZ'};
         var expectedDepthBufferValue = clamp(expectedDepthWriteInput, vpMin, vpMax);
-        if (${!clampDepth} && outOfRange) {
+        if (${!unclippedDepth} && outOfRange) {
           // Test fragment should have been clipped; expect the depth attachment to
           // have its clear value (0.5).
           expectedDepthBufferValue = 0.5;
@@ -174,9 +170,7 @@ fn(async t => {
     vertex: { module, entryPoint: 'vtest' },
     primitive: {
       topology: 'point-list',
-      // `|| undefined` is a workaround for Chromium not allowing `false` here
-      // when the feature is unavailable.
-      clampDepth: clampDepth || undefined },
+      unclippedDepth },
 
     depthStencil: { format, depthWriteEnabled: true },
     multisample: multisampled ? { count: 4 } : undefined,
@@ -255,9 +249,11 @@ fn(async t => {
       colorAttachments: [],
       depthStencilAttachment: {
         view: dsTextureView,
-        depthLoadValue: 0.5, // Will see this depth value if the fragment was clipped.
+        depthClearValue: 0.5, // Will see this depth value if the fragment was clipped.
+        depthLoadOp: 'clear',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
+        stencilClearValue: 0,
+        stencilLoadOp: 'clear',
         stencilStoreOp: 'discard' } });
 
 
@@ -265,36 +261,38 @@ fn(async t => {
     pass.setBindGroup(0, testBindGroup);
     pass.setViewport(0, 0, kNumTestPoints, 1, kViewportMinDepth, kViewportMaxDepth);
     pass.draw(kNumTestPoints);
-    pass.endPass();
+    pass.end();
   }
   if (dsActual) {
     enc.copyTextureToBuffer({ texture: dsTexture }, { buffer: dsActual }, [kNumTestPoints]);
   }
   {
-    const loadValue = [0, 0, 0, 0]; // Will see this color if the check passed.
+    const clearValue = [0, 0, 0, 0]; // Will see this color if the check passed.
     const pass = enc.beginRenderPass({
       colorAttachments: [
       checkTextureMSView ?
       {
         view: checkTextureMSView,
         resolveTarget: checkTextureView,
-        loadValue,
+        clearValue,
+        loadOp: 'clear',
         storeOp: 'discard' } :
 
-      { view: checkTextureView, loadValue, storeOp: 'store' }],
+      { view: checkTextureView, clearValue, loadOp: 'clear', storeOp: 'store' }],
 
       depthStencilAttachment: {
         view: dsTextureView,
-        depthLoadValue: 'load',
+        depthLoadOp: 'load',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
+        stencilClearValue: 0,
+        stencilLoadOp: 'clear',
         stencilStoreOp: 'discard' } });
 
 
     pass.setPipeline(checkPipeline);
     pass.setViewport(0, 0, kNumTestPoints, 1, 0.0, 1.0);
     pass.draw(kNumTestPoints);
-    pass.endPass();
+    pass.end();
   }
   enc.copyTextureToBuffer({ texture: checkTexture }, { buffer: checkBuffer }, [kNumTestPoints]);
   if (dsExpected) {
@@ -304,21 +302,21 @@ fn(async t => {
 
   t.expectGPUBufferValuesPassCheck(
   fragInputZFailedBuffer,
-  a => checkElementsBetween(a, [() => -1e-5, () => 1e-5]),
+  (a) => checkElementsBetween(a, [() => -1e-5, () => 1e-5]),
   { type: Float32Array, typedLength: kNumTestPoints });
 
 
   const kCheckPassedValue = 0;
   const predicatePrinter = [
-  { leftHeader: 'expected ==', getValueForCell: index => kCheckPassedValue }];
+  { leftHeader: 'expected ==', getValueForCell: (index) => kCheckPassedValue }];
 
   if (dsActual && dsExpected && format === 'depth32float') {
     await Promise.all([dsActual.mapAsync(GPUMapMode.READ), dsExpected.mapAsync(GPUMapMode.READ)]);
     const act = new Float32Array(dsActual.getMappedRange());
     const exp = new Float32Array(dsExpected.getMappedRange());
     predicatePrinter.push(
-    { leftHeader: 'act ==', getValueForCell: index => act[index].toFixed(2) },
-    { leftHeader: 'exp ==', getValueForCell: index => exp[index].toFixed(2) });
+    { leftHeader: 'act ==', getValueForCell: (index) => act[index].toFixed(2) },
+    { leftHeader: 'exp ==', getValueForCell: (index) => exp[index].toFixed(2) });
 
   }
   t.expectGPUBufferValuesPassCheck(
@@ -348,14 +346,14 @@ to be empty.`).
 params((u) =>
 u //
 .combine('format', kDepthStencilFormats).
-filter(p => kTextureFormatInfo[p.format].depth).
-combine('clampDepth', [false, true]).
+filter((p) => kTextureFormatInfo[p.format].depth).
+combine('unclippedDepth', [false, true]).
 combine('multisampled', [false, true])).
 
-fn(async t => {
-  const { format, clampDepth, multisampled } = t.params;
+fn(async (t) => {
+  const { format, unclippedDepth, multisampled } = t.params;
   await t.selectDeviceOrSkipTestCase([
-  clampDepth ? 'depth-clamping' : undefined,
+  unclippedDepth ? 'depth-clip-control' : undefined,
   kTextureFormatInfo[format].feature]);
 
 
@@ -422,14 +420,12 @@ fn(async t => {
 
 
   // With a viewport set to [0.25,0.75], output values in [0.0,1.0] and check they're clamped
-  // before the depth test, regardless of whether clampDepth is enabled.
+  // before the depth test, regardless of whether unclippedDepth is enabled.
   const testPipeline = t.device.createRenderPipeline({
     vertex: { module, entryPoint: 'vmain' },
     primitive: {
       topology: 'point-list',
-      // `|| undefined` is a workaround for Chromium not allowing `false` here
-      // when the feature is unavailable.
-      clampDepth: clampDepth || undefined },
+      unclippedDepth },
 
     depthStencil: { format, depthCompare: 'not-equal' },
     multisample: multisampled ? { count: 4 } : undefined,
@@ -466,41 +462,45 @@ fn(async t => {
       colorAttachments: [],
       depthStencilAttachment: {
         view: dsTextureView,
-        depthLoadValue: 1.0,
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
+        stencilClearValue: 0,
+        stencilLoadOp: 'clear',
         stencilStoreOp: 'discard' } });
 
 
     pass.setPipeline(initPipeline);
     pass.draw(kNumDepthValues);
-    pass.endPass();
+    pass.end();
   }
   {
-    const loadValue = [0, 0, 0, 0]; // Will see this color if the test passed.
+    const clearValue = [0, 0, 0, 0]; // Will see this color if the test passed.
     const pass = enc.beginRenderPass({
       colorAttachments: [
       testTextureMSView ?
       {
         view: testTextureMSView,
         resolveTarget: testTextureView,
-        loadValue,
+        clearValue,
+        loadOp: 'clear',
         storeOp: 'discard' } :
 
-      { view: testTextureView, loadValue, storeOp: 'store' }],
+      { view: testTextureView, clearValue, loadOp: 'clear', storeOp: 'store' }],
 
       depthStencilAttachment: {
         view: dsTextureView,
-        depthLoadValue: 'load',
+        depthLoadOp: 'load',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
+        stencilClearValue: 0,
+        stencilLoadOp: 'clear',
         stencilStoreOp: 'discard' } });
 
 
     pass.setPipeline(testPipeline);
     pass.setViewport(0, 0, kNumDepthValues, 1, kViewportMinDepth, kViewportMaxDepth);
     pass.draw(kNumDepthValues);
-    pass.endPass();
+    pass.end();
   }
   enc.copyTextureToBuffer({ texture: testTexture }, { buffer: resultBuffer }, [kNumDepthValues]);
   t.device.queue.submit([enc.finish()]);

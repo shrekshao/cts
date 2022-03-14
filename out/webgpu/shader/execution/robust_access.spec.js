@@ -17,11 +17,11 @@ const kMaxI32 = 0x7fff_ffff;
 const kMinI32 = -0x8000_0000;
 
 /**
-                               * Wraps the provided source into a harness that checks calling `runTest()` returns 0.
-                               *
-                               * Non-test bindings are in bind group 1, including:
-                               * - `constants.zero`: a dynamically-uniform `0u` value.
-                               */
+ * Wraps the provided source into a harness that checks calling `runTest()` returns 0.
+ *
+ * Non-test bindings are in bind group 1, including:
+ * - `constants.zero`: a dynamically-uniform `0u` value.
+ */
 function runShaderTest(
 t,
 stage,
@@ -85,7 +85,7 @@ dynamicOffsets)
   pass.setBindGroup(0, testGroup, dynamicOffsets);
   pass.setBindGroup(1, group);
   pass.dispatch(1);
-  pass.endPass();
+  pass.end();
 
   t.queue.submit([encoder.finish()]);
 
@@ -105,8 +105,8 @@ type,
 }
 
 /**
-   * Generate a bunch of indexable types (vec, mat, sized/unsized array) for testing.
-   */
+ * Generate a bunch of indexable types (vec, mat, sized/unsized array) for testing.
+ */
 
 g.test('linear_memory').
 desc(
@@ -163,12 +163,12 @@ combineWithParams([
 { containerType: 'matrix' },
 { containerType: 'vector' }]).
 
-expand('isAtomic', p => supportsAtomics(p) ? [false, true] : [false]).
+expand('isAtomic', (p) => supportsAtomics(p) ? [false, true] : [false]).
 beginSubcases().
 expand('baseType', supportedScalarTypes).
 expandWithParams(generateTypes)).
 
-fn(async t => {
+fn(async (t) => {
   const {
     storageClass,
     storageMode,

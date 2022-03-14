@@ -159,14 +159,15 @@ class DerivativesTest extends GPUTest {
       {
         view: colorAttachmentView,
         storeOp: 'store',
-        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } }] });
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear' }] });
 
 
 
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6);
-    pass.endPass();
+    pass.end();
     this.device.queue.submit([encoder.finish()]);
 
     return colorAttachment;
@@ -183,8 +184,8 @@ desc(
     loops and fails with a timeout. See https://crbug.com/tint/1112.
     `).
 
-params(u => u.combine('iterations', [1, 2, 3])).
-fn(async t => {
+params((u) => u.combine('iterations', [1, 2, 3])).
+fn(async (t) => {
   const byteLength = kRTSize * kBytesPerRow;
 
   const numIterations = t.params.iterations;

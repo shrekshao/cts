@@ -9,7 +9,7 @@ export const g = makeTestGroup(GPUTest);
 
 g.test('compute').
 desc(`Tests execution of compute passes with very long-running dispatch operations.`).
-fn(async t => {
+fn(async (t) => {
   const kDispatchSize = 1000;
   const data = new Uint32Array(kDispatchSize);
   const buffer = t.makeBufferWithContents(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
@@ -38,14 +38,14 @@ fn(async t => {
 
   pass.setBindGroup(0, bindGroup);
   pass.dispatch(kDispatchSize);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   t.expectGPUBufferValuesEqual(buffer, new Uint32Array(new Array(kDispatchSize).fill(1000000)));
 });
 
 g.test('vertex').
 desc(`Tests execution of render passes with a very long-running vertex stage.`).
-fn(async t => {
+fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
         struct Data { counter: u32; increment: u32; };
@@ -95,7 +95,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -103,7 +104,7 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(1);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   t.expectSinglePixelIn2DTexture(
   renderTarget,
@@ -117,7 +118,7 @@ fn(async t => {
 
 g.test('fragment').
 desc(`Tests execution of render passes with a very long-running fragment stage.`).
-fn(async t => {
+fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
         struct Data { counter: u32; increment: u32; };
@@ -167,7 +168,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -175,7 +177,7 @@ fn(async t => {
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(1);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
   t.expectSinglePixelIn2DTexture(
   renderTarget,

@@ -138,18 +138,6 @@ fn check(success : bool) {
 }
 
 fn floatsSimilar(a : f32, b : f32, tolerance : f32) -> bool {
-  if (isNan(a) && isNan(b)) {
-    return true;
-  }
-
-  if (isInf(a) && isInf(b) && sign(a) == sign(b)) {
-    return true;
-  }
-
-  if (isInf(a) || isInf(b)) {
-    return false;
-  }
-
   // TODO do we check for + and - 0?
   return abs(a - b) < tolerance;
 }
@@ -237,7 +225,8 @@ struct VSOutputs {
       colorAttachments: [
         {
           view: testTexture.createView(),
-          loadValue: [0, 0, 0, 0],
+          clearValue: [0, 0, 0, 0],
+          loadOp: 'clear',
           storeOp: 'store',
         },
       ],
@@ -249,7 +238,7 @@ struct VSOutputs {
       pass.setVertexBuffer(buffer.slot, buffer.buffer, buffer.vbOffset ?? 0);
     }
     pass.draw(vertexCount, instanceCount);
-    pass.endPass();
+    pass.end();
 
     this.device.queue.submit([encoder.finish()]);
 

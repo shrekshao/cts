@@ -83,7 +83,7 @@ class F extends GPUTest {
     computePass.setBindGroup(0, bindGroup);
     computePass.setPipeline(computePipeline);
     computePass.dispatch(1);
-    computePass.endPass();
+    computePass.end();
     this.queue.submit([encoder.finish()]);
 
     this.CheckBufferAndOutputTexture(buffer, boundBufferSize + bufferOffset, outputTexture);
@@ -134,12 +134,13 @@ class F extends GPUTest {
       colorAttachments: [
       {
         view: texture.createView(),
-        loadValue: color,
+        clearValue: color,
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
 
-    renderPass.endPass();
+    renderPass.end();
   }
 
   CheckBufferAndOutputTexture(
@@ -166,8 +167,8 @@ desc(
 `Verify when we upload data to a part of a buffer with writeBuffer() just after the creation of
 the buffer, the remaining part of that buffer will be initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('offset', [0, 8, -12])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('offset', [0, 8, -12])).
+fn(async (t) => {
   const { offset } = t.params;
   const bufferSize = 32;
   const appliedOffset = offset >= 0 ? offset : bufferSize + offset;
@@ -194,8 +195,8 @@ desc(
 creating the GPUBuffer, the contents of both the typed array buffer and the GPUBuffer itself
 have already been initialized to 0.`).
 
-params(u => u.combine('mapMode', kMapModeOptions)).
-fn(async t => {
+params((u) => u.combine('mapMode', kMapModeOptions)).
+fn(async (t) => {
   const { mapMode } = t.params;
 
   const bufferSize = 32;
@@ -222,8 +223,8 @@ desc(
 creation of the GPUBuffer, the contents of both the typed array buffer and the GPUBuffer have
 already been initialized to 0.`).
 
-params(u => u.combine('mapMode', kMapModeOptions).beginSubcases().combine('offset', [0, 8, -16])).
-fn(async t => {
+params((u) => u.combine('mapMode', kMapModeOptions).beginSubcases().combine('offset', [0, 8, -16])).
+fn(async (t) => {
   const { mapMode, offset } = t.params;
   const bufferSize = 32;
   const appliedOffset = offset >= 0 ? offset : bufferSize + offset;
@@ -257,8 +258,8 @@ desc(
 mappedAtCreation === true just after its creation, the contents of both the returned typed
 array buffer of getMappedRange() and the GPUBuffer itself have all been initialized to 0.`).
 
-params(u => u.combine('bufferUsage', kBufferUsagesForMappedAtCreationTests)).
-fn(async t => {
+params((u) => u.combine('bufferUsage', kBufferUsagesForMappedAtCreationTests)).
+fn(async (t) => {
   const { bufferUsage } = t.params;
 
   const bufferSize = 32;
@@ -290,7 +291,7 @@ combine('bufferUsage', kBufferUsagesForMappedAtCreationTests).
 beginSubcases().
 combine('offset', [0, 8, -16])).
 
-fn(async t => {
+fn(async (t) => {
   const { bufferUsage, offset } = t.params;
   const bufferSize = 32;
   const appliedOffset = offset >= 0 ? offset : bufferSize + offset;
@@ -322,7 +323,7 @@ desc(
 `Verify when the first usage of a GPUBuffer is being used as the source buffer of
 CopyBufferToBuffer(), the contents of the GPUBuffer have already been initialized to 0.`).
 
-fn(async t => {
+fn(async (t) => {
   const bufferSize = 32;
   const bufferUsage = GPUBufferUsage.COPY_SRC;
   const buffer = t.device.createBuffer({
@@ -340,8 +341,8 @@ desc(
 `Verify when the first usage of a GPUBuffer is being used as the source buffer of
 CopyBufferToTexture(), the contents of the GPUBuffer have already been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 8])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 8])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
   const textureSize = [8, 8, 1];
   const dstTextureFormat = 'rgba8unorm';
@@ -385,8 +386,8 @@ desc(
 `Verify when we resolve a query set into a GPUBuffer just after creating that GPUBuffer, the
 remaining part of it will be initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 256])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 256])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
   const bufferSize = bufferOffset + 8;
   const bufferUsage = GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE;
@@ -415,12 +416,12 @@ combine('bufferOffset', [0, 8, -16]).
 combine('arrayLayerCount', [1, 3]).
 combine('copyMipLevel', [0, 2]).
 combine('rowsPerImage', [16, 20]).
-filter(t => {
+filter((t) => {
   // We don't need to test the copies that will cover the whole GPUBuffer.
   return !(t.bufferOffset === 0 && t.rowsPerImage === 16);
 })).
 
-fn(async t => {
+fn(async (t) => {
   const { bufferOffset, arrayLayerCount, copyMipLevel, rowsPerImage } = t.params;
   const srcTextureFormat = 'r8uint';
   const textureSize = [32, 16, arrayLayerCount];
@@ -457,12 +458,13 @@ fn(async t => {
           arrayLayerCount: 1,
           baseMipLevel: copyMipLevel }),
 
-        loadValue: { r: layer + 1, g: 0, b: 0, a: 0 },
+        clearValue: { r: layer + 1, g: 0, b: 0, a: 0 },
+        loadOp: 'clear',
         storeOp: 'store' }] });
 
 
 
-    renderPass.endPass();
+    renderPass.end();
   }
 
   // Do texture-to-buffer copy
@@ -492,8 +494,8 @@ desc(
 `Verify when we use a GPUBuffer as a uniform buffer just after the creation of that GPUBuffer,
     all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 256])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 256])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
 
   const boundBufferSize = 16;
@@ -528,8 +530,8 @@ desc(
 `Verify when we use a GPUBuffer as a read-only storage buffer just after the creation of that
     GPUBuffer, all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 256])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 256])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
   const boundBufferSize = 16;
   const buffer = t.device.createBuffer({
@@ -563,8 +565,8 @@ desc(
 `Verify when we use a GPUBuffer as a storage buffer just after the creation of that
     GPUBuffer, all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 256])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 256])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
   const boundBufferSize = 16;
   const buffer = t.device.createBuffer({
@@ -598,8 +600,8 @@ desc(
 `Verify when we use a GPUBuffer as a vertex buffer just after the creation of that
   GPUBuffer, all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 16])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 16])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
 
   const renderPipeline = t.CreateRenderPipelineForTest(
@@ -641,7 +643,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: outputTexture.createView(),
-      loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+      clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -649,7 +652,7 @@ fn(async t => {
   renderPass.setVertexBuffer(0, vertexBuffer, bufferOffset);
   renderPass.setPipeline(renderPipeline);
   renderPass.draw(1);
-  renderPass.endPass();
+  renderPass.end();
   t.queue.submit([encoder.finish()]);
 
   t.CheckBufferAndOutputTexture(vertexBuffer, bufferSize, outputTexture);
@@ -660,8 +663,8 @@ desc(
 `Verify when we use a GPUBuffer as an index buffer just after the creation of that
 GPUBuffer, all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 16])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 16])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
 
   const renderPipeline = t.CreateRenderPipelineForTest(
@@ -705,7 +708,8 @@ fn(async t => {
     colorAttachments: [
     {
       view: outputTexture.createView(),
-      loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+      clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -713,7 +717,7 @@ fn(async t => {
   renderPass.setPipeline(renderPipeline);
   renderPass.setIndexBuffer(indexBuffer, 'uint16', bufferOffset, 4);
   renderPass.drawIndexed(1);
-  renderPass.endPass();
+  renderPass.end();
   t.queue.submit([encoder.finish()]);
 
   t.CheckBufferAndOutputTexture(indexBuffer, bufferSize, outputTexture);
@@ -728,7 +732,7 @@ have been initialized to 0.`).
 params((u) =>
 u.combine('test_indexed_draw', [true, false]).beginSubcases().combine('bufferOffset', [0, 16])).
 
-fn(async t => {
+fn(async (t) => {
   const { test_indexed_draw, bufferOffset } = t.params;
 
   const renderPipeline = t.CreateRenderPipelineForTest(
@@ -772,7 +776,7 @@ fn(async t => {
     colorAttachments: [
     {
       view: outputTexture.createView(),
-      loadValue: 'load',
+      loadOp: 'load',
       storeOp: 'store' }] });
 
 
@@ -791,7 +795,7 @@ fn(async t => {
     renderPass.drawIndirect(indirectBuffer, bufferOffset);
   }
 
-  renderPass.endPass();
+  renderPass.end();
   t.queue.submit([encoder.finish()]);
 
   // The indirect buffer should be lazily cleared to 0, so we actually draw nothing and the color
@@ -804,8 +808,8 @@ desc(
 `Verify when we use a GPUBuffer as an indirect buffer for dispatchIndirect() just after the
 creation of that GPUBuffer, all the contents in that GPUBuffer have been initialized to 0.`).
 
-paramsSubcasesOnly(u => u.combine('bufferOffset', [0, 16])).
-fn(async t => {
+paramsSubcasesOnly((u) => u.combine('bufferOffset', [0, 16])).
+fn(async (t) => {
   const { bufferOffset } = t.params;
 
   const computePipeline = t.device.createComputePipeline({
@@ -858,7 +862,7 @@ fn(async t => {
   computePass.setBindGroup(0, bindGroup);
   computePass.setPipeline(computePipeline);
   computePass.dispatchIndirect(indirectBuffer, bufferOffset);
-  computePass.endPass();
+  computePass.end();
   t.queue.submit([encoder.finish()]);
 
   // The indirect buffer should be lazily cleared to 0, so we actually draw nothing and the color

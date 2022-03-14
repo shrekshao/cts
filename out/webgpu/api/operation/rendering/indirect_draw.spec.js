@@ -146,7 +146,7 @@ params((u) =>
 u.
 combine('isIndexed', [true, false]).
 beginSubcases().
-expand('indirectOffset', p => {
+expand('indirectOffset', (p) => {
   const indirectDrawParametersSize = p.isIndexed ?
   kDrawIndexedIndirectParametersSize * Uint32Array.BYTES_PER_ELEMENT :
   kDrawIndirectParametersSize * Uint32Array.BYTES_PER_ELEMENT;
@@ -162,7 +162,7 @@ expand('indirectOffset', p => {
 
 })).
 
-fn(t => {
+fn((t) => {
   const { isIndexed, indirectOffset } = t.params;
 
   const vertexBuffer = t.MakeVertexBuffer(isIndexed);
@@ -215,7 +215,8 @@ fn(t => {
     colorAttachments: [
     {
       view: renderTarget.createView(),
-      loadValue: [0, 0, 0, 0],
+      clearValue: [0, 0, 0, 0],
+      loadOp: 'clear',
       storeOp: 'store' }] });
 
 
@@ -229,7 +230,7 @@ fn(t => {
   } else {
     renderPass.drawIndirect(indirectBuffer, indirectOffset);
   }
-  renderPass.endPass();
+  renderPass.end();
   t.queue.submit([commandEncoder.finish()]);
 
   // The bottom left area is filled

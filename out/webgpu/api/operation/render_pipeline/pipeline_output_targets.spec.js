@@ -27,6 +27,7 @@ class F extends GPUTest {
         suffix = 'u';
         break;
       case 'float':
+      case 'unfilterable-float':
         fragColorType = 'f32';
         suffix = '';
         fractionDigits = 4;
@@ -35,7 +36,7 @@ class F extends GPUTest {
         unreachable();}
 
 
-    const v = output.map(n => n.toFixed(fractionDigits));
+    const v = output.map((n) => n.toFixed(fractionDigits));
 
     let outputType;
     let result;
@@ -78,9 +79,9 @@ u.
 combine('format', kRenderableColorTextureFormats).
 beginSubcases().
 combine('componentCount', [1, 2, 3, 4]).
-filter(x => x.componentCount >= kTexelRepresentationInfo[x.format].componentOrder.length)).
+filter((x) => x.componentCount >= kTexelRepresentationInfo[x.format].componentOrder.length)).
 
-fn(async t => {
+fn(async (t) => {
   const { format, componentCount } = t.params;
   const info = kTextureFormatInfo[format];
   await t.selectDeviceOrSkipTestCase(info.feature);
@@ -128,13 +129,14 @@ fn(async t => {
     {
       view: renderTarget.createView(),
       storeOp: 'store',
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 } }] });
+      clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      loadOp: 'clear' }] });
 
 
 
   pass.setPipeline(pipeline);
   pass.draw(3);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
 
   t.expectSingleColor(renderTarget, format, {
@@ -283,9 +285,9 @@ beginSubcases()
   alphaDstFactor: 'dst-alpha' }]).
 
 
-filter(x => x.output.length >= kTexelRepresentationInfo[x.format].componentOrder.length)).
+filter((x) => x.output.length >= kTexelRepresentationInfo[x.format].componentOrder.length)).
 
-fn(async t => {
+fn(async (t) => {
   const {
     format,
     _result,
@@ -354,13 +356,14 @@ fn(async t => {
     {
       view: renderTarget.createView(),
       storeOp: 'store',
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 } }] });
+      clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      loadOp: 'clear' }] });
 
 
 
   pass.setPipeline(pipeline);
   pass.draw(3);
-  pass.endPass();
+  pass.end();
   t.device.queue.submit([encoder.finish()]);
 
   t.expectSingleColor(renderTarget, format, {

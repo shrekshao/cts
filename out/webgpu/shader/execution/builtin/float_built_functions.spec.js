@@ -17,7 +17,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,asin').
@@ -32,22 +32,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
-unimplemented();
-
-g.test('float_builtin_functions,atan2').
-uniqueId('cc85953f226ac95c').
-specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions').
-desc(
-`
-atan2:
-T is f32 or vecN<f32> atan2(e1: T ,e2: T ) -> T Returns the arc tangent of e1 over e2. Component-wise when T is a vector. (GLSLstd450Atan2)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
-`).
-
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,cosh').
@@ -62,7 +47,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,vector_case_cross').
@@ -77,7 +62,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,distance').
@@ -92,7 +77,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,exp').
@@ -107,7 +92,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,exp2').
@@ -122,7 +107,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,faceForward').
@@ -137,7 +122,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,fma').
@@ -152,7 +137,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,scalar_case_frexp').
@@ -168,7 +153,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,vector_case_frexp').
@@ -184,7 +169,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,inverseSqrt').
@@ -199,22 +184,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
-unimplemented();
-
-g.test('float_builtin_functions,ldexp').
-uniqueId('358f6e4501a32907').
-specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions').
-desc(
-`
-ldexp:
-T is f32 or vecN<f32> I is i32 or vecN<i32>, where I is a scalar if T is a scalar, or a vector when T is a vector ldexp(e1: T ,e2: I ) -> T Returns e1 * 2e2. Component-wise when T is a vector. (GLSLstd450Ldexp)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
-`).
-
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,length').
@@ -229,37 +199,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
-unimplemented();
-
-g.test('float_builtin_functions,log').
-uniqueId('7cd6780116b47d00').
-specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions').
-desc(
-`
-log:
-T is f32 or vecN<f32> log(e: T ) -> T Returns the natural logaritm of e. Component-wise when T is a vector. (GLSLstd450Log)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
-`).
-
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
-unimplemented();
-
-g.test('float_builtin_functions,log2').
-uniqueId('9ed120de1990296a').
-specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions').
-desc(
-`
-log2:
-T is f32 or vecN<f32> log2(e: T ) -> T Returns the base-2 logarithm of e. Component-wise when T is a vector. (GLSLstd450Log2)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
-`).
-
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,mix_all_same_type_operands').
@@ -274,7 +214,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,vector_mix_with_scalar_blending_factor').
@@ -289,7 +229,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,scalar_case_modf').
@@ -305,7 +245,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,vector_case_modf').
@@ -321,7 +261,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,vector_case_normalize').
@@ -336,7 +276,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,pow').
@@ -351,7 +291,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,quantize_to_f16').
@@ -366,7 +306,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,reflect').
@@ -381,7 +321,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,refract').
@@ -396,7 +336,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,round').
@@ -411,7 +351,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,float_sign').
@@ -426,22 +366,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
-unimplemented();
-
-g.test('float_builtin_functions,sin').
-uniqueId('d10f3745e5ea639d').
-specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions').
-desc(
-`
-sin:
-T is f32 or vecN<f32> sin(e: T ) -> T Returns the sine of e. Component-wise when T is a vector. (GLSLstd450Sin)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
-`).
-
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,sinh').
@@ -456,7 +381,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,smoothStep').
@@ -471,7 +396,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,sqrt').
@@ -486,7 +411,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,step').
@@ -501,7 +426,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,tan').
@@ -516,7 +441,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,tanh').
@@ -531,7 +456,7 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 
 g.test('float_builtin_functions,trunc').
@@ -546,6 +471,6 @@ Please read the following guidelines before contributing:
 https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
 `).
 
-params(u => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
+params((u) => u.combine('placeHolder1', ['placeHolder2', 'placeHolder3'])).
 unimplemented();
 //# sourceMappingURL=float_built_functions.spec.js.map

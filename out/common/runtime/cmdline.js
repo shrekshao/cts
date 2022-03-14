@@ -28,11 +28,6 @@ function usage(rc) {
   return sys.exit(rc);
 }
 
-if (!sys.existsSync('src/common/runtime/cmdline.ts')) {
-  console.log('Must be run from repository root');
-  usage(1);
-}
-
 
 
 
@@ -59,7 +54,7 @@ for (let i = 0; i < sys.args.length; ++i) {
       printJSON = true;
     } else if (a === '--expectations') {
       const expectationsFile = new URL(sys.args[++i], `file://${sys.cwd()}`).pathname;
-      loadWebGPUExpectations = import(expectationsFile).then(m => m.expectations);
+      loadWebGPUExpectations = import(expectationsFile).then((m) => m.expectations);
     } else if (a === '--gpu-provider') {
       const modulePath = sys.args[++i];
       gpuProviderModule = require(modulePath);
@@ -162,8 +157,8 @@ if (queries.length === 0) {
   }
 
   const passed = total - warned.length - failed.length - skipped.length;
-  const pct = x => (100 * x / total).toFixed(2);
-  const rpt = x => {
+  const pct = (x) => (100 * x / total).toFixed(2);
+  const rpt = (x) => {
     const xs = x.toString().padStart(1 + Math.log10(total), ' ');
     return `${xs} / ${total} = ${pct(x).padStart(6, ' ')}%`;
   };
@@ -177,7 +172,7 @@ Failed               = ${rpt(failed.length)}`);
   if (failed.length || warned.length) {
     sys.exit(1);
   }
-})().catch(ex => {
+})().catch((ex) => {
   console.log(ex.stack ?? ex.toString());
   sys.exit(1);
 });

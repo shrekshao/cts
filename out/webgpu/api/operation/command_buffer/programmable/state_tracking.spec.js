@@ -33,16 +33,22 @@ combine('groupIndices', [
 { a: 1, b: 0, out: 2 }])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType, groupIndices } = t.params;
 
   const pipeline = t.createBindingStatePipeline(encoderType, groupIndices);
 
   const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const bindGroups = {
-    a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-    out: t.createBindGroup(out) };
+    a: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    b: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+    'read-only-storage'),
+
+    out: t.createBindGroup(out, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -76,7 +82,7 @@ combine('setOrder', [
 ['out', 'b', 'a']])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType, setOrder } = t.params;
 
   const groupIndices = { a: 0, b: 1, out: 2 };
@@ -84,16 +90,22 @@ fn(async t => {
 
   const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const bindGroups = {
-    a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-    out: t.createBindGroup(out) };
+    a: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    b: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+    'read-only-storage'),
+
+    out: t.createBindGroup(out, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
   t.setPipeline(encoder, pipeline);
 
-  for (const group of setOrder) {
-    encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+  for (let i = 0; i < setOrder.length; ++i) {
+    encoder.setBindGroup(groupIndices[setOrder[i]], bindGroups[setOrder[i]]);
   }
 
   t.dispatchOrDraw(encoder);
@@ -119,28 +131,34 @@ combineWithParams([
 { setBefore: ['a', 'b', 'out'], setAfter: [] }])).
 
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType, setBefore, setAfter } = t.params;
   const groupIndices = { a: 0, b: 1, out: 2 };
   const pipeline = t.createBindingStatePipeline(encoderType, groupIndices);
 
   const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const bindGroups = {
-    a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-    out: t.createBindGroup(out) };
+    a: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    b: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+    'read-only-storage'),
+
+    out: t.createBindGroup(out, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
 
-  for (const group of setBefore) {
-    encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+  for (let i = 0; i < setBefore.length; ++i) {
+    encoder.setBindGroup(groupIndices[setBefore[i]], bindGroups[setBefore[i]]);
   }
 
   t.setPipeline(encoder, pipeline);
 
-  for (const group of setAfter) {
-    encoder.setBindGroup(groupIndices[group], bindGroups[group]);
+  for (let i = 0; i < setAfter.length; ++i) {
+    encoder.setBindGroup(groupIndices[setAfter[i]], bindGroups[setAfter[i]]);
   }
 
   t.dispatchOrDraw(encoder);
@@ -159,14 +177,17 @@ params((u) =>
 u //
 .combine('encoderType', kProgrammableEncoderTypes)).
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType } = t.params;
   const pipeline = t.createBindingStatePipeline(encoderType, { a: 0, b: 1, out: 2 });
 
   const out = t.makeBufferWithContents(new Int32Array([1]), kBufferUsage);
   const bindGroups = {
-    ab: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    out: t.createBindGroup(out) };
+    ab: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    out: t.createBindGroup(out, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -192,18 +213,27 @@ params((u) =>
 u //
 .combine('encoderType', kProgrammableEncoderTypes)).
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType } = t.params;
   const pipeline = t.createBindingStatePipeline(encoderType, { a: 0, b: 1, out: 2 });
 
   const badOut = t.makeBufferWithContents(new Int32Array([-1]), kBufferUsage);
   const out = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const bindGroups = {
-    a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-    c: t.createBindGroup(t.makeBufferWithContents(new Int32Array([5]), kBufferUsage)),
-    badOut: t.createBindGroup(badOut),
-    out: t.createBindGroup(out) };
+    a: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    b: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+    'read-only-storage'),
+
+    c: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([5]), kBufferUsage),
+    'read-only-storage'),
+
+    badOut: t.createBindGroup(badOut, 'storage'),
+    out: t.createBindGroup(out, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -233,7 +263,7 @@ params((u) =>
 u //
 .combine('encoderType', kProgrammableEncoderTypes)).
 
-fn(async t => {
+fn(async (t) => {
   const { encoderType } = t.params;
   const pipelineA = t.createBindingStatePipeline(encoderType, { a: 0, b: 1, out: 2 });
   const pipelineB = t.createBindingStatePipeline(
@@ -245,10 +275,16 @@ fn(async t => {
   const outA = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const outB = t.makeBufferWithContents(new Int32Array([0]), kBufferUsage);
   const bindGroups = {
-    a: t.createBindGroup(t.makeBufferWithContents(new Int32Array([3]), kBufferUsage)),
-    b: t.createBindGroup(t.makeBufferWithContents(new Int32Array([2]), kBufferUsage)),
-    outA: t.createBindGroup(outA),
-    outB: t.createBindGroup(outB) };
+    a: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([3]), kBufferUsage),
+    'read-only-storage'),
+
+    b: t.createBindGroup(
+    t.makeBufferWithContents(new Int32Array([2]), kBufferUsage),
+    'read-only-storage'),
+
+    outA: t.createBindGroup(outA, 'storage'),
+    outB: t.createBindGroup(outB, 'storage') };
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
