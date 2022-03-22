@@ -104,7 +104,7 @@ class F extends ValidationTest {
 
   createComputePipelineWithLayout(bindGroups) {
     const shader = `
-      [[stage(compute), workgroup_size(1, 1, 1)]]
+      @stage(compute) @workgroup_size(1)
         fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
       }
     `;
@@ -337,7 +337,7 @@ g.test('buffer_binding,render_pipeline')
   The GPUBufferBindingLayout bindings configure should be exactly
   same in PipelineLayout and bindgroup.
   - TODO: test more draw functions, e.g. indirect
-  - TODO: test more visibilities, e.g. vetex
+  - TODO: test more visibilities, e.g. vertex
   - TODO: bind group should be created with different layout
   `
   )
@@ -396,7 +396,7 @@ g.test('sampler_binding,render_pipeline')
   The GPUSamplerBindingLayout bindings configure should be exactly
   same in PipelineLayout and bindgroup.
   - TODO: test more draw functions, e.g. indirect
-  - TODO: test more visibilities, e.g. vetex
+  - TODO: test more visibilities, e.g. vertex
   `
   )
   .params(u =>

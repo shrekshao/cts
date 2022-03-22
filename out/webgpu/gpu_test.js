@@ -29,7 +29,8 @@ TestOOMedShouldAttemptGC } from
 './util/device_pool.js';
 import { align, roundDown } from './util/math.js';
 import {
-getTextureCopyLayout } from
+getTextureCopyLayout,
+getTextureSubCopyLayout } from
 
 './util/texture/layout.js';
 import { kTexelRepresentationInfo } from './util/texture/texel_data.js';
@@ -596,12 +597,7 @@ export class GPUTest extends Fixture {
   { x, y },
   { slice = 0, layout })
   {
-    const { byteLength, bytesPerRow, rowsPerImage, mipSize } = getTextureCopyLayout(
-    format,
-    '2d',
-    [1, 1, 1],
-    layout);
-
+    const { byteLength, bytesPerRow, rowsPerImage } = getTextureSubCopyLayout(format, [1, 1]);
     const buffer = this.device.createBuffer({
       size: byteLength,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
@@ -612,7 +608,7 @@ export class GPUTest extends Fixture {
     commandEncoder.copyTextureToBuffer(
     { texture: src, mipLevel: layout?.mipLevel, origin: { x, y, z: slice } },
     { buffer, bytesPerRow, rowsPerImage },
-    mipSize);
+    [1, 1]);
 
     this.queue.submit([commandEncoder.finish()]);
 
@@ -622,8 +618,8 @@ export class GPUTest extends Fixture {
   /**
    * Expect a single pixel of a 2D texture to have a particular byte representation.
    *
-   * MAINENANCE_TODO: Add check for values of depth/stencil, probably through sampling of shader
-   * MAINENANCE_TODO: Can refactor this and expectSingleColor to use a similar base expect
+   * MAINTENANCE_TODO: Add check for values of depth/stencil, probably through sampling of shader
+   * MAINTENANCE_TODO: Can refactor this and expectSingleColor to use a similar base expect
    */
   expectSinglePixelIn2DTexture(
   src,
@@ -951,14 +947,22 @@ export class GPUTest extends Fixture {
           let depthStencilAttachment = undefined;
           if (fullAttachmentInfo.depthStencilFormat !== undefined) {
             depthStencilAttachment = {
-              view: makeAttachmentView(fullAttachmentInfo.depthStencilFormat) };
+              view: makeAttachmentView(fullAttachmentInfo.depthStencilFormat),
+              depthReadOnly: fullAttachmentInfo.depthReadOnly,
+              stencilReadOnly: fullAttachmentInfo.stencilReadOnly };
 
-            if (kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].depth) {
+            if (
+            kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].depth &&
+            !fullAttachmentInfo.depthReadOnly)
+            {
               depthStencilAttachment.depthClearValue = 0;
               depthStencilAttachment.depthLoadOp = 'clear';
               depthStencilAttachment.depthStoreOp = 'discard';
             }
-            if (kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].stencil) {
+            if (
+            kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].stencil &&
+            !fullAttachmentInfo.stencilReadOnly)
+            {
               depthStencilAttachment.stencilClearValue = 1;
               depthStencilAttachment.stencilLoadOp = 'clear';
               depthStencilAttachment.stencilStoreOp = 'discard';

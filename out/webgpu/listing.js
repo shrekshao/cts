@@ -835,6 +835,14 @@ export const listing = [
       "api",
       "validation",
       "encoding",
+      "createRenderBundleEncoder"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
       "encoder_state"
     ]
   },
@@ -1146,6 +1154,35 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "binary",
+      "bitwise"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "f32_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "f32_logical"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "abs"
     ]
@@ -1154,6 +1191,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "all"
     ]
@@ -1162,6 +1201,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "any"
     ]
@@ -1170,6 +1211,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "atan"
     ]
@@ -1178,6 +1221,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "atan2"
     ]
@@ -1186,6 +1231,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "ceil"
     ]
@@ -1194,6 +1241,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "clamp"
     ]
@@ -1202,6 +1251,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "cos"
     ]
@@ -1210,6 +1261,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "countLeadingZeros"
     ]
@@ -1218,6 +1271,18 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "countOneBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "countTrailingZeros"
     ]
@@ -1226,6 +1291,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "extractBits"
     ]
@@ -1234,6 +1301,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "firstLeadingBit"
     ]
@@ -1242,6 +1311,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "firstTrailingBit"
     ]
@@ -1250,6 +1321,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "float_built_functions"
     ]
@@ -1258,6 +1331,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "floor"
     ]
@@ -1266,6 +1341,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "fract"
     ]
@@ -1274,6 +1351,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "insertBits"
     ]
@@ -1282,14 +1361,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
-      "builtin",
-      "integer_built_in_functions"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "execution",
+      "expression",
+      "call",
       "builtin",
       "inversesqrt"
     ]
@@ -1298,6 +1371,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "ldexp"
     ]
@@ -1306,6 +1381,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "log"
     ]
@@ -1314,6 +1391,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "log2"
     ]
@@ -1322,6 +1401,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "logical_built_in_functions"
     ]
@@ -1330,6 +1411,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "max"
     ]
@@ -1338,6 +1421,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "min"
     ]
@@ -1346,6 +1431,18 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "reverseBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "select"
     ]
@@ -1354,6 +1451,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "sin"
     ]
@@ -1362,8 +1461,19 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "value_testing_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "f32_arithmetic"
     ]
   },
   {
@@ -1501,6 +1611,13 @@ export const listing = [
     "file": [
       "shader",
       "validation",
+      "tokens"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
       "variable_and_const"
     ]
   },
@@ -1615,5 +1732,12 @@ export const listing = [
       "reftests"
     ],
     "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#915): canvas_complex: test rgba8unorm and rgba16float\nTODO(#916): canvas_complex: Test all ways to write into textures (currently only testing copy methods).\nTODO(#918): Test all possible color spaces (once we have more than 1)\n\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
+  },
+  {
+    "file": [
+      "web_platform",
+      "worker",
+      "worker"
+    ]
   }
 ];
