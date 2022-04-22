@@ -7,7 +7,7 @@ import { keysOf, makeTable, numericKeysOf, valueof } from '../common/util/data_t
 import { assertTypeTrue, TypeEqual } from '../common/util/types.js';
 import { assert, unreachable } from '../common/util/util.js';
 
-import { GPUConst } from './constants.js';
+import { GPUConst, kMaxUnsignedLongValue, kMaxUnsignedLongLongValue } from './constants.js';
 import { ImageCopyType } from './util/texture/layout.js';
 
 // Base device limits can be found in constants.ts.
@@ -37,23 +37,29 @@ export const kQueryTypes = keysOf(kQueryTypeInfo);
 /** Required alignment of a GPUBuffer size, by spec. */
 export const kBufferSizeAlignment = 4;
 
-/** Per-GPUBufferUsage info. */
-export const kBufferUsageInfo: {
-  readonly [k in valueof<typeof GPUConst.BufferUsage>]: {};
+/** Per-GPUBufferUsage copy info. */
+export const kBufferUsageCopyInfo: {
+  readonly [name: string]: GPUBufferUsageFlags;
 } = /* prettier-ignore */ {
-  [GPUConst.BufferUsage.MAP_READ]:      {},
-  [GPUConst.BufferUsage.MAP_WRITE]:     {},
-  [GPUConst.BufferUsage.COPY_SRC]:      {},
-  [GPUConst.BufferUsage.COPY_DST]:      {},
-  [GPUConst.BufferUsage.INDEX]:         {},
-  [GPUConst.BufferUsage.VERTEX]:        {},
-  [GPUConst.BufferUsage.UNIFORM]:       {},
-  [GPUConst.BufferUsage.STORAGE]:       {},
-  [GPUConst.BufferUsage.INDIRECT]:      {},
-  [GPUConst.BufferUsage.QUERY_RESOLVE]: {},
+  'COPY_NONE':    0,
+  'COPY_SRC':     GPUConst.BufferUsage.COPY_SRC,
+  'COPY_DST':     GPUConst.BufferUsage.COPY_DST,
+  'COPY_SRC_DST': GPUConst.BufferUsage.COPY_SRC | GPUConst.BufferUsage.COPY_DST,
 };
+/** List of all GPUBufferUsage copy values. */
+export const kBufferUsageCopy = keysOf(kBufferUsageCopyInfo);
+
+/** Per-GPUBufferUsage keys and info. */
+type BufferUsageKey = keyof typeof GPUConst.BufferUsage;
+export const kBufferUsageKeys = keysOf(GPUConst.BufferUsage);
+export const kBufferUsageInfo: {
+  readonly [k in BufferUsageKey]: GPUBufferUsageFlags;
+} = {
+  ...GPUConst.BufferUsage,
+};
+
 /** List of all GPUBufferUsage values. */
-export const kBufferUsages = numericKeysOf<GPUBufferUsageFlags>(kBufferUsageInfo);
+export const kBufferUsages = Object.values(GPUConst.BufferUsage);
 export const kAllBufferUsageBits = kBufferUsages.reduce(
   (previousSet, currentUsage) => previousSet | currentUsage,
   0
@@ -113,10 +119,10 @@ const kRegularTextureFormatInfo = /* prettier-ignore */ makeTable(
 /* prettier-ignore */
 const kTexFmtInfoHeader =  ['renderable', 'multisample', 'resolve', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'sampleType', 'bytesPerBlock', 'blockWidth', 'blockHeight',                'feature', 'baseFormat'] as const;
 const kSizedDepthStencilFormatInfo = /* prettier-ignore */ makeTable(kTexFmtInfoHeader,
-                           [        true,          true,     false,   false,        ,          ,     false,     false,     false,             ,                ,            1,             1,                         ,   undefined ] as const, {
-  'depth32float':          [            ,              ,          ,        ,    true,     false,          ,          ,          ,      'depth',               4],
-  'depth16unorm':          [            ,              ,          ,        ,    true,     false,          ,          ,          ,      'depth',               2],
-  'stencil8':              [            ,              ,          ,        ,   false,      true,          ,          ,          ,       'uint',               1],
+                           [        true,          true,     false,   false,        ,          ,     false,          ,          ,             ,                ,            1,             1,                         ,   undefined ] as const, {
+  'depth32float':          [            ,              ,          ,        ,    true,     false,          ,      true,     false,      'depth',               4],
+  'depth16unorm':          [            ,              ,          ,        ,    true,     false,          ,      true,      true,      'depth',               2],
+  'stencil8':              [            ,              ,          ,        ,   false,      true,          ,      true,      true,       'uint',               1],
 } as const);
 
 // Multi aspect sample type are now set to their first aspect
@@ -405,6 +411,76 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
   },
 } as const;
 
+/** `kDepthStencilFormatResolvedAspect[format][aspect]` returns the aspect-specific format for a
+ *  depth-stencil format, or `undefined` if the format doesn't have the aspect.
+ */
+export const kDepthStencilFormatResolvedAspect: {
+  readonly [k in DepthStencilFormat]: {
+    readonly [a in GPUTextureAspect]: DepthStencilFormat | undefined;
+  };
+} = {
+  // kUnsizedDepthStencilFormats
+  depth24plus: {
+    all: 'depth24plus',
+    'depth-only': 'depth24plus',
+    'stencil-only': undefined,
+  },
+  'depth24plus-stencil8': {
+    all: 'depth24plus-stencil8',
+    'depth-only': 'depth24plus',
+    'stencil-only': 'stencil8',
+  },
+
+  // kSizedDepthStencilFormats
+  depth16unorm: {
+    all: 'depth16unorm',
+    'depth-only': 'depth16unorm',
+    'stencil-only': undefined,
+  },
+  depth32float: {
+    all: 'depth32float',
+    'depth-only': 'depth32float',
+    'stencil-only': undefined,
+  },
+  'depth24unorm-stencil8': {
+    all: 'depth24unorm-stencil8',
+    'depth-only': 'depth24plus', // Should this be depth24unorm? See https://github.com/gpuweb/gpuweb/issues/2732
+    'stencil-only': 'stencil8',
+  },
+  'depth32float-stencil8': {
+    all: 'depth32float-stencil8',
+    'depth-only': 'depth32float',
+    'stencil-only': 'stencil8',
+  },
+  stencil8: {
+    all: 'stencil8',
+    'depth-only': undefined,
+    'stencil-only': 'stencil8',
+  },
+} as const;
+
+/**
+ * @returns the GPUTextureFormat corresponding to the @param aspect of @param format.
+ * This allows choosing the correct format for depth-stencil aspects when creating pipelines that
+ * will have to match the resolved format of views, or to get per-aspect information like the
+ * `blockByteSize`.
+ *
+ * Many helpers use an `undefined` `aspect` to means `'all'` so this is also the default for this
+ * function.
+ */
+export function resolvePerAspectFormat(
+  format: GPUTextureFormat,
+  aspect?: GPUTextureAspect
+): GPUTextureFormat {
+  if (aspect === 'all' || aspect === undefined) {
+    return format;
+  }
+  assert(kTextureFormatInfo[format].depth || kTextureFormatInfo[format].stencil);
+  const resolved = kDepthStencilFormatResolvedAspect[format as DepthStencilFormat][aspect ?? 'all'];
+  assert(resolved !== undefined);
+  return resolved!;
+}
+
 /**
  * Gets all copyable aspects for copies between texture and buffer for specified depth/stencil format and copy type, by spec.
  */
@@ -459,6 +535,29 @@ export function textureDimensionAndFormatCompatible(
     (info.blockWidth > 1 || info.depth || info.stencil)
   );
 }
+
+/** Per-GPUTextureUsage type info. */
+export const kTextureUsageTypeInfo: {
+  readonly [name: string]: number;
+} = /* prettier-ignore */ {
+  'texture': Number(GPUConst.TextureUsage.TEXTURE_BINDING),
+  'storage': Number(GPUConst.TextureUsage.STORAGE_BINDING),
+  'render':  Number(GPUConst.TextureUsage.RENDER_ATTACHMENT),
+};
+/** List of all GPUTextureUsage type values. */
+export const kTextureUsageType = keysOf(kTextureUsageTypeInfo);
+
+/** Per-GPUTextureUsage copy info. */
+export const kTextureUsageCopyInfo: {
+  readonly [name: string]: number;
+} = /* prettier-ignore */ {
+  'none':     0,
+  'src':      Number(GPUConst.TextureUsage.COPY_SRC),
+  'dst':      Number(GPUConst.TextureUsage.COPY_DST),
+  'src-dest': Number(GPUConst.TextureUsage.COPY_SRC) | Number(GPUConst.TextureUsage.COPY_DST),
+};
+/** List of all GPUTextureUsage copy values. */
+export const kTextureUsageCopy = keysOf(kTextureUsageCopyInfo);
 
 /** Per-GPUTextureUsage info. */
 export const kTextureUsageInfo: {
@@ -618,9 +717,6 @@ assertTypeTrue<TypeEqual<BindableResource, typeof kBindableResources[number]>>()
 
 /** Dynamic buffer offsets require offset to be divisible by 256, by spec. */
 export const kMinDynamicBufferOffsetAlignment = 256;
-
-/** Maximum number of bindings per GPUBindGroup(Layout), by spec. */
-export const kMaxBindingsPerBindGroup = 16;
 
 /** Default `PerShaderStage` binding limits, by spec. */
 export const kPerStageBindingLimits: {
@@ -835,6 +931,8 @@ export function allBindingEntries(
 // Shader stages
 
 /** List of all GPUShaderStage values. */
+export type ShaderStageKey = keyof typeof GPUConst.ShaderStage;
+export const kShaderStageKeys = Object.keys(GPUConst.ShaderStage) as ShaderStageKey[];
 export const kShaderStages: readonly GPUShaderStageFlags[] = [
   GPUConst.ShaderStage.VERTEX,
   GPUConst.ShaderStage.FRAGMENT,
@@ -893,3 +991,51 @@ export const kMaxVertexBufferArrayStride = 2048;
 export const kDrawIndirectParametersSize = 4;
 /** The size of indirect drawIndexed parameters in the indirectBuffer of drawIndexedIndirect */
 export const kDrawIndexedIndirectParametersSize = 5;
+
+/** Info for each entry of GPUSupportedLimits */
+export const kLimitInfo = /* prettier-ignore */ makeTable(
+                                               [    'class', 'default',            'maximumValue'] as const,
+                                               [  'maximum',          ,     kMaxUnsignedLongValue] as const, {
+  'maxTextureDimension1D':                     [           ,      8192,                          ],
+  'maxTextureDimension2D':                     [           ,      8192,                          ],
+  'maxTextureDimension3D':                     [           ,      2048,                          ],
+  'maxTextureArrayLayers':                     [           ,       256,                          ],
+
+  'maxBindGroups':                             [           ,         4,                          ],
+  'maxDynamicUniformBuffersPerPipelineLayout': [           ,         8,                          ],
+  'maxDynamicStorageBuffersPerPipelineLayout': [           ,         4,                          ],
+  'maxSampledTexturesPerShaderStage':          [           ,        16,                          ],
+  'maxSamplersPerShaderStage':                 [           ,        16,                          ],
+  'maxStorageBuffersPerShaderStage':           [           ,         8,                          ],
+  'maxStorageTexturesPerShaderStage':          [           ,         4,                          ],
+  'maxUniformBuffersPerShaderStage':           [           ,        12,                          ],
+
+  'maxUniformBufferBindingSize':               [           ,     65536, kMaxUnsignedLongLongValue],
+  'maxStorageBufferBindingSize':               [           , 134217728, kMaxUnsignedLongLongValue],
+  'minUniformBufferOffsetAlignment':           ['alignment',       256,                          ],
+  'minStorageBufferOffsetAlignment':           ['alignment',       256,                          ],
+
+  'maxVertexBuffers':                          [           ,         8,                          ],
+  'maxVertexAttributes':                       [           ,        16,                          ],
+  'maxVertexBufferArrayStride':                [           ,      2048,                          ],
+  'maxInterStageShaderComponents':             [           ,        60,                          ],
+
+  'maxComputeWorkgroupStorageSize':            [           ,     16352,                          ],
+  'maxComputeInvocationsPerWorkgroup':         [           ,       256,                          ],
+  'maxComputeWorkgroupSizeX':                  [           ,       256,                          ],
+  'maxComputeWorkgroupSizeY':                  [           ,       256,                          ],
+  'maxComputeWorkgroupSizeZ':                  [           ,        64,                          ],
+  'maxComputeWorkgroupsPerDimension':          [           ,     65535,                          ],
+} as const);
+
+/** List of all entries of GPUSupportedLimits. */
+export const kLimits = keysOf(kLimitInfo);
+
+/**
+ * Check if two formats are view format compatible.
+ *
+ * This function may need to be generalized to use `baseFormat` from `kTextureFormatInfo`.
+ */
+export function viewCompatible(a: GPUTextureFormat, b: GPUTextureFormat): boolean {
+  return a === b || a + '-srgb' === b || b + '-srgb' === a;
+}

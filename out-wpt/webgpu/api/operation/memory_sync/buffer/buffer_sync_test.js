@@ -143,6 +143,8 @@ export class BufferSyncTest extends GPUTest {
   tmpValueBuffers = [undefined, undefined];
   tmpValueTextures = [undefined, undefined];
 
+  // These intermediate buffers/textures are created before any read/write op
+  // to avoid extra memory synchronization between ops introduced by await on buffer/texture creations.
   // Create extra buffers/textures needed by write operation
   async createIntermediateBuffersAndTexturesForWriteOp(writeOp, slot, value) {
     switch (writeOp) {
@@ -310,7 +312,7 @@ export class BufferSyncTest extends GPUTest {
   createStorageWriteComputePipeline(value) {
     const wgslCompute = `
       struct Data {
-        a : u32;
+        a : u32
       };
 
       @group(0) @binding(0) var<storage, read_write> data : Data;
@@ -359,7 +361,7 @@ export class BufferSyncTest extends GPUTest {
       vertex: kDummyVertexShader,
       fragment: `
       struct Data {
-        a : u32;
+        a : u32
       };
 
       @group(0) @binding(0) var<storage, read_write> data : Data;
@@ -482,7 +484,7 @@ export class BufferSyncTest extends GPUTest {
   createStorageReadComputePipeline() {
     const wgslCompute = `
       struct Data {
-        a : u32;
+        a : u32
       };
 
       @group(0) @binding(0) var<storage, read> srcData : Data;
@@ -519,8 +521,8 @@ export class BufferSyncTest extends GPUTest {
     const wgslShaders = {
       vertex: `
       struct VertexOutput {
-        @builtin(position) position : vec4<f32>;
-        @location(0) @interpolate(flat) data : u32;
+        @builtin(position) position : vec4<f32>,
+        @location(0) @interpolate(flat) data : u32,
       };
       
       @stage(vertex) fn vert_main(@location(0) input: u32) -> VertexOutput {
@@ -532,7 +534,7 @@ export class BufferSyncTest extends GPUTest {
       `,
       fragment: `
       struct Data {
-        a : u32;
+        a : u32
       };
       
       @group(0) @binding(0) var<storage, read_write> data : Data;
@@ -584,7 +586,7 @@ export class BufferSyncTest extends GPUTest {
       vertex: kDummyVertexShader,
       fragment: `
       struct Data {
-        a : u32;
+        a : u32
       };
       
       @group(0) @binding(0) var<uniform> constant: Data;
@@ -606,7 +608,7 @@ export class BufferSyncTest extends GPUTest {
       vertex: kDummyVertexShader,
       fragment: `
         struct Data {
-          a : u32;
+          a : u32
         };
 
         @group(0) @binding(0) var<storage, read> srcData : Data;

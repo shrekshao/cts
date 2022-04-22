@@ -16,10 +16,10 @@
   if (use_struct) {
     // Generate a struct that wraps the entry point IO variable.
     code += 'struct S {\n';
-    code += `  ${attribute} value : ${type};\n`;
+    code += `  ${attribute} value : ${type},\n`;
     if (stage === 'vertex' && io === 'out' && !attribute.includes('builtin(position)')) {
       // Add position builtin for vertex outputs.
-      code += `  @builtin(position) position : vec4<f32>;\n`;
+      code += `  @builtin(position) position : vec4<f32>,\n`;
     }
     code += '};\n\n';
   }
@@ -43,7 +43,7 @@
       param = `${attribute} value : ${type}`;
     }
 
-    // Vertex shaders must always return `builtin(position)`.
+    // Vertex shaders must always return `@builtin(position)`.
     if (stage === 'vertex') {
       retType = `-> @builtin(position) vec4<f32>`;
       retVal = `return vec4<f32>();`;

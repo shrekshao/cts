@@ -48,6 +48,7 @@ import { pp } from '../../../../../common/util/preprocessor.js';
 import { assert } from '../../../../../common/util/util.js';
 import {
   kDepthStencilFormats,
+  kDepthStencilFormatResolvedAspect,
   kTextureFormatInfo,
   kShaderStages,
 } from '../../../../capability_info.js';
@@ -609,6 +610,7 @@ g.test('subresources_and_binding_types_combination_for_aspect')
     });
 
     const view0 = texture.createView({
+      dimension: '2d',
       baseMipLevel: BASE_LEVEL,
       mipLevelCount: 1,
       baseArrayLayer: BASE_LAYER,
@@ -617,6 +619,7 @@ g.test('subresources_and_binding_types_combination_for_aspect')
     });
 
     const view1 = texture.createView({
+      dimension: '2d',
       baseMipLevel: baseLevel,
       mipLevelCount: 1,
       baseArrayLayer: baseLayer,
@@ -624,10 +627,14 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       aspect: aspect1,
     });
 
+    const view1ResolvedFormat = kDepthStencilFormatResolvedAspect[format][aspect1];
+    const view1HasDepth = kTextureFormatInfo[view1ResolvedFormat].depth;
+    const view1HasStencil = kTextureFormatInfo[view1ResolvedFormat].stencil;
+
     const encoder = t.device.createCommandEncoder();
     // Color attachment's size should match depth/stencil attachment's size. Note that if
     // type1 !== 'render-target' then there's no depthStencilAttachment to match anyway.
-    const depthStencilFormat = type1 === 'render-target' ? format : undefined;
+    const depthStencilFormat = type1 === 'render-target' ? view1ResolvedFormat : undefined;
 
     const size = SIZE >> baseLevel;
     const pass = compute
@@ -645,12 +652,10 @@ g.test('subresources_and_binding_types_combination_for_aspect')
           depthStencilAttachment: depthStencilFormat
             ? {
                 view: view1,
-                depthStoreOp: kTextureFormatInfo[depthStencilFormat].depth ? 'discard' : undefined,
-                depthLoadOp: kTextureFormatInfo[depthStencilFormat].depth ? 'load' : undefined,
-                stencilStoreOp: kTextureFormatInfo[depthStencilFormat].stencil
-                  ? 'discard'
-                  : undefined,
-                stencilLoadOp: kTextureFormatInfo[depthStencilFormat].stencil ? 'load' : undefined,
+                depthStoreOp: view1HasDepth ? 'discard' : undefined,
+                depthLoadOp: view1HasDepth ? 'load' : undefined,
+                stencilStoreOp: view1HasStencil ? 'discard' : undefined,
+                stencilLoadOp: view1HasStencil ? 'load' : undefined,
               }
             : undefined,
         });

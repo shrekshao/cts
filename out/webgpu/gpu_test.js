@@ -12,7 +12,8 @@ import {
 
 
 kTextureFormatInfo,
-kQueryTypeInfo } from
+kQueryTypeInfo,
+resolvePerAspectFormat } from
 './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
 import {
@@ -28,12 +29,14 @@ TestOOMedShouldAttemptGC } from
 
 './util/device_pool.js';
 import { align, roundDown } from './util/math.js';
+import { makeTextureWithContents } from './util/texture.js';
 import {
 getTextureCopyLayout,
 getTextureSubCopyLayout } from
 
 './util/texture/layout.js';
 import { kTexelRepresentationInfo } from './util/texture/texel_data.js';
+
 
 const devicePool = new DevicePool();
 
@@ -559,11 +562,13 @@ export class GPUTest extends Fixture {
 
 
   {
+    format = resolvePerAspectFormat(format, layout?.aspect);
     const { byteLength, minBytesPerRow, bytesPerRow, rowsPerImage, mipSize } = getTextureCopyLayout(
     format,
     dimension,
     size,
     layout);
+
 
     const rep = kTexelRepresentationInfo[format];
     const expectedTexelData = rep.pack(rep.encode(exp));
@@ -576,7 +581,12 @@ export class GPUTest extends Fixture {
 
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
-    { texture: src, mipLevel: layout?.mipLevel, origin: { x: 0, y: 0, z: slice } },
+    {
+      texture: src,
+      mipLevel: layout?.mipLevel,
+      origin: { x: 0, y: 0, z: slice },
+      aspect: layout?.aspect },
+
     { buffer, bytesPerRow, rowsPerImage },
     mipSize);
 
@@ -597,7 +607,11 @@ export class GPUTest extends Fixture {
   { x, y },
   { slice = 0, layout })
   {
-    const { byteLength, bytesPerRow, rowsPerImage } = getTextureSubCopyLayout(format, [1, 1]);
+    const { byteLength, bytesPerRow, rowsPerImage } = getTextureSubCopyLayout(
+    format,
+    [1, 1],
+    layout);
+
     const buffer = this.device.createBuffer({
       size: byteLength,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
@@ -801,12 +815,33 @@ export class GPUTest extends Fixture {
   }
 
   /**
+   * Expects that the device should be lost for a particular reason at the teardown of the test.
+   */
+  expectDeviceLost(reason) {
+    assert(
+    this.provider !== undefined,
+    'No provider available right now; did you "await" selectDeviceOrSkipTestCase?');
+
+    this.provider.expectDeviceLost(reason);
+  }
+
+  /**
    * Create a GPUBuffer with the specified contents and usage.
    *
    * MAINTENANCE_TODO: Several call sites would be simplified if this took ArrayBuffer as well.
    */
   makeBufferWithContents(dataArray, usage) {
     return this.trackForCleanup(makeBufferWithContents(this.device, dataArray, usage));
+  }
+
+  /**
+   * Creates a texture with the contents of a TexelView.
+   */
+  makeTextureWithContents(
+  texelView,
+  desc)
+  {
+    return this.trackForCleanup(makeTextureWithContents(this.device, texelView, desc));
   }
 
   /**
@@ -907,30 +942,27 @@ export class GPUTest extends Fixture {
       case 'non-pass':{
           const encoder = this.device.createCommandEncoder();
 
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) =>
-          this.expectGPUError('validation', () => encoder.finish(), !shouldSucceed));
-
+          return new CommandBufferMaker(this, encoder, () => {
+            return encoder.finish();
+          });
         }
       case 'render bundle':{
           const device = this.device;
           const rbEncoder = device.createRenderBundleEncoder(fullAttachmentInfo);
           const pass = this.createEncoder('render pass', { attachmentInfo });
 
-          return new CommandBufferMaker(this, rbEncoder, (shouldSucceed) => {
-            // If !shouldSucceed, the resulting bundle should be invalid.
-            const rb = this.expectGPUError('validation', () => rbEncoder.finish(), !shouldSucceed);
-            pass.encoder.executeBundles([rb]);
-            // Then, the pass should also be invalid if the bundle was invalid.
-            return pass.validateFinish(shouldSucceed);
+          return new CommandBufferMaker(this, rbEncoder, () => {
+            pass.encoder.executeBundles([rbEncoder.finish()]);
+            return pass.finish();
           });
         }
       case 'compute pass':{
           const commandEncoder = this.device.createCommandEncoder();
           const encoder = commandEncoder.beginComputePass();
 
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) => {
+          return new CommandBufferMaker(this, encoder, () => {
             encoder.end();
-            return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+            return commandEncoder.finish();
           });
         }
       case 'render pass':{
@@ -969,11 +1001,15 @@ export class GPUTest extends Fixture {
             }
           }
           const passDesc = {
-            colorAttachments: Array.from(fullAttachmentInfo.colorFormats, (format) => ({
+            colorAttachments: Array.from(fullAttachmentInfo.colorFormats, (format) =>
+            format ?
+            {
               view: makeAttachmentView(format),
               clearValue: [0, 0, 0, 0],
               loadOp: 'clear',
-              storeOp: 'store' })),
+              storeOp: 'store' } :
+
+            null),
 
             depthStencilAttachment,
             occlusionQuerySet };
@@ -981,9 +1017,9 @@ export class GPUTest extends Fixture {
 
           const commandEncoder = this.device.createCommandEncoder();
           const encoder = commandEncoder.beginRenderPass(passDesc);
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) => {
+          return new CommandBufferMaker(this, encoder, () => {
             encoder.end();
-            return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+            return commandEncoder.finish();
           });
         }}
 
