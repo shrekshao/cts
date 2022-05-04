@@ -1,6 +1,8 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ export const description = `WGSL execution test. Section: Logical built-in functions Function: select`;
+ **/ export const description = `
+Execution tests for the 'select' builtin function
+`;
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
 import {
@@ -51,16 +53,13 @@ const dataType = {
   },
 };
 
-g.test('bool')
-  .uniqueId('50b1f627c11098a1')
-  .specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#logical-builtin-functions')
+g.test('scalar')
+  .specURL('https://www.w3.org/TR/WGSL/#logical-builtin-functions')
   .desc(
     `
-scalar select:
-T is a scalar or a vector select(f:T,t:T,cond: bool): T Returns t when cond is true, and f otherwise. (OpSelect)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
+T is scalar, abstract numeric type, or vector
+@const fn select(f: T, t: T, cond: bool) -> T
+Returns t when cond is true, and f otherwise.
 `
   )
   .params(u =>
@@ -135,15 +134,12 @@ https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
   });
 
 g.test('vector')
-  .uniqueId('8b7bb7f58ee1e479')
-  .specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#logical-builtin-functions')
+  .specURL('https://www.w3.org/TR/WGSL/#logical-builtin-functions')
   .desc(
     `
-vector select:
-T is a scalar select(f: vecN<T>,t: vecN<T>,cond: vecN<bool>) Component-wise selection. Result component i is evaluated as select(f[i],t[i],cond[i]). (OpSelect)
-
-Please read the following guidelines before contributing:
-https://github.com/gpuweb/cts/blob/main/docs/plan_autogen.md
+T is scalar or abstract numeric type
+@const fn select(f: vecN<T>, t: vecN<T>, cond: vecN<bool>) -> vecN<T>
+Component-wise selection. Result component i is evaluated as select(f[i],t[i],cond[i]).
 `
   )
   .params(u =>

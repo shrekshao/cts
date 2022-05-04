@@ -232,7 +232,7 @@ class TextureUsageTracking extends ValidationTest {
 
   issueDrawOrDispatch(pass: GPURenderPassEncoder | GPUComputePassEncoder, compute: boolean) {
     if (compute) {
-      (pass as GPUComputePassEncoder).dispatch(1);
+      (pass as GPUComputePassEncoder).dispatchWorkgroups(1);
     } else {
       (pass as GPURenderPassEncoder).draw(3, 1, 0, 0);
     }
@@ -241,7 +241,7 @@ class TextureUsageTracking extends ValidationTest {
   setComputePipelineAndCallDispatch(pass: GPUComputePassEncoder, layout?: GPUPipelineLayout) {
     const pipeline = this.createNoOpComputePipeline(layout);
     pass.setPipeline(pipeline);
-    pass.dispatch(1);
+    pass.dispatchWorkgroups(1);
   }
 }
 
@@ -619,6 +619,10 @@ g.test('subresources_and_binding_types_combination_for_aspect')
           p.compute && (p.binding0InBundle || p.binding1InBundle || p.type1 === 'render-target')
       )
   )
+  .beforeAllSubcases(async t => {
+    const { format } = t.params;
+    await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+  })
   .fn(async t => {
     const {
       compute,
@@ -634,7 +638,6 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       _resourceSuccess,
       _usageSuccess,
     } = t.params;
-    await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 
     const texture = t.createTexture({
       arrayLayerCount: TOTAL_LAYERS,
@@ -877,7 +880,7 @@ g.test('replaced_binding')
     // gets programmatically defined in capability_info, use it here, instead of this logic, for clarity.
     let success = entry.storageTexture?.access !== 'write-only';
     // Replaced bindings should not be validated in compute pass, because validation only occurs
-    // inside dispatch() which only looks at the current resource usages.
+    // inside dispatchWorkgroups() which only looks at the current resource usages.
     success ||= compute;
 
     t.expectValidationError(() => {

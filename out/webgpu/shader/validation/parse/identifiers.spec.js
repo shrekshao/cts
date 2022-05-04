@@ -167,7 +167,6 @@ const kInvalidIdentifiers = new Set([
 'await',
 'become',
 'bf16',
-'buffer',
 'cast',
 'catch',
 'cbuffer',
@@ -250,10 +249,8 @@ const kInvalidIdentifiers = new Set([
 'impl',
 'implements',
 'import',
-'in',
 'inline',
 'inout',
-'input',
 'instanceof',
 'interface',
 'invariant',
@@ -309,8 +306,6 @@ const kInvalidIdentifiers = new Set([
 'nullptr',
 'of',
 'operator',
-'out',
-'output',
 'package',
 'packoffset',
 'partition',
@@ -381,7 +376,6 @@ const kInvalidIdentifiers = new Set([
 'technique10',
 'technique11',
 'template',
-'texture',
 'texture1D',
 'texture1DArray',
 'texture2D',
@@ -472,5 +466,13 @@ u.combine('ident', new Set([...kValidIdentifiers, ...kInvalidIdentifiers])).begi
 fn((t) => {
   const code = `var<private> ${t.params.ident} : i32;`;
   t.expectCompileResult(kValidIdentifiers.has(t.params.ident), code);
+});
+
+g.test('non_normalized').
+desc(`Test that identifiers are not unicode normalized`).
+fn((t) => {
+  const code = `var<private> \u212b : i32;  // \u212b normalizes with NFC to \u00c5
+var<private> \u00c5 : i32;`;
+  t.expectCompileResult(true, code);
 });
 //# sourceMappingURL=identifiers.spec.js.map

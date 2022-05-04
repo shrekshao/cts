@@ -43,7 +43,7 @@ function doTest(t) {
   @group(0) @binding(0) var tex : texture_2d<${shaderType}>;
 
   struct Output {
-    ${rep.componentOrder.map(C => `result${C} : ${shaderType};`).join('\n')}
+    ${rep.componentOrder.map(C => `result${C} : ${shaderType},`).join('\n')}
   };
   @group(0) @binding(1) var<storage, read_write> output : Output;
 
@@ -90,7 +90,7 @@ function doTest(t) {
   const pass = encoder.beginComputePass();
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
-  pass.dispatch(1);
+  pass.dispatchWorkgroups(1);
   pass.end();
   t.device.queue.submit([encoder.finish()]);
 

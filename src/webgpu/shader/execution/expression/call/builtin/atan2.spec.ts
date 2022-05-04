@@ -1,26 +1,46 @@
 export const description = `
-Execution Tests for the 'atan2' builtin function
+Execution tests for the 'atan2' builtin function
 `;
 
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { assert } from '../../../../../../common/util/util.js';
 import { GPUTest } from '../../../../../gpu_test.js';
-import { ulpThreshold } from '../../../../../util/compare.js';
+import { anyOf, ulpThreshold } from '../../../../../util/compare.js';
 import { f32, TypeF32 } from '../../../../../util/conversion.js';
-import { fullF32Range } from '../../../../../util/math.js';
+import { flushSubnormalNumber, fullF32Range } from '../../../../../util/math.js';
 import { Case, Config, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
-g.test('f32')
-  .uniqueId('cc85953f226ac95c')
-  .specURL('https://www.w3.org/TR/2021/WD-WGSL-20210929/#float-builtin-functions')
+g.test('abstract_float')
+  .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(
     `
 atan2:
-T is f32 or vecN<f32> atan2(e1: T ,e2: T ) -> T Returns the arc tangent of e1 over e2. Component-wise when T is a vector. (GLSLstd450Atan2)
+T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
+@const fn atan2(e1: T ,e2: T ) -> T
+Returns the arc tangent of e1 over e2. Component-wise when T is a vector.
+
+TODO(#792): Decide what the ground-truth is for these tests. [1]
+`
+  )
+  .params(u =>
+    u
+      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
+      .combine('vectorize', [undefined, 2, 3, 4] as const)
+  )
+  .unimplemented();
+
+g.test('f32')
+  .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
+  .desc(
+    `
+atan2:
+T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
+@const fn atan2(e1: T ,e2: T ) -> T
+Returns the arc tangent of e1 over e2. Component-wise when T is a vector.
 
 TODO(#792): Decide what the ground-truth is for these tests. [1]
 `
@@ -34,23 +54,25 @@ TODO(#792): Decide what the ground-truth is for these tests. [1]
     // [1]: Need to decide what the ground-truth is.
     const makeCase = (y: number, x: number): Case => {
       assert(x !== 0, 'atan2 is undefined for x = 0');
-      return { input: [f32(y), f32(x)], expected: f32(Math.atan2(y, x)) };
+      // Subnormals are already excluded from the x values, so do not need to test x being flushed.
+      const expected = [f32(Math.atan2(y, x)), f32(Math.atan2(flushSubnormalNumber(y), x))];
+      return { input: [f32(y), f32(x)], expected: anyOf(...expected) };
     };
 
     const numeric_range = fullF32Range({
-      neg_norm: 1000,
-      neg_sub: 100,
-      pos_sub: 100,
-      pos_norm: 1000,
-    }).filter(x => {
-      return x !== 0;
+      neg_norm: 100,
+      neg_sub: 10,
+      pos_sub: 10,
+      pos_norm: 100,
     });
 
-    const cases: Array<Case> = numeric_range.map(x => makeCase(0.0, x));
+    const cases: Array<Case> = [];
     numeric_range.forEach((y, y_idx) => {
       numeric_range.forEach((x, x_idx) => {
-        if (x_idx >= y_idx) {
-          cases.push(makeCase(y, x));
+        if (flushSubnormalNumber(x) !== 0) {
+          if (x_idx >= y_idx) {
+            cases.push(makeCase(y, x));
+          }
         }
       });
     });
@@ -58,3 +80,22 @@ TODO(#792): Decide what the ground-truth is for these tests. [1]
     cfg.cmpFloats = ulpThreshold(4096);
     run(t, builtin('atan2'), [TypeF32, TypeF32], TypeF32, cfg, cases);
   });
+
+g.test('f16')
+  .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
+  .desc(
+    `
+atan2:
+T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
+@const fn atan2(e1: T ,e2: T ) -> T
+Returns the arc tangent of e1 over e2. Component-wise when T is a vector.
+
+TODO(#792): Decide what the ground-truth is for these tests. [1]
+`
+  )
+  .params(u =>
+    u
+      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
+      .combine('vectorize', [undefined, 2, 3, 4] as const)
+  )
+  .unimplemented();

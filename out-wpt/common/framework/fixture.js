@@ -9,6 +9,25 @@ export { TestCaseRecorder } from '../internal/logging/test_case_recorder.js';
 
 /** The fully-general type for params passed to a test function invocation. */
 
+export class SubcaseBatchState {
+  constructor(params) {
+    this._params = params;
+  }
+
+  /**
+   * Returns the case parameters for this test fixture shared state. Subcase params
+   * are not included.
+   */
+  get params() {
+    return this._params;
+  }
+
+  /** @internal MAINTENANCE_TODO: Make this not visible to test code? */
+  async init() {}
+  /** @internal MAINTENANCE_TODO: Make this not visible to test code? */
+  async finalize() {}
+}
+
 /**
  * A Fixture is a class used to instantiate each test sub/case at run time.
  * A new instance of the Fixture is created for every single test subcase
@@ -25,8 +44,13 @@ export class Fixture {
   numOutstandingAsyncExpectations = 0;
   objectsToCleanUp = [];
 
+  static MakeSharedState(params) {
+    return new SubcaseBatchState(params);
+  }
+
   /** @internal */
-  constructor(rec, params) {
+  constructor(sharedState, rec, params) {
+    this._sharedState = sharedState;
     this.rec = rec;
     this._params = params;
   }
@@ -38,10 +62,20 @@ export class Fixture {
     return this._params;
   }
 
-  // This has to be a member function instead of an async `createFixture` function, because
-  // we need to be able to ergonomically override it in subclasses.
+  /**
+   * Gets the test fixture's shared state. This object is shared between subcases
+   * within the same testcase.
+   */
+  get sharedState() {
+    return this._sharedState;
+  }
+
   /**
    * Override this to do additional pre-test-function work in a derived fixture.
+   * This has to be a member function instead of an async `createFixture` function, because
+   * we need to be able to ergonomically override it in subclasses.
+   *
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
    */
   async init() {}
 
@@ -49,6 +83,8 @@ export class Fixture {
    * Override this to do additional post-test-function work in a derived fixture.
    *
    * Called even if init was unsuccessful.
+   *
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
    */
   async finalize() {
     assert(
@@ -77,16 +113,6 @@ export class Fixture {
         o.close();
       }
     }
-  }
-
-  /** @internal */
-  doInit() {
-    return this.init();
-  }
-
-  /** @internal */
-  doFinalize() {
-    return this.finalize();
   }
 
   /**
