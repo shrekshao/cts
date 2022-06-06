@@ -67,7 +67,7 @@ export class ValidationTest extends GPUTest {
             ...descriptor,
             usage: descriptor.usage | GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_SRC });
 
-          this.device.popErrorScope();
+          void this.device.popErrorScope();
           return buffer;
         }
       case 'destroyed':{
@@ -127,7 +127,7 @@ export class ValidationTest extends GPUTest {
   getErrorSampler() {
     this.device.pushErrorScope('validation');
     const sampler = this.device.createSampler({ lodMinClamp: -1 });
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return sampler;
   }
 
@@ -176,7 +176,7 @@ export class ValidationTest extends GPUTest {
       format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING });
 
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return texture;
   }
 
@@ -184,7 +184,7 @@ export class ValidationTest extends GPUTest {
   getErrorTextureView() {
     this.device.pushErrorScope('validation');
     const view = this.getErrorTexture().createView();
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return view;
   }
 
@@ -312,6 +312,7 @@ export class ValidationTest extends GPUTest {
   /** Return a GPURenderPipeline with default options and no-op vertex and fragment shaders. */
   createNoOpRenderPipeline() {
     return this.device.createRenderPipeline({
+      layout: 'auto',
       vertex: {
         module: this.device.createShaderModule({
           code: this.getNoOpShaderCode('VERTEX') }),
@@ -333,6 +334,7 @@ export class ValidationTest extends GPUTest {
   createErrorRenderPipeline() {
     this.device.pushErrorScope('validation');
     const pipeline = this.device.createRenderPipeline({
+      layout: 'auto',
       vertex: {
         module: this.device.createShaderModule({
           code: '' }),
@@ -340,12 +342,14 @@ export class ValidationTest extends GPUTest {
         entryPoint: '' } });
 
 
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return pipeline;
   }
 
   /** Return a GPUComputePipeline with a no-op shader. */
-  createNoOpComputePipeline(layout) {
+  createNoOpComputePipeline(
+  layout = 'auto')
+  {
     return this.device.createComputePipeline({
       layout,
       compute: {
@@ -361,6 +365,7 @@ export class ValidationTest extends GPUTest {
   createErrorComputePipeline() {
     this.device.pushErrorScope('validation');
     const pipeline = this.device.createComputePipeline({
+      layout: 'auto',
       compute: {
         module: this.device.createShaderModule({
           code: '' }),
@@ -368,7 +373,7 @@ export class ValidationTest extends GPUTest {
         entryPoint: '' } });
 
 
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return pipeline;
   }}
 //# sourceMappingURL=validation_test.js.map

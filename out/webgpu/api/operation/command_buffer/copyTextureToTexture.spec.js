@@ -778,9 +778,9 @@ combine('copyBoxOffsets', kCopyBoxOffsetsForWholeDepth).
 combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { srcFormat, dstFormat } = t.params;
-  await t.selectDeviceOrSkipTestCase([
+  t.selectDeviceOrSkipTestCase([
   kTextureFormatInfo[srcFormat].feature,
   kTextureFormatInfo[dstFormat].feature]);
 
@@ -932,10 +932,10 @@ combine('copyBoxOffsets', kCopyBoxOffsetsFor2DArrayTextures).
 combine('srcCopyLevel', [0, 2]).
 combine('dstCopyLevel', [0, 2])).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { srcFormat, dstFormat } = t.params;
 
-  await t.selectDeviceOrSkipTestCase([
+  t.selectDeviceOrSkipTestCase([
   kTextureFormatInfo[srcFormat].feature,
   kTextureFormatInfo[dstFormat].feature]);
 
@@ -1116,9 +1116,9 @@ filter((t) => {
 
 })).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { format } = t.params;
-  await t.selectDeviceForTextureFormatOrSkipTestCase(format);
+  t.selectDeviceForTextureFormatOrSkipTestCase(format);
 }).
 fn(async (t) => {
   const {
@@ -1243,6 +1243,7 @@ fn(async (t) => {
 
   // Initialize sourceTexture with a draw call.
   const renderPipelineForInit = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: {
       module: t.device.createShaderModule({
         code: `
@@ -1305,6 +1306,7 @@ fn(async (t) => {
   // Verify if all the sub-pixel values at the same location of sourceTexture and
   // destinationTexture are equal.
   const renderPipelineForValidation = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: {
       module: t.device.createShaderModule({
         code: `
@@ -1438,6 +1440,7 @@ fn(async (t) => {
 
   // Initialize the depth aspect of source texture with a draw call
   const renderPipelineForInit = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: vertexState,
     depthStencil: {
       format: kDepthFormat,
@@ -1481,6 +1484,7 @@ fn(async (t) => {
   // depthCompareFunction == 'equal' and depthWriteEnabled == false in the render pipeline
   const kColorFormat = 'rgba8unorm';
   const renderPipelineForVerify = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: vertexState,
     fragment: {
       module: t.device.createShaderModule({

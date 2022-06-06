@@ -801,9 +801,9 @@ g.test('color_textures,compressed,non_array')
       .combine('srcCopyLevel', [0, 2])
       .combine('dstCopyLevel', [0, 2])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { srcFormat, dstFormat } = t.params;
-    await t.selectDeviceOrSkipTestCase([
+    t.selectDeviceOrSkipTestCase([
       kTextureFormatInfo[srcFormat].feature,
       kTextureFormatInfo[dstFormat].feature,
     ]);
@@ -958,10 +958,10 @@ g.test('color_textures,compressed,array')
       .combine('srcCopyLevel', [0, 2])
       .combine('dstCopyLevel', [0, 2])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { srcFormat, dstFormat } = t.params;
 
-    await t.selectDeviceOrSkipTestCase([
+    t.selectDeviceOrSkipTestCase([
       kTextureFormatInfo[srcFormat].feature,
       kTextureFormatInfo[dstFormat].feature,
     ]);
@@ -1152,9 +1152,9 @@ g.test('copy_depth_stencil')
         );
       })
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format } = t.params;
-    await t.selectDeviceForTextureFormatOrSkipTestCase(format);
+    t.selectDeviceForTextureFormatOrSkipTestCase(format);
   })
   .fn(async t => {
     const {
@@ -1286,6 +1286,7 @@ g.test('copy_multisampled_color')
 
     // Initialize sourceTexture with a draw call.
     const renderPipelineForInit = t.device.createRenderPipeline({
+      layout: 'auto',
       vertex: {
         module: t.device.createShaderModule({
           code: `
@@ -1357,6 +1358,7 @@ g.test('copy_multisampled_color')
     // Verify if all the sub-pixel values at the same location of sourceTexture and
     // destinationTexture are equal.
     const renderPipelineForValidation = t.device.createRenderPipeline({
+      layout: 'auto',
       vertex: {
         module: t.device.createShaderModule({
           code: `
@@ -1500,6 +1502,7 @@ g.test('copy_multisampled_depth')
 
     // Initialize the depth aspect of source texture with a draw call
     const renderPipelineForInit = t.device.createRenderPipeline({
+      layout: 'auto',
       vertex: vertexState,
       depthStencil: {
         format: kDepthFormat,
@@ -1548,6 +1551,7 @@ g.test('copy_multisampled_depth')
     // depthCompareFunction == 'equal' and depthWriteEnabled == false in the render pipeline
     const kColorFormat = 'rgba8unorm';
     const renderPipelineForVerify = t.device.createRenderPipeline({
+      layout: 'auto',
       vertex: vertexState,
       fragment: {
         module: t.device.createShaderModule({

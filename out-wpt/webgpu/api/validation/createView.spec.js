@@ -45,9 +45,9 @@ g.test('format')
       )
       .combine('useViewFormatList', [false, true])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { textureFormatFeature, viewFormatFeature } = t.params;
-    await t.selectDeviceOrSkipTestCase([textureFormatFeature, viewFormatFeature]);
+    t.selectDeviceOrSkipTestCase([textureFormatFeature, viewFormatFeature]);
   })
   .fn(async t => {
     const { textureFormat, viewFormat, useViewFormatList } = t.params;
@@ -121,9 +121,9 @@ g.test('aspect')
       .combine('format', kTextureFormats)
       .combine('aspect', kTextureAspects)
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format } = t.params;
-    await t.selectDeviceForTextureFormatOrSkipTestCase(format);
+    t.selectDeviceForTextureFormatOrSkipTestCase(format);
   })
   .fn(async t => {
     const { format, aspect } = t.params;
@@ -284,7 +284,7 @@ g.test('mip_levels')
     const success = validateCreateViewLayersLevels(textureDescriptor, viewDescriptor);
 
     const texture = t.device.createTexture(textureDescriptor);
-    t.debug(mipLevelCount + ' ' + success);
+    t.debug(`${mipLevelCount} ${success}`);
     t.expectValidationError(() => {
       texture.createView(viewDescriptor);
     }, !success);

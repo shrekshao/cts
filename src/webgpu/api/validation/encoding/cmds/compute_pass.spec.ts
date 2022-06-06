@@ -30,7 +30,7 @@ class F extends ValidationTest {
 
     this.device.pushErrorScope('validation');
     const buffer = this.device.createBuffer(descriptor);
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
 
     if (state === 'valid') {
       this.queue.writeBuffer(buffer, 0, data);
@@ -65,14 +65,15 @@ setPipeline should generate an error iff using an 'invalid' pipeline.
 g.test('pipeline,device_mismatch')
   .desc('Tests setPipeline cannot be called with a compute pipeline created from another device')
   .paramsSubcasesOnly(u => u.combine('mismatched', [true, false]))
-  .beforeAllSubcases(async t => {
-    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+  .beforeAllSubcases(t => {
+    t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
   .fn(async t => {
     const { mismatched } = t.params;
     const device = mismatched ? t.mismatchedDevice : t.device;
 
     const pipeline = device.createComputePipeline({
+      layout: 'auto',
       compute: {
         module: device.createShaderModule({
           code: '@stage(compute) @workgroup_size(1) fn main() {}',
@@ -182,8 +183,8 @@ g.test('indirect_dispatch_buffer,device_mismatch')
     `Tests dispatchWorkgroupsIndirect cannot be called with an indirect buffer created from another device`
   )
   .paramsSubcasesOnly(u => u.combine('mismatched', [true, false]))
-  .beforeAllSubcases(async t => {
-    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+  .beforeAllSubcases(t => {
+    t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
   .fn(async t => {
     const { mismatched } = t.params;

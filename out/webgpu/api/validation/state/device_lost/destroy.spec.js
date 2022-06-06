@@ -194,9 +194,9 @@ filter(({ format, usageType }) => {
 
 })).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { format } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 }).
 fn(async (t) => {
   const { awaitLost, format, usageType, usageCopy } = t.params;
@@ -269,9 +269,9 @@ filter(({ format, usageType }) => {
 
 })).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { format } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 }).
 fn(async (t) => {
   const { awaitLost, format, usageType, usageCopy } = t.params;
@@ -417,6 +417,7 @@ fn(async (t) => {
   const cShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('COMPUTE') });
   await t.executeAfterDestroy(() => {
     t.device.createComputePipeline({
+      layout: 'auto',
       compute: { module: cShader, entryPoint: 'main' } });
 
   }, awaitLost);
@@ -436,6 +437,7 @@ fn(async (t) => {
   const fShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('FRAGMENT') });
   await t.executeAfterDestroy(() => {
     t.device.createRenderPipeline({
+      layout: 'auto',
       vertex: { module: vShader, entryPoint: 'main' },
       fragment: {
         module: fShader,
@@ -488,9 +490,9 @@ Tests creating query sets on destroyed device.
   `).
 
 params((u) => u.combine('type', kQueryTypes).beginSubcases().combine('awaitLost', [true, false])).
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { type } = t.params;
-  await t.selectDeviceForQueryTypeOrSkipTestCase(type);
+  t.selectDeviceForQueryTypeOrSkipTestCase(type);
 }).
 fn(async (t) => {
   const { awaitLost, type } = t.params;
@@ -670,9 +672,9 @@ beginSubcases().
 combine('stage', kCommandValidationStages).
 combine('awaitLost', [true, false])).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { type } = t.params;
-  await t.selectDeviceForQueryTypeOrSkipTestCase(type);
+  t.selectDeviceForQueryTypeOrSkipTestCase(type);
 }).
 fn(async (t) => {
   const { type, stage, awaitLost } = t.params;
@@ -724,6 +726,7 @@ fn(async (t) => {
   const { stage, awaitLost } = t.params;
   const cShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('COMPUTE') });
   const pipeline = t.device.createComputePipeline({
+    layout: 'auto',
     compute: { module: cShader, entryPoint: 'main' } });
 
   await t.executeCommandsAfterDestroy(stage, awaitLost, 'compute pass', (maker) => {
@@ -750,6 +753,7 @@ fn(async (t) => {
   const vShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('VERTEX') });
   const fShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('FRAGMENT') });
   const pipeline = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: { module: vShader, entryPoint: 'main' },
     fragment: {
       module: fShader,
@@ -781,6 +785,7 @@ fn(async (t) => {
   const vShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('VERTEX') });
   const fShader = t.device.createShaderModule({ code: t.getNoOpShaderCode('FRAGMENT') });
   const pipeline = t.device.createRenderPipeline({
+    layout: 'auto',
     vertex: { module: vShader, entryPoint: 'main' },
     fragment: {
       module: fShader,
@@ -856,9 +861,9 @@ combine('format', kCompressedTextureFormats).
 beginSubcases().
 combine('awaitLost', [true, false])).
 
-beforeAllSubcases(async (t) => {
+beforeAllSubcases((t) => {
   const { format } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 }).
 fn(async (t) => {
   const { format, awaitLost } = t.params;

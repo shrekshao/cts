@@ -43,7 +43,7 @@ class F extends ValidationTest {
     this.device.pushErrorScope('validation');
     const code = 'deadbeaf'; // Something make nonsense
     const shaderModule = this.device.createShaderModule({ code });
-    this.device.popErrorScope();
+    void this.device.popErrorScope();
     return shaderModule;
   }
 
@@ -75,6 +75,7 @@ Call the API with valid compute shader and matching valid entryPoint, making sur
   .fn(async t => {
     const { isAsync } = t.params;
     t.doCreateComputePipelineTest(isAsync, true, {
+      layout: 'auto',
       compute: { module: t.getShaderModule('compute', 'main'), entryPoint: 'main' },
     });
   });
@@ -89,6 +90,7 @@ Tests calling createComputePipeline(Async) with a invalid compute shader, and ch
   .fn(async t => {
     const { isAsync } = t.params;
     t.doCreateComputePipelineTest(isAsync, false, {
+      layout: 'auto',
       compute: {
         module: t.getInvalidShaderModule(),
         entryPoint: 'main',
@@ -111,6 +113,7 @@ and check that the APIs only accept compute shader.
   .fn(async t => {
     const { isAsync, shaderModuleStage } = t.params;
     const descriptor = {
+      layout: 'auto',
       compute: {
         module: t.getShaderModule(shaderModuleStage, 'main'),
         entryPoint: 'main',
@@ -159,6 +162,7 @@ The entryPoint assigned in descriptor include:
   .fn(async t => {
     const { isAsync, shaderModuleEntryPoint, stageEntryPoint } = t.params;
     const descriptor = {
+      layout: 'auto',
       compute: {
         module: t.getShaderModule('compute', shaderModuleEntryPoint),
         entryPoint: stageEntryPoint,
@@ -174,8 +178,8 @@ g.test('pipeline_layout,device_mismatch')
     'Tests createComputePipeline(Async) cannot be called with a pipeline layout created from another device'
   )
   .paramsSubcasesOnly(u => u.combine('isAsync', [true, false]).combine('mismatched', [true, false]))
-  .beforeAllSubcases(async t => {
-    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+  .beforeAllSubcases(t => {
+    t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
   .fn(async t => {
     const { isAsync, mismatched } = t.params;
@@ -199,8 +203,8 @@ g.test('shader_module,device_mismatch')
     'Tests createComputePipeline(Async) cannot be called with a shader module created from another device'
   )
   .paramsSubcasesOnly(u => u.combine('isAsync', [true, false]).combine('mismatched', [true, false]))
-  .beforeAllSubcases(async t => {
-    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+  .beforeAllSubcases(t => {
+    t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
   .fn(async t => {
     const { isAsync, mismatched } = t.params;
@@ -212,6 +216,7 @@ g.test('shader_module,device_mismatch')
     });
 
     const descriptor = {
+      layout: 'auto',
       compute: {
         module,
         entryPoint: 'main',

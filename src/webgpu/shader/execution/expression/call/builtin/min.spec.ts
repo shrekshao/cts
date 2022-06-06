@@ -1,39 +1,47 @@
 export const description = `
 Execution tests for the 'min' builtin function
+
+S is AbstractInt, i32, or u32
+T is S or vecN<S>
+@const fn min(e1: T ,e2: T) -> T
+Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a vector.
+
+S is AbstractFloat, f32, f16
+T is S or vecN<S>
+@const fn min(e1: T ,e2: T) -> T
+Returns e2 if e2 is less than e1, and e1 otherwise.
+If one operand is a NaN, the other is returned.
+If both operands are NaNs, a NaN is returned.
+Component-wise when T is a vector.
 `;
 
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
-import { anyOf, correctlyRoundedThreshold } from '../../../../../util/compare.js';
-import { kBit } from '../../../../../util/constants.js';
+import { correctlyRoundedMatch } from '../../../../../util/compare.js';
+import { kBit, kValue } from '../../../../../util/constants.js';
 import {
-  f32,
-  f32Bits,
   i32,
-  i32Bits,
-  Scalar,
   TypeF32,
   TypeI32,
   TypeU32,
   u32,
+  uint32ToFloat32,
 } from '../../../../../util/conversion.js';
-import { isSubnormalScalar } from '../../../../../util/math.js';
-import { Case, Config, run } from '../../expression.js';
+import { Case, Config, makeBinaryF32Case, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
-/** Generate set of min test cases from an ascending list of values */
-function generateTestCases(test_values: Array<Scalar>): Array<Case> {
+/** Generate set of min test cases from list of interesting values */
+function generateTestCases(
+  values: Array<number>,
+  makeCase: (x: number, y: number) => Case
+): Array<Case> {
   const cases = new Array<Case>();
-  test_values.forEach((e, ei) => {
-    test_values.forEach((f, fi) => {
-      const precise_expected = ei <= fi ? e : f;
-      const expected = isSubnormalScalar(precise_expected)
-        ? anyOf(precise_expected, f32(0.0))
-        : precise_expected;
-      cases.push({ input: [e, f], expected });
+  values.forEach(e => {
+    values.forEach(f => {
+      cases.push(makeCase(e, f));
     });
   });
   return cases;
@@ -41,14 +49,7 @@ function generateTestCases(test_values: Array<Scalar>): Array<Case> {
 
 g.test('abstract_int')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
-  .desc(
-    `
-S is AbstractInt, i32, or u32
-T is S or vecN<S>
-@const fn min(e1: T ,e2: T) -> T
-Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a vector.
-`
-  )
+  .desc(`abstract int tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
@@ -58,14 +59,7 @@ Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a v
 
 g.test('u32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
-  .desc(
-    `
-S is AbstractInt, i32, or u32
-T is S or vecN<S>
-@const fn min(e1: T ,e2: T) -> T
-Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a vector.
-`
-  )
+  .desc(`u32 tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
@@ -73,32 +67,21 @@ Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a v
   )
   .fn(async t => {
     const cfg: Config = t.params;
-    cfg.cmpFloats = correctlyRoundedThreshold();
+    cfg.cmpFloats = correctlyRoundedMatch();
 
-    // This array must be strictly increasing, since that ordering determines
-    // the expected values.
-    const test_values: Array<Scalar> = [
-      u32(0),
-      u32(1),
-      u32(2),
-      u32(0x70000000),
-      u32(0x80000000),
-      u32(0xffffffff),
-    ];
+    const makeCase = (x: number, y: number): Case => {
+      return { input: [u32(x), u32(y)], expected: u32(Math.min(x, y)) };
+    };
 
-    run(t, builtin('min'), [TypeU32, TypeU32], TypeU32, cfg, generateTestCases(test_values));
+    const test_values: Array<number> = [0, 1, 2, 0x70000000, 0x80000000, 0xffffffff];
+    const cases = generateTestCases(test_values, makeCase);
+
+    run(t, builtin('min'), [TypeU32, TypeU32], TypeU32, cfg, cases);
   });
 
 g.test('i32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
-  .desc(
-    `
-S is AbstractInt, i32, or u32
-T is S or vecN<S>
-@const fn min(e1: T ,e2: T) -> T
-Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a vector.
-`
-  )
+  .desc(`i32 tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
@@ -106,35 +89,21 @@ Returns e1 if e1 is less than e2, and e2 otherwise. Component-wise when T is a v
   )
   .fn(async t => {
     const cfg: Config = t.params;
-    cfg.cmpFloats = correctlyRoundedThreshold();
+    cfg.cmpFloats = correctlyRoundedMatch();
 
-    // This array must be strictly increasing, since that ordering determines
-    // the expected values.
-    const test_values: Array<Scalar> = [
-      i32Bits(0x80000000),
-      i32(-2),
-      i32(-1),
-      i32(0),
-      i32(1),
-      i32(2),
-      i32Bits(0x70000000),
-    ];
+    const makeCase = (x: number, y: number): Case => {
+      return { input: [i32(x), i32(y)], expected: i32(Math.min(x, y)) };
+    };
 
-    run(t, builtin('min'), [TypeI32, TypeI32], TypeI32, cfg, generateTestCases(test_values));
+    const test_values: Array<number> = [-0x70000000, -2, -1, 0, 1, 2, 0x70000000];
+    const cases = generateTestCases(test_values, makeCase);
+
+    run(t, builtin('min'), [TypeI32, TypeI32], TypeI32, cfg, cases);
   });
 
 g.test('abstract_float')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
-  .desc(
-    `
-T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
-@const fn min(e1: T ,e2: T ) -> T
-Returns e2 if e2 is less than e1, and e1 otherwise.
-If one operand is a NaN, the other is returned.
-If both operands are NaNs, a NaN is returned.
-Component-wise when T is a vector.
-`
-  )
+  .desc(`abstract float tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
@@ -144,16 +113,7 @@ Component-wise when T is a vector.
 
 g.test('f32')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
-  .desc(
-    `
-T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
-@const fn min(e1: T ,e2: T ) -> T
-Returns e2 if e2 is less than e1, and e1 otherwise.
-If one operand is a NaN, the other is returned.
-If both operands are NaNs, a NaN is returned.
-Component-wise when T is a vector.
-`
-  )
+  .desc(`f32 tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
@@ -161,43 +121,37 @@ Component-wise when T is a vector.
   )
   .fn(async t => {
     const cfg: Config = t.params;
-    cfg.cmpFloats = correctlyRoundedThreshold();
+    cfg.cmpFloats = correctlyRoundedMatch();
 
-    // This array must be strictly increasing, since that ordering determines
-    // the expected values.
-    const test_values: Array<Scalar> = [
-      f32Bits(kBit.f32.infinity.negative),
-      f32Bits(kBit.f32.negative.min),
-      f32(-10.0),
-      f32(-1.0),
-      f32Bits(kBit.f32.negative.max),
-      f32Bits(kBit.f32.subnormal.negative.min),
-      f32Bits(kBit.f32.subnormal.negative.max),
-      f32(0.0),
-      f32Bits(kBit.f32.subnormal.positive.min),
-      f32Bits(kBit.f32.subnormal.positive.max),
-      f32Bits(kBit.f32.positive.min),
-      f32(1.0),
-      f32(10.0),
-      f32Bits(kBit.f32.positive.max),
-      f32Bits(kBit.f32.infinity.positive),
+    const makeCase = (x: number, y: number): Case => {
+      return makeBinaryF32Case(x, y, Math.min);
+    };
+
+    const test_values: Array<number> = [
+      uint32ToFloat32(kBit.f32.infinity.negative),
+      kValue.f32.negative.min,
+      -10.0,
+      -1.0,
+      kValue.f32.negative.max,
+      kValue.f32.subnormal.negative.min,
+      kValue.f32.subnormal.negative.max,
+      0.0,
+      kValue.f32.subnormal.positive.min,
+      kValue.f32.subnormal.positive.max,
+      kValue.f32.positive.min,
+      1.0,
+      10.0,
+      kValue.f32.positive.max,
+      uint32ToFloat32(kBit.f32.infinity.positive),
     ];
+    const cases = generateTestCases(test_values, makeCase);
 
-    run(t, builtin('min'), [TypeF32, TypeF32], TypeF32, cfg, generateTestCases(test_values));
+    run(t, builtin('min'), [TypeF32, TypeF32], TypeF32, cfg, cases);
   });
 
 g.test('f16')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
-  .desc(
-    `
-T is AbstractFloat, f32, f16, vecN<AbstractFloat>, vecN<f32>, or vecN<f16>
-@const fn min(e1: T ,e2: T ) -> T
-Returns e2 if e2 is less than e1, and e1 otherwise.
-If one operand is a NaN, the other is returned.
-If both operands are NaNs, a NaN is returned.
-Component-wise when T is a vector.
-`
-  )
+  .desc(`f16 tests`)
   .params(u =>
     u
       .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)

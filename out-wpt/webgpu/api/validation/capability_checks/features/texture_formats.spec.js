@@ -24,32 +24,30 @@ g.test('texture_descriptor')
     `
   Test creating a texture with an optional texture format will fail if the required optional feature
   is not enabled.
-
-  TODO(#919): Actually it should throw an exception, not fail with a validation error.
   `
   )
   .params(u =>
     u.combine('format', kOptionalTextureFormats).combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
-    t.expectValidationError(() => {
+    t.shouldThrow(enable_required_feature ? false : 'TypeError', () => {
       t.device.createTexture({
         format,
         size: [formatInfo.blockWidth, formatInfo.blockHeight, 1],
         usage: GPUTextureUsage.TEXTURE_BINDING,
       });
-    }, !enable_required_feature);
+    });
   });
 
 g.test('storage_texture_binding_layout')
@@ -67,12 +65,12 @@ g.test('storage_texture_binding_layout')
       .filter(t => kTextureFormatInfo[t.format].storage)
       .combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {
@@ -108,12 +106,12 @@ g.test('color_target_state')
       .filter(t => kTextureFormatInfo[t.format].renderable && kTextureFormatInfo[t.format].color)
       .combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {
@@ -121,6 +119,7 @@ g.test('color_target_state')
 
     t.expectValidationError(() => {
       t.device.createRenderPipeline({
+        layout: 'auto',
         vertex: {
           module: t.device.createShaderModule({
             code: `
@@ -166,12 +165,12 @@ g.test('depth_stencil_state')
       )
       .combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {
@@ -179,6 +178,7 @@ g.test('depth_stencil_state')
 
     t.expectValidationError(() => {
       t.device.createRenderPipeline({
+        layout: 'auto',
         vertex: {
           module: t.device.createShaderModule({
             code: `
@@ -226,12 +226,12 @@ g.test('render_bundle_encoder_descriptor_color_format')
       .filter(t => kTextureFormatInfo[t.format].renderable && kTextureFormatInfo[t.format].color)
       .combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {
@@ -261,12 +261,12 @@ g.test('render_bundle_encoder_descriptor_depth_stencil_format')
       )
       .combine('enable_required_feature', [true, false])
   )
-  .beforeAllSubcases(async t => {
+  .beforeAllSubcases(t => {
     const { format, enable_required_feature } = t.params;
 
     const formatInfo = kTextureFormatInfo[format];
     if (enable_required_feature) {
-      await t.selectDeviceOrSkipTestCase(formatInfo.feature);
+      t.selectDeviceOrSkipTestCase(formatInfo.feature);
     }
   })
   .fn(async t => {

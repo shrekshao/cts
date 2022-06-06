@@ -277,8 +277,8 @@ class F extends GPUTest {
     return bufferContents;
   }
 
-  generateVertexBufferDescriptors(bufferCount, attributesPerBuffer, type) {
-    const typeInfo = typeInfoMap[type];
+  generateVertexBufferDescriptors(bufferCount, attributesPerBuffer, format) {
+    const typeInfo = typeInfoMap[format];
     // Vertex buffer descriptors
     const buffers = [];
     {
@@ -292,7 +292,7 @@ class F extends GPUTest {
             .map((_, i) => ({
               shaderLocation: currAttribute++,
               offset: i * typeInfo.sizeInBytes,
-              format: type,
+              format,
             })),
         });
       }
@@ -372,6 +372,7 @@ class F extends GPUTest {
     buffers,
   }) {
     const pipeline = this.device.createRenderPipeline({
+      layout: 'auto',
       vertex: {
         module: this.device.createShaderModule({
           code: this.generateVertexShaderCode({

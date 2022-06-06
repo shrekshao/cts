@@ -2,7 +2,7 @@
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { Colors } from '../../common/util/colors.js';
 import { assert } from '../../common/util/util.js';
-import { clamp } from './math.js';
+import { clamp, isSubnormalNumber } from './math.js';
 
 /**
  * Encodes a JS `number` into a "normalized" (unorm/snorm) integer representation with `bits` bits.
@@ -377,6 +377,10 @@ export const TypeU32 = new ScalarType('u32', 4, (buf, offset) =>
   u32(new Uint32Array(buf.buffer, offset)[0])
 );
 
+export const TypeF64 = new ScalarType('f64', 8, (buf, offset) =>
+  f32(new Float64Array(buf.buffer, offset)[0])
+);
+
 export const TypeF32 = new ScalarType('f32', 4, (buf, offset) =>
   f32(new Float32Array(buf.buffer, offset)[0])
 );
@@ -408,6 +412,8 @@ export const TypeBool = new ScalarType('bool', 4, (buf, offset) =>
 /** @returns the ScalarType from the ScalarKind */
 export function scalarType(kind) {
   switch (kind) {
+    case 'f64':
+      return TypeF64;
     case 'f32':
       return TypeF32;
     case 'f16':
@@ -485,12 +491,25 @@ export class Scalar {
       case Infinity:
       case -Infinity:
         return Colors.bold(this.value.toString());
-      default:
-        return Colors.bold(this.value.toString()) + ' (0x' + this.value.toString(16) + ')';
+      default: {
+        const n = this.value;
+        if (n !== null) {
+          return (
+            Colors.bold(this.value.toString()) +
+            `(0x${this.value.toString(16)}, subnormal: ${isSubnormalNumber(n.valueOf())})`
+          );
+        }
+        return Colors.bold(this.value.toString()) + `(0x${this.value.toString(16)})`;
+      }
     }
   }
 }
 
+/** Create an f64 from a numeric value, a JS `number`. */
+export function f64(value) {
+  const arr = new Float32Array([value]);
+  return new Scalar(TypeF64, arr[0], arr);
+}
 /** Create an f32 from a numeric value, a JS `number`. */
 export function f32(value) {
   const arr = new Float32Array([value]);
@@ -660,3 +679,12 @@ export function vec4(x, y, z, w) {
 }
 
 /** Value is a Scalar or Vector value. */
+
+/** @returns if the Value is a float scalar type */
+export function isFloatValue(v) {
+  if (v instanceof Scalar) {
+    const s = v;
+    return s.type.kind === s.type.kind || s.type.kind === 'f32' || s.type.kind === 'f16';
+  }
+  return false;
+}

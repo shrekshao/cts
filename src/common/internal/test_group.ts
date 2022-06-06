@@ -497,6 +497,7 @@ class RunCaseSpecific implements RunCase {
         if (this.beforeFn) {
           await this.beforeFn(sharedState);
         }
+        await sharedState.postInit();
 
         let allPreviousSubcasesFinalizedPromise: Promise<void> = Promise.resolve();
         if (this.subcases) {
@@ -528,7 +529,7 @@ class RunCaseSpecific implements RunCase {
                 const prop = TestCaseRecorder.prototype[k];
                 if (typeof prop === 'function') {
                   return function (...args: Parameters<typeof prop>) {
-                    allPreviousSubcasesFinalizedPromise.then(() => {
+                    void allPreviousSubcasesFinalizedPromise.then(() => {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const rv = (prop as any).apply(target, args);
                       // Because this proxy executes functions in a deferred manner,

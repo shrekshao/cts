@@ -32,9 +32,20 @@ export class SubcaseBatchState {
     return this._params;
   }
 
-  /** @internal MAINTENANCE_TODO: Make this not visible to test code? */
+  /**
+   * Runs before the `.before()` function.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
   async init() {}
-  /** @internal MAINTENANCE_TODO: Make this not visible to test code? */
+  /**
+   * Runs between the `.before()` function and the subcases.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
+  async postInit() {}
+  /**
+   * Runs after all subcases finish.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
   async finalize() {}}
 
 
@@ -191,7 +202,6 @@ export class Fixture {
   eventualAsyncExpectation(fn) {
     const promise = fn(new Error());
     this.eventualExpectations.push(promise);
-    return promise;
   }
 
   expectErrorValue(expectedError, ex, niceStack) {
@@ -275,22 +285,35 @@ export class Fixture {
     return cond;
   }
 
-  /** If the argument is an `Error`, fail (or warn). If it's `undefined`, no-op. */
+  /**
+   * If the argument is an `Error`, fail (or warn). If it's `undefined`, no-op.
+   * If the argument is an array, apply the above behavior on each of elements.
+   */
   expectOK(
   error,
   { mode = 'fail', niceStack } = {})
   {
-    if (error instanceof Error) {
-      if (niceStack) {
-        error.stack = niceStack.stack;
+    const handleError = (error) => {
+      if (error instanceof Error) {
+        if (niceStack) {
+          error.stack = niceStack.stack;
+        }
+        if (mode === 'fail') {
+          this.rec.expectationFailed(error);
+        } else if (mode === 'warn') {
+          this.rec.warn(error);
+        } else {
+          unreachable();
+        }
       }
-      if (mode === 'fail') {
-        this.rec.expectationFailed(error);
-      } else if (mode === 'warn') {
-        this.rec.warn(error);
-      } else {
-        unreachable();
+    };
+
+    if (Array.isArray(error)) {
+      for (const e of error) {
+        handleError(e);
       }
+    } else {
+      handleError(error);
     }
   }
 
