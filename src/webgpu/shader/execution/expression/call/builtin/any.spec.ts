@@ -19,7 +19,7 @@ import {
   vec3,
   vec4,
 } from '../../../../../util/conversion.js';
-import { run } from '../../expression.js';
+import { allInputSources, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -30,7 +30,7 @@ g.test('bool')
   .desc(`bool tests`)
   .params(u =>
     u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
+      .combine('inputSource', allInputSources)
       .combine('overload', ['scalar', 'vec2', 'vec3', 'vec4'] as const)
   )
   .fn(async t => {
@@ -88,5 +88,5 @@ g.test('bool')
     };
     const overload = overloads[t.params.overload];
 
-    run(t, builtin('any'), [overload.type], TypeBool, t.params, overload.cases);
+    await run(t, builtin('any'), [overload.type], TypeBool, t.params, overload.cases);
   });

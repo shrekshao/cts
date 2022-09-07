@@ -5,7 +5,7 @@ Execution Tests for the bitwise binary expression operations
 `;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../gpu_test.js';
 import { i32, scalarType, u32 } from '../../../../util/conversion.js';
-import { run } from '../expression.js';
+import { allInputSources, run } from '../expression.js';
 
 import { binary } from './binary.js';
 
@@ -24,7 +24,7 @@ Bitwise-or. Component-wise when T is a vector.
 params((u) =>
 u.
 combine('type', ['i32', 'u32']).
-combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).
+combine('inputSource', allInputSources).
 combine('vectorize', [undefined, 2, 3, 4])).
 
 fn(async (t) => {
@@ -72,7 +72,7 @@ fn(async (t) => {
 
     }
   }
-  run(t, binary('|'), [type, type], type, t.params, cases);
+  await run(t, binary('|'), [type, type], type, t.params, cases);
 });
 
 g.test('bitwise_and').
@@ -88,7 +88,7 @@ Bitwise-and. Component-wise when T is a vector.
 params((u) =>
 u.
 combine('type', ['i32', 'u32']).
-combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).
+combine('inputSource', allInputSources).
 combine('vectorize', [undefined, 2, 3, 4])).
 
 fn(async (t) => {
@@ -144,7 +144,7 @@ fn(async (t) => {
 
     }
   }
-  run(t, binary('&'), [type, type], type, t.params, cases);
+  await run(t, binary('&'), [type, type], type, t.params, cases);
 });
 
 g.test('bitwise_exclusive_or').
@@ -160,7 +160,7 @@ Bitwise-exclusive-or. Component-wise when T is a vector.
 params((u) =>
 u.
 combine('type', ['i32', 'u32']).
-combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).
+combine('inputSource', allInputSources).
 combine('vectorize', [undefined, 2, 3, 4])).
 
 fn(async (t) => {
@@ -216,6 +216,6 @@ fn(async (t) => {
 
     }
   }
-  run(t, binary('^'), [type, type], type, t.params, cases);
+  await run(t, binary('^'), [type, type], type, t.params, cases);
 });
 //# sourceMappingURL=bitwise.spec.js.map

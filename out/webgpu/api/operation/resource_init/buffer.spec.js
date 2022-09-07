@@ -61,6 +61,7 @@ class F extends GPUTest {
       size: [1, 1, 1],
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.STORAGE_BINDING });
 
+    this.trackForCleanup(outputTexture);
     const bindGroup = this.device.createBindGroup({
       layout: computePipeline.getBindGroupLayout(0),
       entries: [
@@ -103,7 +104,7 @@ class F extends GPUTest {
       fragment: {
         module: this.device.createShaderModule({
           code: `
-        @stage(fragment)
+        @fragment
         fn main(@location(0) i_color : vec4<f32>) -> @location(0) vec4<f32> {
             return i_color;
         }` }),
@@ -179,6 +180,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
 
+  t.trackForCleanup(buffer);
 
   const copySize = 12;
   const writeData = new Uint8Array(copySize);
@@ -207,6 +209,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(buffer);
 
   await buffer.mapAsync(mapMode);
   const readData = new Uint8Array(buffer.getMappedRange());
@@ -236,6 +239,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(buffer);
 
   const expectedData = new Uint8Array(bufferSize);
   {
@@ -270,6 +274,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(buffer);
 
   const mapped = new Uint8Array(buffer.getMappedRange());
   for (let i = 0; i < bufferSize; ++i) {
@@ -303,6 +308,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(buffer);
 
   const expectedData = new Uint8Array(bufferSize);
   {
@@ -332,6 +338,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(buffer);
 
   const expectedData = new Uint8Array(bufferSize);
   // copyBufferToBuffer() is called inside t.CheckGPUBufferContent().
@@ -354,6 +361,7 @@ fn(async (t) => {
     format: dstTextureFormat,
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST });
 
+  t.trackForCleanup(dstTexture);
   const layout = getTextureCopyLayout(dstTextureFormat, '2d', textureSize);
   const srcBufferSize = layout.byteLength + bufferOffset;
   const srcBufferUsage = GPUBufferUsage.COPY_SRC;
@@ -361,6 +369,7 @@ fn(async (t) => {
     size: srcBufferSize,
     usage: srcBufferUsage });
 
+  t.trackForCleanup(srcBuffer);
 
   const encoder = t.device.createCommandEncoder();
   encoder.copyBufferToTexture(
@@ -397,6 +406,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: bufferUsage });
 
+  t.trackForCleanup(dstBuffer);
 
   const querySet = t.device.createQuerySet({ type: 'occlusion', count: 1 });
   const encoder = t.device.createCommandEncoder();
@@ -434,6 +444,7 @@ fn(async (t) => {
     size: textureSize,
     mipLevelCount: copyMipLevel + 1 });
 
+  t.trackForCleanup(srcTexture);
 
   const bytesPerRow = 256;
   const layout = getTextureCopyLayout(srcTextureFormat, '2d', textureSize, {
@@ -447,6 +458,7 @@ fn(async (t) => {
     size: dstBufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
 
+  t.trackForCleanup(dstBuffer);
 
   const encoder = t.device.createCommandEncoder();
 
@@ -505,16 +517,17 @@ fn(async (t) => {
     size: bufferOffset + boundBufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.UNIFORM });
 
+  t.trackForCleanup(buffer);
 
   const computeShaderModule = t.device.createShaderModule({
     code: `
   struct UBO {
-      value : vec4<u32>
+    value : vec4<u32>
   };
   @group(0) @binding(0) var<uniform> ubo : UBO;
   @group(0) @binding(1) var outImage : texture_storage_2d<rgba8unorm, write>;
 
-  @stage(compute) @workgroup_size(1) fn main() {
+  @compute @workgroup_size(1) fn main() {
       if (all(ubo.value == vec4<u32>(0u, 0u, 0u, 0u))) {
           textureStore(outImage, vec2<i32>(0, 0), vec4<f32>(0.0, 1.0, 0.0, 1.0));
       } else {
@@ -540,16 +553,17 @@ fn(async (t) => {
     size: bufferOffset + boundBufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE });
 
+  t.trackForCleanup(buffer);
 
   const computeShaderModule = t.device.createShaderModule({
     code: `
     struct SSBO {
-        value : vec4<u32>
+      value : vec4<u32>
     };
     @group(0) @binding(0) var<storage, read> ssbo : SSBO;
     @group(0) @binding(1) var outImage : texture_storage_2d<rgba8unorm, write>;
 
-    @stage(compute) @workgroup_size(1) fn main() {
+    @compute @workgroup_size(1) fn main() {
         if (all(ssbo.value == vec4<u32>(0u, 0u, 0u, 0u))) {
             textureStore(outImage, vec2<i32>(0, 0), vec4<f32>(0.0, 1.0, 0.0, 1.0));
         } else {
@@ -575,16 +589,17 @@ fn(async (t) => {
     size: bufferOffset + boundBufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE });
 
+  t.trackForCleanup(buffer);
 
   const computeShaderModule = t.device.createShaderModule({
     code: `
     struct SSBO {
-        value : vec4<u32>
+      value : vec4<u32>
     };
     @group(0) @binding(0) var<storage, read_write> ssbo : SSBO;
     @group(0) @binding(1) var outImage : texture_storage_2d<rgba8unorm, write>;
 
-    @stage(compute) @workgroup_size(1) fn main() {
+    @compute @workgroup_size(1) fn main() {
         if (all(ssbo.value == vec4<u32>(0u, 0u, 0u, 0u))) {
             textureStore(outImage, vec2<i32>(0, 0), vec4<f32>(0.0, 1.0, 0.0, 1.0));
         } else {
@@ -614,7 +629,7 @@ fn(async (t) => {
         @builtin(position) position : vec4<f32>,
       };
 
-      @stage(vertex) fn main(@location(0) pos : vec4<f32>) -> VertexOut {
+      @vertex fn main(@location(0) pos : vec4<f32>) -> VertexOut {
         var output : VertexOut;
         if (all(pos == vec4<f32>(0.0, 0.0, 0.0, 0.0))) {
           output.color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
@@ -633,12 +648,14 @@ fn(async (t) => {
     size: bufferSize,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_SRC });
 
+  t.trackForCleanup(vertexBuffer);
 
   const outputTexture = t.device.createTexture({
     format: 'rgba8unorm',
     size: [1, 1, 1],
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
+  t.trackForCleanup(outputTexture);
 
   const encoder = t.device.createCommandEncoder();
   const renderPass = encoder.beginRenderPass({
@@ -677,7 +694,7 @@ fn(async (t) => {
       @builtin(position) position : vec4<f32>,
     };
 
-    @stage(vertex)
+    @vertex
     fn main(@builtin(vertex_index) VertexIndex : u32) -> VertexOut {
       var output : VertexOut;
       if (VertexIndex == 0u) {
@@ -698,12 +715,14 @@ fn(async (t) => {
     size: bufferSize,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_SRC });
 
+  t.trackForCleanup(indexBuffer);
 
   const outputTexture = t.device.createTexture({
     format: 'rgba8unorm',
     size: [1, 1, 1],
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
+  t.trackForCleanup(outputTexture);
 
   const encoder = t.device.createCommandEncoder();
   const renderPass = encoder.beginRenderPass({
@@ -745,7 +764,7 @@ fn(async (t) => {
       @builtin(position) position : vec4<f32>,
     };
 
-    @stage(vertex) fn main() -> VertexOut {
+    @vertex fn main() -> VertexOut {
       var output : VertexOut;
       output.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
       output.position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
@@ -763,12 +782,14 @@ fn(async (t) => {
     size: bufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.INDIRECT });
 
+  t.trackForCleanup(indirectBuffer);
 
   const outputTexture = t.device.createTexture({
     format: 'rgba8unorm',
     size: [1, 1, 1],
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
+  t.trackForCleanup(outputTexture);
 
   // Initialize outputTexture to green.
   const encoder = t.device.createCommandEncoder();
@@ -791,6 +812,7 @@ fn(async (t) => {
       size: 4,
       usage: GPUBufferUsage.INDEX });
 
+    t.trackForCleanup(indexBuffer);
     renderPass.setIndexBuffer(indexBuffer, 'uint16');
     renderPass.drawIndexedIndirect(indirectBuffer, bufferOffset);
   } else {
@@ -822,7 +844,7 @@ fn(async (t) => {
         code: `
         @group(0) @binding(0) var outImage : texture_storage_2d<rgba8unorm, write>;
 
-        @stage(compute) @workgroup_size(1) fn main() {
+        @compute @workgroup_size(1) fn main() {
           textureStore(outImage, vec2<i32>(0, 0), vec4<f32>(1.0, 0.0, 0.0, 1.0));
         }` }),
 
@@ -836,6 +858,7 @@ fn(async (t) => {
     size: bufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.INDIRECT });
 
+  t.trackForCleanup(indirectBuffer);
 
   const outputTexture = t.device.createTexture({
     format: 'rgba8unorm',
@@ -845,6 +868,7 @@ fn(async (t) => {
     GPUTextureUsage.RENDER_ATTACHMENT |
     GPUTextureUsage.STORAGE_BINDING });
 
+  t.trackForCleanup(outputTexture);
 
   // Initialize outputTexture to green.
   const encoder = t.device.createCommandEncoder();

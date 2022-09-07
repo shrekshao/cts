@@ -30,7 +30,7 @@ import {
   vec4,
   TypeVec,
 } from '../../../../../util/conversion.js';
-import { run } from '../../expression.js';
+import { allInputSources, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -41,7 +41,7 @@ g.test('integer')
   .desc(`integer tests`)
   .params(u =>
     u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
+      .combine('inputSource', allInputSources)
       .combine('signed', [false, true])
       .combine('width', [1, 2, 3, 4])
   )
@@ -93,7 +93,7 @@ g.test('integer')
       0b01010101010101010101010101010101
     );
 
-    run(t, builtin('insertBits'), [T, T, TypeU32, TypeU32], T, cfg, [
+    await run(t, builtin('insertBits'), [T, T, TypeU32, TypeU32], T, cfg, [
       { input: [all_0, all_0, u32(0), u32(32)], expected: all_0 },
       { input: [all_0, all_0, u32(1), u32(10)], expected: all_0 },
       { input: [all_0, all_0, u32(2), u32(5)], expected: all_0 },

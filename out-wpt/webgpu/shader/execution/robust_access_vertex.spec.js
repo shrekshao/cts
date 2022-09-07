@@ -251,8 +251,8 @@ const typeInfoMap = {
   float32x4: {
     wgslType: 'vec4<f32>',
     sizeInBytes: 16,
-    validationFunc: `return valid(v.x) && valid(v.y) && valid(v.z) && valid(v.w) ||
-                            v.x == 0.0 && v.y == 0.0 && v.z == 0.0 && (v.w == 0.0 || v.w == 1.0);`,
+    validationFunc: `return (valid(v.x) && valid(v.y) && valid(v.z) && valid(v.w)) ||
+                            (v.x == 0.0 && v.y == 0.0 && v.z == 0.0 && (v.w == 0.0 || v.w == 1.0));`,
   },
 };
 
@@ -335,7 +335,7 @@ class F extends GPUTest {
         ${typeInfo.validationFunc}
       }
 
-      @stage(vertex) fn main(
+      @vertex fn main(
         @builtin(vertex_index) VertexIndex : u32,
         attributes : Attributes
         ) -> @builtin(position) vec4<f32> {
@@ -393,7 +393,7 @@ class F extends GPUTest {
       fragment: {
         module: this.device.createShaderModule({
           code: `
-            @stage(fragment) fn main() -> @location(0) vec4<f32> {
+            @fragment fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(1.0, 0.0, 0.0, 1.0);
             }`,
         }),

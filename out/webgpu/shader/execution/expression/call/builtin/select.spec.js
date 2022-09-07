@@ -29,7 +29,7 @@ vec2,
 vec3,
 vec4 } from
 '../../../../../util/conversion.js';
-import { run } from '../../expression.js';
+import { run, allInputSources } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -65,7 +65,7 @@ specURL('https://www.w3.org/TR/WGSL/#logical-builtin-functions').
 desc(`scalar tests`).
 params((u) =>
 u.
-combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).
+combine('inputSource', allInputSources).
 combine('component', ['b', 'f', 'i', 'u']).
 combine('overload', ['scalar', 'vec2', 'vec3', 'vec4'])).
 
@@ -120,7 +120,7 @@ fn(async (t) => {
 
   const overload = overloads[t.params.overload];
 
-  run(
+  await run(
   t,
   builtin('select'),
   [overload.type, overload.type, TypeBool],
@@ -135,7 +135,7 @@ specURL('https://www.w3.org/TR/WGSL/#logical-builtin-functions').
 desc(`vector tests`).
 params((u) =>
 u.
-combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).
+combine('inputSource', allInputSources).
 combine('component', ['b', 'f', 'i', 'u']).
 combine('overload', ['vec2', 'vec3', 'vec4'])).
 
@@ -218,7 +218,7 @@ fn(async (t) => {
       }}
 
 
-  run(
+  await run(
   t,
   builtin('select'),
   [tests.dataType, tests.dataType, tests.boolType],

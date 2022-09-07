@@ -23,7 +23,7 @@ export const listing = [
       "api",
       "operation",
       "adapter",
-      "requestDevice"
+      "requestAdapterInfo"
     ]
   },
   {
@@ -31,7 +31,7 @@ export const listing = [
       "api",
       "operation",
       "adapter",
-      "requestDevice_limits"
+      "requestDevice"
     ]
   },
   {
@@ -194,14 +194,6 @@ export const listing = [
     "file": [
       "api",
       "operation",
-      "error_scope"
-    ],
-    "readme": "TODO: plan and implement\n- test very deeply nested error scopes, make sure errors go to the right place, e.g.\n    - validation, ..., validation, out-of-memory\n    - out-of-memory, validation, ..., validation\n    - out-of-memory, ..., out-of-memory, validation\n    - validation, out-of-memory, ..., out-of-memory\n- use error scopes on two different threads and make sure errors go to the right place\n- unhandled errors always go to the \"original\" device object\n    - test they go nowhere if the original was dropped (attemptGarbageCollection to make sure)"
-  },
-  {
-    "file": [
-      "api",
-      "operation",
       "labels"
     ]
   },
@@ -267,6 +259,13 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "reflection"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "render_pass"
     ],
     "readme": "Render pass stuff other than commands (which are in command_buffer/)."
@@ -317,14 +316,6 @@ export const listing = [
       "operation",
       "render_pipeline",
       "culling_tests"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "render_pipeline",
-      "entry_point_name"
     ]
   },
   {
@@ -536,13 +527,6 @@ export const listing = [
     "file": [
       "api",
       "validation",
-      "attachment_compatibility"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
       "buffer",
       "create"
     ]
@@ -586,15 +570,6 @@ export const listing = [
       "validation",
       "capability_checks",
       "features",
-      "depth_clip_control"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "capability_checks",
-      "features",
       "query_types"
     ]
   },
@@ -620,6 +595,13 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "compute_pipeline"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "createBindGroup"
     ]
   },
@@ -634,21 +616,7 @@ export const listing = [
     "file": [
       "api",
       "validation",
-      "createComputePipeline"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
       "createPipelineLayout"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "createRenderPipeline"
     ]
   },
   {
@@ -676,7 +644,8 @@ export const listing = [
     "file": [
       "api",
       "validation",
-      "create_pipeline"
+      "encoding",
+      "beginComputePass"
     ]
   },
   {
@@ -685,15 +654,6 @@ export const listing = [
       "validation",
       "encoding",
       "beginRenderPass"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "encoding",
-      "cmds",
-      "buffer_texture_copies"
     ]
   },
   {
@@ -935,6 +895,14 @@ export const listing = [
       "api",
       "validation",
       "image_copy",
+      "buffer_texture_copies"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "image_copy",
       "layout_related"
     ]
   },
@@ -944,14 +912,6 @@ export const listing = [
       "validation",
       "image_copy",
       "texture_related"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "initialization",
-      "requestDevice"
     ]
   },
   {
@@ -1031,9 +991,33 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "queue",
+      "writeTexture"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "render_pass"
     ],
     "readme": "Render pass stuff other than commands (which are in encoding/cmds/)."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pass",
+      "attachment_compatibility"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pass",
+      "render_pass_descriptor"
+    ]
   },
   {
     "file": [
@@ -1055,7 +1039,64 @@ export const listing = [
     "file": [
       "api",
       "validation",
-      "render_pass_descriptor"
+      "render_pipeline",
+      "depth_stencil_state"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "fragment_state"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "inter_stage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "misc"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "multisample_state"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "primitive_state"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "shader_module"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
+      "vertex_state"
     ]
   },
   {
@@ -1074,6 +1115,15 @@ export const listing = [
       "resource_usages",
       "buffer",
       "in_pass_encoder"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "resource_usages",
+      "buffer",
+      "in_pass_misc"
     ]
   },
   {
@@ -1107,6 +1157,14 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "shader_module",
+      "entry_point"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "state",
       "device_lost"
     ],
@@ -1127,13 +1185,6 @@ export const listing = [
       "validation",
       "texture",
       "destroy"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "vertex_state"
     ]
   },
   {
@@ -1968,6 +2019,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "saturate"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
       "select"
     ]
   },
@@ -2386,7 +2447,23 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "align"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "blankspace"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "builtin"
     ]
   },
   {
@@ -2435,6 +2512,14 @@ export const listing = [
       "validation",
       "shader_io",
       "builtins"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "shader_io",
+      "entry_point"
     ]
   },
   {
@@ -2521,7 +2606,7 @@ export const listing = [
     "file": [
       "web_platform",
       "canvas",
-      "getPreferredFormat"
+      "getPreferredCanvasFormat"
     ]
   },
   {

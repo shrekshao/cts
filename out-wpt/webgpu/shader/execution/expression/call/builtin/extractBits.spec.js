@@ -45,7 +45,7 @@ import {
   vec4,
   TypeVec,
 } from '../../../../../util/conversion.js';
-import { run } from '../../expression.js';
+import { allInputSources, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -54,9 +54,7 @@ export const g = makeTestGroup(GPUTest);
 g.test('u32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
   .desc(`u32 tests`)
-  .params(u =>
-    u.combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).combine('width', [1, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('width', [1, 2, 3, 4]))
   .fn(async t => {
     const cfg = t.params;
 
@@ -90,7 +88,7 @@ g.test('u32')
       0b00000000001010101010100000000000
     );
 
-    run(t, builtin('extractBits'), [T, TypeU32, TypeU32], T, cfg, [
+    await run(t, builtin('extractBits'), [T, TypeU32, TypeU32], T, cfg, [
       { input: [all_0, u32(0), u32(32)], expected: all_0 },
       { input: [all_0, u32(1), u32(10)], expected: all_0 },
       { input: [all_0, u32(2), u32(5)], expected: all_0 },
@@ -202,9 +200,7 @@ g.test('u32')
 g.test('i32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
   .desc(`i32 tests`)
-  .params(u =>
-    u.combine('storageClass', ['uniform', 'storage_r', 'storage_rw']).combine('width', [1, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('width', [1, 2, 3, 4]))
   .fn(async t => {
     const cfg = t.params;
 
@@ -238,7 +234,7 @@ g.test('i32')
       0b00000000001010101010100000000000
     );
 
-    run(t, builtin('extractBits'), [T, TypeU32, TypeU32], T, cfg, [
+    await run(t, builtin('extractBits'), [T, TypeU32, TypeU32], T, cfg, [
       { input: [all_0, u32(0), u32(32)], expected: all_0 },
       { input: [all_0, u32(1), u32(10)], expected: all_0 },
       { input: [all_0, u32(2), u32(5)], expected: all_0 },

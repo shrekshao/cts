@@ -15,13 +15,25 @@ fn((t) => {
  * /* I can nest /**/ comments. */
  * // I can nest line comments too.
  **/
-@stage(fragment) // This is the stage
+@fragment // This is the stage
 fn main(/*
 no
 parameters
 */) -> @location(0) vec4<f32> {
   return/*block_comments_delimit_tokens*/vec4<f32>(.4, .2, .3, .1);
 }/* terminated block comments are OK at EOF...*/`;
+  t.expectCompileResult(true, code);
+});
+
+g.test('line_comment_eof').
+desc(`Test that line comments can come at EOF.`).
+fn((t) => {
+  const code = `
+@fragment
+fn main() -> @location(0) vec4<f32> {
+  return vec4<f32>(.4, .2, .3, .1);
+}
+// line comments are OK at EOF...`;
   t.expectCompileResult(true, code);
 });
 
@@ -44,7 +56,7 @@ combine('blankspace', [
 beginSubcases()).
 
 fn((t) => {
-  const code = `// Line comment${t.params.blankspace[0]}let invalid_outside_comment = should_fail`;
+  const code = `// Line comment${t.params.blankspace[0]}const invalid_outside_comment = should_fail`;
 
   t.expectCompileResult([' ', '\t'].includes(t.params.blankspace[0]), code);
 });

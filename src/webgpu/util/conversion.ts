@@ -493,24 +493,70 @@ export class Scalar {
     }
   }
 
+  /**
+   * @returns the WGSL representation of this scalar value
+   */
+  public wgsl(): string {
+    const withPoint = (x: number) => {
+      const str = `${x}`;
+      return str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
+    };
+    if (isFinite(this.value as number)) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `${withPoint(this.value as number)}f`;
+        case 'f16':
+          return `${withPoint(this.value as number)}h`;
+        case 'u32':
+          return `${this.value}u`;
+        case 'i32':
+          return `${this.value}i`;
+        case 'bool':
+          return `${this.value}`;
+      }
+    } else if (this.value === Number.POSITIVE_INFINITY) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `f32(1.0/0.0)`;
+        case 'f16':
+          return `f16(1.0/0.0)`;
+      }
+    } else if (this.value === Number.NEGATIVE_INFINITY) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `f32(-1.0/0.0)`;
+        case 'f16':
+          return `f16(-1.0/0.0)`;
+      }
+    }
+    throw new Error(
+      `scalar of value ${this.value} and type ${this.type} has no WGSL representation`
+    );
+  }
+
   public toString(): string {
     if (this.type.kind === 'bool') {
       return Colors.bold(this.value.toString());
     }
     switch (this.value) {
-      case 0:
       case Infinity:
       case -Infinity:
         return Colors.bold(this.value.toString());
       default: {
+        // Uint8Array.map returns a Uint8Array, so cannot use .map directly
+        const hex = Array.from(this.bits)
+          .reverse()
+          .map(x => x.toString(16).padStart(2, '0'))
+          .join('');
         const n = this.value as Number;
-        if (n !== null) {
-          return (
-            Colors.bold(this.value.toString()) +
-            `(0x${this.value.toString(16)}, subnormal: ${isSubnormalNumber(n.valueOf())})`
-          );
+        if (n !== null && isFloatValue(this)) {
+          let str = this.value.toString();
+          str = str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
+          return isSubnormalNumber(n.valueOf())
+            ? `${Colors.bold(str)} (0x${hex} subnormal)`
+            : `${Colors.bold(str)} (0x${hex})`;
         }
-        return Colors.bold(this.value.toString()) + `(0x${this.value.toString(16)})`;
+        return `${Colors.bold(this.value.toString())} (0x${hex})`;
       }
     }
   }
@@ -518,7 +564,7 @@ export class Scalar {
 
 /** Create an f64 from a numeric value, a JS `number`. */
 export function f64(value: number): Scalar {
-  const arr = new Float32Array([value]);
+  const arr = new Float64Array([value]);
   return new Scalar(TypeF64, arr[0], arr);
 }
 /** Create an f32 from a numeric value, a JS `number`. */
@@ -652,6 +698,14 @@ export class Vector {
     }
   }
 
+  /**
+   * @returns the WGSL representation of this vector value
+   */
+  public wgsl(): string {
+    const els = this.elements.map(v => v.wgsl()).join(', ');
+    return `vec${this.type.width}(${els})`;
+  }
+
   public toString(): string {
     return `${this.type}(${this.elements.map(e => e.toString()).join(', ')})`;
   }
@@ -699,7 +753,7 @@ export type Value = Scalar | Vector;
 export function isFloatValue(v: Value): boolean {
   if (v instanceof Scalar) {
     const s = v;
-    return s.type.kind === s.type.kind || s.type.kind === 'f32' || s.type.kind === 'f16';
+    return s.type.kind === 'f64' || s.type.kind === 'f32' || s.type.kind === 'f16';
   }
   return false;
 }

@@ -56,6 +56,17 @@ export const kAllBufferUsageBits = kBufferUsages.reduce(
   0
 );
 
+// Errors
+
+/** Per-GPUErrorFilter info. */
+export const kErrorScopeFilterInfo = {
+  'out-of-memory': {},
+  validation: {},
+};
+
+/** List of all GPUTextureAspect values. */
+export const kErrorScopeFilters = keysOf(kErrorScopeFilterInfo);
+
 // Textures
 
 // Definitions for use locally. To access the table entries, use `kTextureFormatInfo`.
@@ -161,7 +172,6 @@ const kUnsizedDepthStencilFormatInfo = makeTable(
     depth24plus: [, , , , true, false, , , , 'depth'],
     'depth24plus-stencil8': [, , , , true, true, , , , 'depth'],
     // MAINTENANCE_TODO: These should really be sized formats; see below MAINTENANCE_TODO about multi-aspect formats.
-    'depth24unorm-stencil8': [, , , , true, true, , , , 'depth', , , , 'depth24unorm-stencil8'],
     'depth32float-stencil8': [, , , , true, true, , , , 'depth', , , , 'depth32float-stencil8'],
   }
 );
@@ -970,11 +980,14 @@ export const kRenderableColorTextureFormats = kRegularTextureFormats.filter(
 // The formats of GPUTextureFormat for canvas context.
 export const kCanvasTextureFormats = ['bgra8unorm', 'rgba8unorm', 'rgba16float'];
 
+// The alpha mode for canvas context.
+export const kCanvasAlphaModes = ['opaque', 'premultiplied'];
+
 /** Per-GPUTextureFormat info. */
 // Exists just for documentation. Otherwise could be inferred by `makeTable`.
 // MAINTENANCE_TODO: Refactor this to separate per-aspect data for multi-aspect formats. In particular:
 // - bytesPerBlock only makes sense on a per-aspect basis. But this table can't express that.
-//   So we put depth24unorm-stencil8 and depth32float-stencil8 to be unsized formats for now.
+//   So we put depth32float-stencil8 to be an unsized format for now.
 
 /** Per-GPUTextureFormat info. */
 export const kTextureFormatInfo = kAllTextureFormatInfo;
@@ -1075,12 +1088,6 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
     texelAspectSize: { 'depth-only': 4, 'stencil-only': -1 },
   },
 
-  'depth24unorm-stencil8': {
-    CopyB2T: ['stencil-only'],
-    CopyT2B: ['stencil-only'],
-    texelAspectSize: { 'depth-only': -1, 'stencil-only': 1 },
-  },
-
   'depth32float-stencil8': {
     CopyB2T: ['stencil-only'],
     CopyT2B: ['depth-only', 'stencil-only'],
@@ -1122,12 +1129,6 @@ export const kDepthStencilFormatResolvedAspect = {
     all: 'depth32float',
     'depth-only': 'depth32float',
     'stencil-only': undefined,
-  },
-
-  'depth24unorm-stencil8': {
-    all: 'depth24unorm-stencil8',
-    'depth-only': 'depth24plus', // Should this be depth24unorm? See https://github.com/gpuweb/gpuweb/issues/2732
-    'stencil-only': 'stencil8',
   },
 
   'depth32float-stencil8': {
@@ -1611,6 +1612,20 @@ export const kBlendOperations = [
   'max',
 ];
 
+// Primitive topologies
+export const kPrimitiveTopology = [
+  'point-list',
+  'line-list',
+  'line-strip',
+  'triangle-list',
+  'triangle-strip',
+];
+
+assertTypeTrue();
+
+export const kIndexFormat = ['uint16', 'uint32'];
+assertTypeTrue();
+
 // Pipeline limits
 
 /** Maximum number of color attachments to a render pass, by spec. */
@@ -1667,6 +1682,22 @@ export const kLimitInfo = makeTable(
 
 /** List of all entries of GPUSupportedLimits. */
 export const kLimits = keysOf(kLimitInfo);
+
+/** Per-GPUFeatureName info. */
+export const kFeatureNameInfo = {
+  'depth-clip-control': {},
+  'depth32float-stencil8': {},
+  'texture-compression-bc': {},
+  'texture-compression-etc2': {},
+  'texture-compression-astc': {},
+  'timestamp-query': {},
+  'indirect-first-instance': {},
+  'shader-f16': {},
+  'bgra8unorm-storage': {},
+};
+
+/** List of all GPUFeatureName values. */
+export const kFeatureNames = keysOf(kFeatureNameInfo);
 
 /**
  * Check if two formats are view format compatible.

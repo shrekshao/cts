@@ -132,14 +132,20 @@ export class ValidationTest extends GPUTest {
   }
 
   /**
-   * Return an arbitrarily-configured GPUTexture with the `TEXTURE_BINDING` usage and specified sampleCount.
+   * Return an arbitrarily-configured GPUTexture with the `TEXTURE_BINDING` usage and specified
+   * sampleCount. The `RENDER_ATTACHMENT` usage will also be specified if sampleCount > 1 as is
+   * required by WebGPU SPEC.
    */
   getSampledTexture(sampleCount = 1) {
+    const usage =
+    sampleCount > 1 ?
+    GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT :
+    GPUTextureUsage.TEXTURE_BINDING;
     return this.trackForCleanup(
     this.device.createTexture({
       size: { width: 16, height: 16, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
-      usage: GPUTextureUsage.TEXTURE_BINDING,
+      usage,
       sampleCount }));
 
 
@@ -189,7 +195,7 @@ export class ValidationTest extends GPUTest {
   }
 
   /**
-   * Return an arbitrary object of the specified {@link BindableResource} type
+   * Return an arbitrary object of the specified {@link webgpu/capability_info!BindableResource} type
    * (e.g. `'errorBuf'`, `'nonFiltSamp'`, `sampledTexMS`, etc.)
    */
   getBindingResource(bindingType) {
@@ -293,14 +299,14 @@ export class ValidationTest extends GPUTest {
     switch (stage) {
       case 'VERTEX':
         return `
-          @stage(vertex) fn main() -> @builtin(position) vec4<f32> {
+          @vertex fn main() -> @builtin(position) vec4<f32> {
             return vec4<f32>();
           }
         `;
       case 'FRAGMENT':
-        return `@stage(fragment) fn main() {}`;
+        return `@fragment fn main() {}`;
       case 'COMPUTE':
-        return `@stage(compute) @workgroup_size(1) fn main() {}`;}
+        return `@compute @workgroup_size(1) fn main() {}`;}
 
   }
 
@@ -310,9 +316,11 @@ export class ValidationTest extends GPUTest {
   }
 
   /** Return a GPURenderPipeline with default options and no-op vertex and fragment shaders. */
-  createNoOpRenderPipeline() {
+  createNoOpRenderPipeline(
+  layout = 'auto')
+  {
     return this.device.createRenderPipeline({
-      layout: 'auto',
+      layout,
       vertex: {
         module: this.device.createShaderModule({
           code: this.getNoOpShaderCode('VERTEX') }),
@@ -375,5 +383,52 @@ export class ValidationTest extends GPUTest {
 
     void this.device.popErrorScope();
     return pipeline;
+  }
+
+  /** Return an invalid GPUShaderModule. */
+  createInvalidShaderModule() {
+    this.device.pushErrorScope('validation');
+    const code = 'deadbeaf'; // Something make no sense
+    const shaderModule = this.device.createShaderModule({ code });
+    void this.device.popErrorScope();
+    return shaderModule;
+  }
+
+  /** Helper for testing createRenderPipeline(Async) validation */
+  doCreateRenderPipelineTest(
+  isAsync,
+  _success,
+  descriptor)
+  {
+    if (isAsync) {
+      if (_success) {
+        this.shouldResolve(this.device.createRenderPipelineAsync(descriptor));
+      } else {
+        this.shouldReject('OperationError', this.device.createRenderPipelineAsync(descriptor));
+      }
+    } else {
+      this.expectValidationError(() => {
+        this.device.createRenderPipeline(descriptor);
+      }, !_success);
+    }
+  }
+
+  /** Helper for testing createComputePipeline(Async) validation */
+  doCreateComputePipelineTest(
+  isAsync,
+  _success,
+  descriptor)
+  {
+    if (isAsync) {
+      if (_success) {
+        this.shouldResolve(this.device.createComputePipelineAsync(descriptor));
+      } else {
+        this.shouldReject('OperationError', this.device.createComputePipelineAsync(descriptor));
+      }
+    } else {
+      this.expectValidationError(() => {
+        this.device.createComputePipeline(descriptor);
+      }, !_success);
+    }
   }}
 //# sourceMappingURL=validation_test.js.map

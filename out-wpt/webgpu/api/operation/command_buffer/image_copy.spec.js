@@ -29,7 +29,7 @@
   - add another initMethod which renders the texture [3]
   - test copyT2B with buffer size not divisible by 4 (not done because expectContents 4-byte alignment)
   - Convert the float32 values in initialData into the ones compatible to the depth aspect of
-    depthFormats when depth16unorm and depth24unorm-stencil8 are supported by the browsers in
+    depthFormats when depth16unorm is supported by the browsers in
     DoCopyTextureToBufferWithDepthAspectTest().
 
 TODO: Expand tests of GPUExtent3D [1]
@@ -55,6 +55,7 @@ import {
 import { GPUTest } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
 import { align } from '../../../util/math.js';
+import { DataArrayGenerator } from '../../../util/texture/data_generation.js';
 import {
   bytesInACompleteRow,
   dataBytesForCopyOrFail,
@@ -86,6 +87,9 @@ const kExcludedFormats = new Set([
 ]);
 
 const kWorkingColorTextureFormats = kColorTextureFormats.filter(x => !kExcludedFormats.has(x));
+
+const dataGenerator = new DataArrayGenerator();
+const altDataGenerator = new DataArrayGenerator();
 
 class ImageCopyTest extends GPUTest {
   /** Offset for a particular texel in the linear texture data */
@@ -125,14 +129,6 @@ class ImageCopyTest extends GPUTest {
         };
       }
     }
-  }
-
-  generateData(byteSize, start = 0, offset = 0) {
-    const arr = new Uint8Array(byteSize);
-    for (let i = 0; i < byteSize; ++i) {
-      arr[i + offset] = (i ** 3 + i + start) % 251;
-    }
-    return arr;
   }
 
   /**
@@ -332,7 +328,7 @@ class ImageCopyTest extends GPUTest {
     // The alignment is necessary because we need to copy and map data from this buffer.
     const bufferSize = align(expected.byteLength, 4);
     // The start value ensures generated data here doesn't match the expected data.
-    const bufferData = this.generateData(bufferSize, 17);
+    const bufferData = altDataGenerator.generateAndCopyView(bufferSize, 17);
 
     const buffer = this.makeBufferWithContents(
       bufferData,
@@ -372,6 +368,8 @@ class ImageCopyTest extends GPUTest {
       size: align(byteLength, 4), // this is necessary because we need to copy and map data from this buffer
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
+
+    this.trackForCleanup(buffer);
 
     const encoder = this.device.createCommandEncoder();
     encoder.copyTextureToBuffer(
@@ -499,7 +497,9 @@ class ImageCopyTest extends GPUTest {
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
     });
 
-    const data = this.generateData(dataSize);
+    this.trackForCleanup(texture);
+
+    const data = dataGenerator.generateView(dataSize);
 
     switch (checkMethod) {
       case 'PartialCopyT2B': {
@@ -577,8 +577,10 @@ class ImageCopyTest extends GPUTest {
       mipLevelCount: mipLevel + 1,
     });
 
+    this.trackForCleanup(srcTexture);
+
     const copySize = [textureSize[0] >> mipLevel, textureSize[1] >> mipLevel, textureSize[2]];
-    const initialData = this.generateData(
+    const initialData = dataGenerator.generateView(
       align(initialDataSize, kBufferSizeAlignment),
       0,
       initialDataOffset
@@ -642,9 +644,11 @@ class ImageCopyTest extends GPUTest {
       mipLevelCount: mipLevel + 1,
     });
 
+    this.trackForCleanup(srcTexture);
+
     // Initialize srcTexture with queue.writeTexture()
     const copySize = [textureSize[0] >> mipLevel, textureSize[1] >> mipLevel, textureSize[2]];
-    const initialData = this.generateData(
+    const initialData = dataGenerator.generateView(
       align(copySize[0] * copySize[1] * copySize[2], kBufferSizeAlignment)
     );
 
@@ -673,6 +677,7 @@ class ImageCopyTest extends GPUTest {
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
 
+    this.trackForCleanup(outputBuffer);
     const encoder = this.device.createCommandEncoder();
     encoder.copyTextureToBuffer(
       { texture: srcTexture, aspect: 'stencil-only', mipLevel },
@@ -748,7 +753,7 @@ class ImageCopyTest extends GPUTest {
       vertex: {
         module: this.device.createShaderModule({
           code: `
-            @stage(vertex)
+            @vertex
             fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
               var pos : array<vec2<f32>, 6> = array<vec2<f32>, 6>(
                   vec2<f32>(-1.0,  1.0),
@@ -771,7 +776,7 @@ class ImageCopyTest extends GPUTest {
               stencilBitIndex: u32
             };
             @group(0) @binding(0) var<uniform> param: Params;
-            @stage(fragment)
+            @fragment
             fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(f32(1u << param.stencilBitIndex) / 255.0, 0.0, 0.0, 0.0);
             }`,
@@ -846,6 +851,8 @@ class ImageCopyTest extends GPUTest {
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
+    this.trackForCleanup(outputTexture);
+
     for (
       let stencilTextureLayer = 0;
       stencilTextureLayer < stencilTextureSize[2];
@@ -903,6 +910,7 @@ class ImageCopyTest extends GPUTest {
         usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
       });
 
+      this.trackForCleanup(outputStagingBuffer);
       encoder.copyTextureToBuffer(
         {
           texture: outputTexture,
@@ -952,6 +960,7 @@ class ImageCopyTest extends GPUTest {
       format: 'r32float',
     });
 
+    this.trackForCleanup(inputTexture);
     this.queue.writeTexture(
       { texture: inputTexture },
       initialData,
@@ -968,7 +977,7 @@ class ImageCopyTest extends GPUTest {
       vertex: {
         module: this.device.createShaderModule({
           code: `
-          @stage(vertex)
+          @vertex
           fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
             var pos : array<vec2<f32>, 6> = array<vec2<f32>, 6>(
                 vec2<f32>(-1.0,  1.0),
@@ -988,7 +997,7 @@ class ImageCopyTest extends GPUTest {
         module: this.device.createShaderModule({
           code: `
             @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-            @stage(fragment) fn main(@builtin(position) fragcoord : vec4<f32>) ->
+            @fragment fn main(@builtin(position) fragcoord : vec4<f32>) ->
               @builtin(frag_depth) f32 {
               var depthValue : vec4<f32> = textureLoad(inputTexture, vec2<i32>(fragcoord.xy), 0);
               return depthValue.x;
@@ -1072,9 +1081,7 @@ class ImageCopyTest extends GPUTest {
     mipLevel
   ) {
     // [2]: need to convert the float32 values in initialData into the ones compatible
-    // to the depth aspect of depthFormats when depth16unorm and depth24unorm-stencil8 are supported
-    // by the browsers.
-    assert(format !== 'depth24unorm-stencil8');
+    // to the depth aspect of depthFormats when depth16unorm is supported by the browsers.
 
     // Generate the initial depth data uploaded to the texture as float32.
     const initialData = new Float32Array(copySize[0] * copySize[1] * copySize[2]);
@@ -1108,6 +1115,7 @@ class ImageCopyTest extends GPUTest {
       mipLevelCount: mipLevel + 1,
     });
 
+    this.trackForCleanup(depthTexture);
     this.initializeDepthAspectWithRendering(depthTexture, format, copySize, mipLevel, initialData);
 
     // Copy the depth aspect of the texture into the destination buffer.
@@ -1131,6 +1139,7 @@ class ImageCopyTest extends GPUTest {
       size: destinationBufferSize,
     });
 
+    this.trackForCleanup(destinationBuffer);
     const copyEncoder = this.device.createCommandEncoder();
     copyEncoder.copyTextureToBuffer(
       {

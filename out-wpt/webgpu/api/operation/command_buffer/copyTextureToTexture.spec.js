@@ -18,17 +18,12 @@ import { GPUTest } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
 import { align } from '../../../util/math.js';
 import { physicalMipSize } from '../../../util/texture/base.js';
+import { DataArrayGenerator } from '../../../util/texture/data_generation.js';
 import { kBytesPerRowAlignment, dataBytesForCopyOrFail } from '../../../util/texture/layout.js';
 
-class F extends GPUTest {
-  GetInitialData(byteSize) {
-    const initialData = new Uint8Array(byteSize);
-    for (let i = 0; i < initialData.length; ++i) {
-      initialData[i] = ((i ** 3 + i) % 251) + 1; // Have all initialData be non zero.
-    }
-    return initialData;
-  }
+const dataGenerator = new DataArrayGenerator();
 
+class F extends GPUTest {
   GetInitialDataPerMipLevel(dimension, textureSize, format, mipLevel) {
     const textureSizeAtLevel = physicalMipSize(textureSize, format, dimension, mipLevel);
     const bytesPerBlock = kTextureFormatInfo[format].bytesPerBlock;
@@ -39,7 +34,7 @@ class F extends GPUTest {
       (textureSizeAtLevel.height / blockHeightInTexel);
 
     const byteSize = bytesPerBlock * blocksPerSubresource * textureSizeAtLevel.depthOrArrayLayers;
-    return this.GetInitialData(byteSize);
+    return dataGenerator.generateView(byteSize);
   }
 
   GetInitialStencilDataPerMipLevel(textureSize, format, mipLevel) {
@@ -50,7 +45,7 @@ class F extends GPUTest {
       textureSizeAtLevel.width *
       textureSizeAtLevel.height *
       textureSizeAtLevel.depthOrArrayLayers;
-    return this.GetInitialData(byteSize);
+    return dataGenerator.generateView(byteSize);
   }
 
   DoCopyTextureToTextureTest(
@@ -76,6 +71,7 @@ class F extends GPUTest {
     };
 
     const srcTexture = this.device.createTexture(srcTextureDesc);
+    this.trackForCleanup(srcTexture);
     const dstTextureDesc = {
       dimension,
       size: dstTextureSize,
@@ -85,6 +81,7 @@ class F extends GPUTest {
     };
 
     const dstTexture = this.device.createTexture(dstTextureDesc);
+    this.trackForCleanup(dstTexture);
 
     // Fill the whole subresource of srcTexture at srcCopyLevel with initialSrcData.
     const initialSrcData = this.GetInitialDataPerMipLevel(
@@ -190,6 +187,7 @@ class F extends GPUTest {
     };
 
     const dstBuffer = this.device.createBuffer(dstBufferDesc);
+    this.trackForCleanup(dstBuffer);
 
     encoder.copyTextureToBuffer(
       { texture: dstTexture, mipLevel: dstCopyLevel },
@@ -299,6 +297,7 @@ class F extends GPUTest {
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
 
+    this.trackForCleanup(outputBuffer);
     const encoder = this.device.createCommandEncoder();
     encoder.copyTextureToBuffer(
       {
@@ -340,7 +339,7 @@ class F extends GPUTest {
               copyLayer: f32
             };
             @group(0) @binding(0) var<uniform> param: Params;
-            @stage(vertex)
+            @vertex
             fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
               var depthValue = 0.5 + 0.2 * sin(param.copyLayer);
               var pos : array<vec3<f32>, 6> = array<vec3<f32>, 6>(
@@ -364,7 +363,7 @@ class F extends GPUTest {
       renderPipelineDescriptor.fragment = {
         module: this.device.createShaderModule({
           code: `
-            @stage(fragment)
+            @fragment
             fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(0.0, 1.0, 0.0, 1.0);
             }`,
@@ -487,6 +486,7 @@ class F extends GPUTest {
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
     });
 
+    this.trackForCleanup(outputColorTexture);
     const encoder = this.device.createCommandEncoder();
     for (let dstCopyLayer = 0; dstCopyLayer < copySize[2]; ++dstCopyLayer) {
       // If the depth value is not expected, the color of outputColorTexture will remain Red after
@@ -1180,6 +1180,7 @@ g.test('copy_depth_stencil')
       mipLevelCount: srcCopyLevel + 1,
     });
 
+    t.trackForCleanup(sourceTexture);
     const destinationTexture = t.device.createTexture({
       format,
       size: [
@@ -1192,6 +1193,8 @@ g.test('copy_depth_stencil')
         GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
       mipLevelCount: dstCopyLevel + 1,
     });
+
+    t.trackForCleanup(destinationTexture);
 
     let initialStencilData = undefined;
     if (kTextureFormatInfo[format].stencil) {
@@ -1277,12 +1280,18 @@ g.test('copy_multisampled_color')
       sampleCount: kSampleCount,
     });
 
+    t.trackForCleanup(sourceTexture);
     const destinationTexture = t.device.createTexture({
       format: kColorFormat,
       size: textureSize,
-      usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
+      usage:
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.RENDER_ATTACHMENT,
       sampleCount: kSampleCount,
     });
+
+    t.trackForCleanup(destinationTexture);
 
     // Initialize sourceTexture with a draw call.
     const renderPipelineForInit = t.device.createRenderPipeline({
@@ -1290,7 +1299,7 @@ g.test('copy_multisampled_color')
       vertex: {
         module: t.device.createShaderModule({
           code: `
-            @stage(vertex)
+            @vertex
             fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
               var pos = array<vec2<f32>, 3>(
                   vec2<f32>(-1.0,  1.0),
@@ -1307,7 +1316,7 @@ g.test('copy_multisampled_color')
       fragment: {
         module: t.device.createShaderModule({
           code: `
-            @stage(fragment)
+            @fragment
             fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(0.3, 0.5, 0.8, 1.0);
             }`,
@@ -1362,7 +1371,7 @@ g.test('copy_multisampled_color')
       vertex: {
         module: t.device.createShaderModule({
           code: `
-          @stage(vertex)
+          @vertex
           fn main(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
             var pos = array<vec2<f32>, 6>(
               vec2<f32>(-1.0,  1.0),
@@ -1383,7 +1392,7 @@ g.test('copy_multisampled_color')
           code: `
           @group(0) @binding(0) var sourceTexture : texture_multisampled_2d<f32>;
           @group(0) @binding(1) var destinationTexture : texture_multisampled_2d<f32>;
-          @stage(fragment)
+          @fragment
           fn main(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
             var coord_in_vec2 = vec2<i32>(i32(coord_in.x), i32(coord_in.y));
             for (var sampleIndex = 0; sampleIndex < ${kSampleCount};
@@ -1426,6 +1435,7 @@ g.test('copy_multisampled_color')
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
+    t.trackForCleanup(expectedOutputTexture);
     const validationEncoder = t.device.createCommandEncoder();
     const renderPassForValidation = validationEncoder.beginRenderPass({
       colorAttachments: [
@@ -1474,6 +1484,7 @@ g.test('copy_multisampled_depth')
       sampleCount: kSampleCount,
     });
 
+    t.trackForCleanup(sourceTexture);
     const destinationTexture = t.device.createTexture({
       format: kDepthFormat,
       size: textureSize,
@@ -1481,10 +1492,12 @@ g.test('copy_multisampled_depth')
       sampleCount: kSampleCount,
     });
 
+    t.trackForCleanup(destinationTexture);
+
     const vertexState = {
       module: t.device.createShaderModule({
         code: `
-          @stage(vertex)
+          @vertex
           fn main(@builtin(vertex_index) VertexIndex : u32)-> @builtin(position) vec4<f32> {
             var pos : array<vec3<f32>, 6> = array<vec3<f32>, 6>(
                 vec3<f32>(-1.0,  1.0, 0.5),
@@ -1556,7 +1569,7 @@ g.test('copy_multisampled_depth')
       fragment: {
         module: t.device.createShaderModule({
           code: `
-          @stage(fragment)
+          @fragment
           fn main() -> @location(0) vec4<f32> {
             return vec4<f32>(0.0, 1.0, 0.0, 1.0);
           }`,
@@ -1584,11 +1597,14 @@ g.test('copy_multisampled_depth')
       sampleCount: kSampleCount,
     });
 
+    t.trackForCleanup(multisampledColorTexture);
     const colorTextureAsResolveTarget = t.device.createTexture({
       format: kColorFormat,
       size: textureSize,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
+
+    t.trackForCleanup(colorTextureAsResolveTarget);
 
     const encoderForVerify = t.device.createCommandEncoder();
     const renderPassForVerify = encoderForVerify.beginRenderPass({

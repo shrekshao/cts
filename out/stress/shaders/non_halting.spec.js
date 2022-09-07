@@ -19,9 +19,9 @@ fn(async (t) => {
   const buffer = t.makeBufferWithContents(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
   const module = t.device.createShaderModule({
     code: `
-        struct Buffer { data: u32; };
+        struct Buffer { data: u32, };
         @group(0) @binding(0) var<storage, read_write> buffer: Buffer;
-        @stage(compute) @workgroup_size(1) fn main() {
+        @compute @workgroup_size(1) fn main() {
           loop {
             if (buffer.data == 1u) {
               break;
@@ -59,9 +59,9 @@ device loss.`).
 fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
-        struct Data { counter: u32; increment: u32; };
+        struct Data { counter: u32, increment: u32, };
         @group(0) @binding(0) var<uniform> data: Data;
-        @stage(vertex) fn vmain() -> @builtin(position) vec4<f32> {
+        @vertex fn vmain() -> @builtin(position) vec4<f32> {
           var counter: u32 = data.counter;
           loop {
             if (counter % 2u == 1u) {
@@ -71,7 +71,7 @@ fn(async (t) => {
           }
           return vec4<f32>(1.0, 1.0, 0.0, f32(counter));
         }
-        @stage(fragment) fn fmain() -> @location(0) vec4<f32> {
+        @fragment fn fmain() -> @location(0) vec4<f32> {
           return vec4<f32>(1.0);
         }
       ` });
@@ -131,12 +131,12 @@ device loss.`).
 fn(async (t) => {
   const module = t.device.createShaderModule({
     code: `
-        struct Data { counter: u32; increment: u32; };
+        struct Data { counter: u32, increment: u32, };
         @group(0) @binding(0) var<uniform> data: Data;
-        @stage(vertex) fn vmain() -> @builtin(position) vec4<f32> {
+        @vertex fn vmain() -> @builtin(position) vec4<f32> {
           return vec4<f32>(0.0, 0.0, 0.0, 1.0);
         }
-        @stage(fragment) fn fmain() -> @location(0) vec4<f32> {
+        @fragment fn fmain() -> @location(0) vec4<f32> {
           var counter: u32 = data.counter;
           loop {
             if (counter % 2u == 1u) {

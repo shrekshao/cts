@@ -62,9 +62,13 @@ export class ShaderValidationTest extends GPUTest {
    * t.wrapInEntryPoint(`var i = 0;`);
    * ```
    */
-  wrapInEntryPoint(code: string) {
+  wrapInEntryPoint(code: string, enabledExtensions: string[] = []) {
+    const enableDirectives = enabledExtensions.map(x => `enable ${x};`).join('\n      ');
+
     return `
-      @stage(compute) @workgroup_size(1)
+      ${enableDirectives}
+
+      @compute @workgroup_size(1)
       fn main() {
         ${code}
       }`;

@@ -1,23 +1,37 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { compare, anyOf } from '../../../util/compare.js';import {
+**/import { assert } from '../../../../common/util/util.js';import { compare, anyOf } from '../../../util/compare.js';
+import {
 ScalarType,
-
+Scalar,
 
 TypeVec,
 TypeU32,
 
 Vector,
 VectorType,
-f32,
-f64 } from
+f32 } from
 '../../../util/conversion.js';
-import { flushSubnormalNumber, isSubnormalNumber, quantizeToF32 } from '../../../util/math.js';
+import {
 
-// Helper for converting Values to Comparators.
-function toComparator(input) {
-  if (input.type !== undefined) {
-    return (got, cmpFloats) => compare(got, input, cmpFloats);
+F32Interval } from
+
+
+
+'../../../util/f32_interval.js';
+import { quantizeToF32 } from '../../../util/math.js';
+
+
+
+/** Is this expectation actually a Comparator */
+function isComparator(e) {
+  return !(e instanceof F32Interval || e instanceof Scalar || e instanceof Vector);
+}
+
+/** Helper for converting Values to Comparators */
+export function toComparator(input) {
+  if (!isComparator(input)) {
+    return (got) => compare(got, input);
   }
   return input;
 }
@@ -38,8 +52,12 @@ function toComparator(input) {
 
 
 
+// Read-write storage buffer
 
+/** All possible input sources */
+export const allInputSources = ['const', 'uniform', 'storage_r', 'storage_rw'];
 
+/** Configuration for running a expression test */
 
 
 
@@ -120,12 +138,9 @@ t,
 expressionBuilder,
 parameterTypes,
 returnType,
-cfg = { storageClass: 'storage_r' },
+cfg = { inputSource: 'storage_r' },
 cases)
 {
-  const cmpFloats =
-  cfg.cmpFloats !== undefined ? cfg.cmpFloats : (got, expect) => got === expect;
-
   // If the 'vectorize' config option was provided, pack the cases into vectors.
   if (cfg.vectorize !== undefined) {
     const packed = packScalarsToVector(parameterTypes, returnType, cases, cfg.vectorize);
@@ -134,109 +149,68 @@ cases)
     returnType = packed.returnType;
   }
 
-  // The size of the input buffer max exceed the maximum buffer binding size,
+  // The size of the input buffer may exceed the maximum buffer binding size,
   // so chunk the tests up into batches that fit into the limits.
-  const maxInputSize =
-  cfg.storageClass === 'uniform' ?
-  t.device.limits.maxUniformBufferBindingSize :
-  t.device.limits.maxStorageBufferBindingSize;
-  const casesPerBatch = Math.floor(maxInputSize / (parameterTypes.length * kValueStride));
+  const casesPerBatch = function () {
+    switch (cfg.inputSource) {
+      case 'const':
+        return 256; // Arbitrary limit, to ensure shaders aren't too large
+      case 'uniform':
+        return Math.floor(
+        t.device.limits.maxUniformBufferBindingSize / (parameterTypes.length * kValueStride));
+
+      case 'storage_r':
+      case 'storage_rw':
+        return Math.floor(
+        t.device.limits.maxStorageBufferBindingSize / (parameterTypes.length * kValueStride));}
+
+
+  }();
+
+  // Submit all the batches inside an error scope.
+  // Note: there is no async work between "push" and "pop" so this is safe to
+  // run concurrently with itself (in other subcases).
+  t.device.pushErrorScope('validation');
+
+  const checkResults = [];
   for (let i = 0; i < cases.length; i += casesPerBatch) {
     const batchCases = cases.slice(i, Math.min(i + casesPerBatch, cases.length));
-    runBatch(
-    t,
-    expressionBuilder,
-    parameterTypes,
-    returnType,
-    batchCases,
-    cfg.storageClass,
-    cmpFloats);
+    checkResults.push(
+    submitBatch(t, expressionBuilder, parameterTypes, returnType, batchCases, cfg.inputSource));
 
   }
+
+  // Check GPU validation (shader compilation, pipeline creation, etc) before checking the results.
+  return t.device.popErrorScope().then((error) => {
+    if (error !== null) {
+      t.fail(error.message);
+      return;
+    }
+
+    // Check the results
+    checkResults.forEach((f) => f());
+  });
 }
 
 /**
- * Runs the list of expression tests. The input data must fit within the buffer
- * binding limits of the given storageClass.
+ * Submits the list of expression tests. The input data must fit within the
+ * buffer binding limits of the given inputSource.
  * @param t the GPUTest
  * @param expressionBuilder the expression builder function
  * @param parameterTypes the list of expression parameter types
  * @param returnType the return type for the expression overload
  * @param cases list of test cases that fit within the binding limits of the device
- * @param storageClass the storage class to use for the input buffer
- * @param cmpFloats the method to compare floating point numbers
+ * @param inputSource the source of the input values
+ * @returns a function that checks the results are as expected
  */
-function runBatch(
+function submitBatch(
 t,
 expressionBuilder,
 parameterTypes,
 returnType,
 cases,
-storageClass,
-cmpFloats)
+inputSource)
 {
-  // returns the WGSL expression to load the ith parameter of the given type from the input buffer
-  const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
-
-  // resolves to the expression that calls the builtin
-  const expr = toStorage(returnType, expressionBuilder(parameterTypes.map(paramExpr)));
-
-  const storage = storageClass === 'storage_r' ? 'read' : 'read_write';
-
-  // the full WGSL shader source
-  const source = `
-struct Input {
-${parameterTypes.
-  map((ty, i) => `  @size(${kValueStride}) param${i} : ${storageType(ty)},`).
-  join('\n')}
-};
-
-struct Output {
-  @size(${kValueStride}) value : ${storageType(returnType)}
-};
-
-@group(0) @binding(0)
-${
-  storageClass === 'uniform' ?
-  `var<uniform> inputs : array<Input, ${cases.length}>;` :
-  `var<storage, ${storage}> inputs : array<Input, ${cases.length}>;`
-  }
-@group(0) @binding(1) var<storage, write> outputs : array<Output, ${cases.length}>;
-
-@stage(compute) @workgroup_size(1)
-fn main() {
-  for(var i = 0; i < ${cases.length}; i = i + 1) {
-    outputs[i].value = ${expr};
-  }
-}
-`;
-  const inputSize = cases.length * parameterTypes.length * kValueStride;
-
-  // Holds all the parameter values for all cases
-  const inputData = new Uint8Array(inputSize);
-
-  // Pack all the input parameter values into the inputData buffer
-  {
-    const caseStride = kValueStride * parameterTypes.length;
-    for (let caseIdx = 0; caseIdx < cases.length; caseIdx++) {
-      const caseBase = caseIdx * caseStride;
-      for (let paramIdx = 0; paramIdx < parameterTypes.length; paramIdx++) {
-        const offset = caseBase + paramIdx * kValueStride;
-        const params = cases[caseIdx].input;
-        if (params instanceof Array) {
-          params[paramIdx].copyTo(inputData, offset);
-        } else {
-          params.copyTo(inputData, offset);
-        }
-      }
-    }
-  }
-  const inputBuffer = t.makeBufferWithContents(
-  inputData,
-  GPUBufferUsage.COPY_SRC | (
-  storageClass === 'uniform' ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE));
-
-
   // Construct a buffer to hold the results of the expression tests
   const outputBufferSize = cases.length * kValueStride;
   const outputBuffer = t.device.createBuffer({
@@ -244,18 +218,14 @@ fn main() {
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE });
 
 
-  const module = t.device.createShaderModule({ code: source });
-  const pipeline = t.device.createComputePipeline({
-    layout: 'auto',
-    compute: { module, entryPoint: 'main' } });
-
-
-  const group = t.device.createBindGroup({
-    layout: pipeline.getBindGroupLayout(0),
-    entries: [
-    { binding: 0, resource: { buffer: inputBuffer } },
-    { binding: 1, resource: { buffer: outputBuffer } }] });
-
+  const [pipeline, group] = buildPipeline(
+  t,
+  expressionBuilder,
+  parameterTypes,
+  returnType,
+  cases,
+  inputSource,
+  outputBuffer);
 
 
   const encoder = t.device.createCommandEncoder();
@@ -267,34 +237,223 @@ fn main() {
 
   t.queue.submit([encoder.finish()]);
 
-  const checkExpectation = (outputData) => {
-    // Read the outputs from the output buffer
-    const outputs = new Array(cases.length);
-    for (let i = 0; i < cases.length; i++) {
-      outputs[i] = returnType.read(outputData, i * kValueStride);
-    }
+  // Return a function that can check the results of the shader
+  return () => {
+    const checkExpectation = (outputData) => {
+      // Read the outputs from the output buffer
+      const outputs = new Array(cases.length);
+      for (let i = 0; i < cases.length; i++) {
+        outputs[i] = returnType.read(outputData, i * kValueStride);
+      }
 
-    // The list of expectation failures
-    const errs = [];
+      // The list of expectation failures
+      const errs = [];
 
-    // For each case...
-    for (let caseIdx = 0; caseIdx < cases.length; caseIdx++) {
-      const c = cases[caseIdx];
-      const got = outputs[caseIdx];
-      const cmp = toComparator(c.expected)(got, cmpFloats);
-      if (!cmp.matched) {
-        errs.push(`(${c.input instanceof Array ? c.input.join(', ') : c.input})
+      // For each case...
+      for (let caseIdx = 0; caseIdx < cases.length; caseIdx++) {
+        const c = cases[caseIdx];
+        const got = outputs[caseIdx];
+        const cmp = toComparator(c.expected)(got);
+        if (!cmp.matched) {
+          errs.push(`(${c.input instanceof Array ? c.input.join(', ') : c.input})
     returned: ${cmp.got}
     expected: ${cmp.expected}`);
+        }
       }
-    }
 
-    return errs.length > 0 ? new Error(errs.join('\n\n')) : undefined;
+      return errs.length > 0 ? new Error(errs.join('\n\n')) : undefined;
+    };
+
+    t.expectGPUBufferValuesPassCheck(outputBuffer, checkExpectation, {
+      type: Uint8Array,
+      typedLength: outputBufferSize });
+
   };
+}
 
-  t.expectGPUBufferValuesPassCheck(outputBuffer, checkExpectation, {
-    type: Uint8Array,
-    typedLength: outputBufferSize });
+/**
+ * @param v either an array of T or a single element of type T
+ * @param i the value index to
+ * @returns the i'th value of v, if v is an array, otherwise v (i must be 0)
+ */
+function ith(v, i) {
+  if (v instanceof Array) {
+    assert(i < v.length);
+    return v[i];
+  }
+  assert(i === 0);
+  return v;
+}
+
+/**
+ * Constructs and returns a GPUComputePipeline and GPUBindGroup for running a
+ * batch of test cases.
+ * @param t the GPUTest
+ * @param expressionBuilder the expression builder function
+ * @param parameterTypes the list of expression parameter types
+ * @param returnType the return type for the expression overload
+ * @param cases list of test cases that fit within the binding limits of the device
+ * @param inputSource the source of the input values
+ * @param outputBuffer the buffer that will hold the output values of the tests
+ */
+function buildPipeline(
+t,
+expressionBuilder,
+parameterTypes,
+returnType,
+cases,
+inputSource,
+outputBuffer)
+{
+  // wgsl declaration of output buffer and binding
+  const wgslStorageType = storageType(returnType);
+  const wgslOutputs = `
+struct Output {
+  @size(${kValueStride}) value : ${wgslStorageType}
+};
+@group(0) @binding(0) var<storage, read_write> outputs : array<Output, ${cases.length}>;
+`;
+
+  switch (inputSource) {
+    case 'const':{
+        //////////////////////////////////////////////////////////////////////////
+        // Input values are constant values in the WGSL shader
+        //////////////////////////////////////////////////////////////////////////
+        const wgslValues = cases.map((c) => {
+          const args = parameterTypes.map((_, i) => `(${ith(c.input, i).wgsl()})`);
+          return `${toStorage(returnType, expressionBuilder(args))}`;
+        });
+
+        // the full WGSL shader source
+        const source = `
+${wgslOutputs}
+
+const values = array<${wgslStorageType}, ${cases.length}>(
+  ${wgslValues.join(',\n  ')}
+);
+
+@compute @workgroup_size(1)
+fn main() {
+  for (var i = 0u; i < ${cases.length}; i++) {
+    outputs[i].value = values[i];
+  }
+}
+`;
+
+        // build the shader module
+        const module = t.device.createShaderModule({ code: source });
+
+        // build the pipeline
+        const pipeline = t.device.createComputePipeline({
+          layout: 'auto',
+          compute: { module, entryPoint: 'main' } });
+
+
+        // build the bind group
+        const group = t.device.createBindGroup({
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [{ binding: 0, resource: { buffer: outputBuffer } }] });
+
+
+        return [pipeline, group];
+      }
+
+    case 'uniform':
+    case 'storage_r':
+    case 'storage_rw':{
+        //////////////////////////////////////////////////////////////////////////
+        // Input values come from a uniform or storage buffer
+        //////////////////////////////////////////////////////////////////////////
+
+        // returns the WGSL expression to load the ith parameter of the given type from the input buffer
+        const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
+
+        // resolves to the expression that calls the builtin
+        const expr = toStorage(returnType, expressionBuilder(parameterTypes.map(paramExpr)));
+
+        // input binding var<...> declaration
+        const wgslInputVar = function () {
+          switch (inputSource) {
+            case 'storage_r':
+              return 'var<storage, read>';
+            case 'storage_rw':
+              return 'var<storage, read_write>';
+            case 'uniform':
+              return 'var<uniform>';}
+
+        }();
+
+        // the full WGSL shader source
+        const source = `
+struct Input {
+${parameterTypes.
+        map((ty, i) => `  @size(${kValueStride}) param${i} : ${storageType(ty)},`).
+        join('\n')}
+};
+
+${wgslOutputs}
+
+@group(0) @binding(1)
+${wgslInputVar} inputs : array<Input, ${cases.length}>;
+
+@compute @workgroup_size(1)
+fn main() {
+  for(var i = 0; i < ${cases.length}; i++) {
+    outputs[i].value = ${expr};
+  }
+}
+`;
+
+        // size in bytes of the input buffer
+        const inputSize = cases.length * parameterTypes.length * kValueStride;
+
+        // Holds all the parameter values for all cases
+        const inputData = new Uint8Array(inputSize);
+
+        // Pack all the input parameter values into the inputData buffer
+        {
+          const caseStride = kValueStride * parameterTypes.length;
+          for (let caseIdx = 0; caseIdx < cases.length; caseIdx++) {
+            const caseBase = caseIdx * caseStride;
+            for (let paramIdx = 0; paramIdx < parameterTypes.length; paramIdx++) {
+              const offset = caseBase + paramIdx * kValueStride;
+              const params = cases[caseIdx].input;
+              if (params instanceof Array) {
+                params[paramIdx].copyTo(inputData, offset);
+              } else {
+                params.copyTo(inputData, offset);
+              }
+            }
+          }
+        }
+
+        // build the input buffer
+        const inputBuffer = t.makeBufferWithContents(
+        inputData,
+        GPUBufferUsage.COPY_SRC | (
+        inputSource === 'uniform' ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE));
+
+
+        // build the shader module
+        const module = t.device.createShaderModule({ code: source });
+
+        // build the pipeline
+        const pipeline = t.device.createComputePipeline({
+          layout: 'auto',
+          compute: { module, entryPoint: 'main' } });
+
+
+        // build the bind group
+        const group = t.device.createBindGroup({
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [
+          { binding: 0, resource: { buffer: outputBuffer } },
+          { binding: 1, resource: { buffer: inputBuffer } }] });
+
+
+
+        return [pipeline, group];
+      }}
 
 }
 
@@ -350,12 +509,12 @@ vectorWidth)
     for (let i = 0; i < vectorWidth; i++) {
       comparators[i] = toComparator(cases[clampCaseIdx(caseIdx + i)].expected);
     }
-    const packedComparator = (got, cmpFloats) => {
+    const packedComparator = (got) => {
       let matched = true;
       const gElements = new Array(vectorWidth);
       const eElements = new Array(vectorWidth);
       for (let i = 0; i < vectorWidth; i++) {
-        const d = comparators[i](got.elements[i], cmpFloats);
+        const d = comparators[i](got.elements[i]);
         matched = matched && d.matched;
         gElements[i] = d.got;
         eElements[i] = d.expected;
@@ -379,66 +538,91 @@ vectorWidth)
 
 }
 
-/** @returns a set of flushed and non-flushed floating point results for a given number. */
-function calculateFlushedResults(value) {
-  return [f64(value), f64(flushSubnormalNumber(value))];
-}
-
 /**
- * Generates a Case for the param and unary op provide.
- * The Case will use either exact matching or the test level Comparator.
- * @param param the parameter to pass into the operation
- * @param op callback that implements the truth function for the unary operation
+ * Generates a Case for the param and unary interval generator provided.
+ * The Case will use use an interval comparator for matching results.
+ * @param param the param to pass into the unary operation
+ * @param ops callbacks that implement generating an acceptance interval for a unary operation
  */
-export function makeUnaryF32Case(param, op) {
-  const f32_param = quantizeToF32(param);
-  const is_param_subnormal = isSubnormalNumber(f32_param);
-  const expected = calculateFlushedResults(op(f32_param));
-  if (is_param_subnormal) {
-    calculateFlushedResults(op(0)).forEach((value) => {
-      expected.push(value);
-    });
+export function makeUnaryToF32IntervalCase(param, ...ops) {
+  param = quantizeToF32(param);
+  const intervals = new Array();
+  for (const op of ops) {
+    intervals.push(op(param));
   }
-  return { input: [f32(param)], expected: anyOf(...expected) };
+  return { input: [f32(param)], expected: anyOf(...intervals) };
 }
 
 /**
- * Generates a Case for the params and binary op provide.
- * The Case will use either exact matching or the test level Comparator.
+ * Generates a Case for the params and binary interval generator provided.
+ * The Case will use use an interval comparator for matching results.
  * @param param0 the first param or left hand side to pass into the binary operation
  * @param param1 the second param or rhs hand side to pass into the binary operation
- * @param op callback that implements the truth function for the binary operation
- * @param skip_param1_zero_flush should the builder skip cases where the param1 would be flushed to 0,
- *                               this is to avoid performing division by 0, other invalid operations.
- *                               The caller is responsible for making sure the initial param1 isn't 0.
+ * @param ops callbacks that implement generating an acceptance interval for a binary operation
  */
-export function makeBinaryF32Case(
+export function makeBinaryToF32IntervalCase(
 param0,
 param1,
-op,
-skip_param1_zero_flush = false)
+...ops)
 {
-  const f32_param0 = quantizeToF32(param0);
-  const f32_param1 = quantizeToF32(param1);
-  const is_param0_subnormal = isSubnormalNumber(f32_param0);
-  const is_param1_subnormal = isSubnormalNumber(f32_param1);
-  const expected = calculateFlushedResults(op(f32_param0, f32_param1));
-  if (is_param0_subnormal) {
-    calculateFlushedResults(op(0, f32_param1)).forEach((value) => {
-      expected.push(value);
-    });
+  param0 = quantizeToF32(param0);
+  param1 = quantizeToF32(param1);
+  const intervals = new Array();
+  for (const op of ops) {
+    intervals.push(op(param0, param1));
   }
-  if (!skip_param1_zero_flush && is_param1_subnormal) {
-    calculateFlushedResults(op(f32_param0, 0)).forEach((value) => {
-      expected.push(value);
-    });
-  }
-  if (!skip_param1_zero_flush && is_param0_subnormal && is_param1_subnormal) {
-    calculateFlushedResults(op(0, 0)).forEach((value) => {
-      expected.push(value);
-    });
-  }
+  return { input: [f32(param0), f32(param1)], expected: anyOf(...intervals) };
+}
 
-  return { input: [f32(param0), f32(param1)], expected: anyOf(...expected) };
+/**
+ * Generates a Case for the params and ternary interval generator provided.
+ * The Case will use use an interval comparator for matching results.
+ * @param param0 the first param to pass into the ternary operation
+ * @param param1 the second param to pass into the ternary operation
+ * @param param2 the third param to pass into the ternary operation
+ * @param ops callbacks that implement generating an acceptance interval for a
+ *           ternary operation.
+ */
+export function makeTernaryToF32IntervalCase(
+param0,
+param1,
+param2,
+...ops)
+{
+  param0 = quantizeToF32(param0);
+  param1 = quantizeToF32(param1);
+  param2 = quantizeToF32(param2);
+  const intervals = new Array();
+  for (const op of ops) {
+    intervals.push(op(param0, param1, param2));
+  }
+  return {
+    input: [f32(param0), f32(param1), f32(param2)],
+    expected: anyOf(...intervals) };
+
+}
+
+/**
+ * Generates a Case for the params and vector pair interval generator provided.
+ * @param param0 the first param to pass into the operation
+ * @param param1 the second param to pass into the operation
+ * @param ops callbacks that implement generating an acceptance interval for a
+ *            pair of vectors.
+ */
+export function makeVectorPairToF32IntervalCase(
+param0,
+param1,
+...ops)
+{
+  param0 = param0.map(quantizeToF32);
+  param1 = param1.map(quantizeToF32);
+  const param0_f32 = param0.map(f32);
+  const param1_f32 = param1.map(f32);
+
+  const intervals = ops.map((o) => o(param0, param1));
+  return {
+    input: [new Vector(param0_f32), new Vector(param1_f32)],
+    expected: anyOf(...intervals) };
+
 }
 //# sourceMappingURL=expression.js.map

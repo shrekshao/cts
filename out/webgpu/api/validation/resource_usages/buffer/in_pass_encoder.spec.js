@@ -17,7 +17,7 @@ const kBoundBufferSize = 256;
 
 
 
-const kAllBufferUsages = [
+export const kAllBufferUsages = [
 'uniform',
 'storage',
 'read-only-storage',
@@ -27,7 +27,7 @@ const kAllBufferUsages = [
 'indexedIndirect'];
 
 
-class F extends ValidationTest {
+export class BufferResourceUsageTest extends ValidationTest {
   createBindGroupLayoutForTest(
   type,
   resourceVisibility)
@@ -109,7 +109,7 @@ class F extends ValidationTest {
       fragment: {
         module: this.device.createShaderModule({
           code: `
-              @stage(fragment) fn main()
+              @fragment fn main()
                 -> @location(0) vec4<f32> {
                   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
               }` }),
@@ -138,7 +138,7 @@ function IsBufferUsageInBindGroup(bufferUsage) {
 
 }
 
-export const g = makeTestGroup(F);
+export const g = makeTestGroup(BufferResourceUsageTest);
 
 g.test('subresources,buffer_usage_in_one_compute_pass_with_no_dispatch').
 desc(

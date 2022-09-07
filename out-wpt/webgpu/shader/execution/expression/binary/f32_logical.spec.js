@@ -8,7 +8,7 @@ import { GPUTest } from '../../../../gpu_test.js';
 import { anyOf } from '../../../../util/compare.js';
 import { bool, f32, TypeBool, TypeF32 } from '../../../../util/conversion.js';
 import { flushSubnormalScalar, fullF32Range } from '../../../../util/math.js';
-import { run } from '../expression.js';
+import { allInputSources, run } from '../expression.js';
 
 import { binary } from './binary.js';
 
@@ -44,11 +44,7 @@ Expression: x == y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value === rhs.value;
@@ -62,7 +58,7 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('=='), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('=='), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });
 
 g.test('not_equals')
@@ -73,11 +69,7 @@ Expression: x != y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value !== rhs.value;
@@ -91,7 +83,7 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('!='), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('!='), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });
 
 g.test('less_than')
@@ -102,11 +94,7 @@ Expression: x < y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value < rhs.value;
@@ -120,7 +108,7 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('<'), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('<'), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });
 
 g.test('less_equals')
@@ -131,11 +119,7 @@ Expression: x <= y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value <= rhs.value;
@@ -149,7 +133,7 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('<='), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('<='), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });
 
 g.test('greater_than')
@@ -160,11 +144,7 @@ Expression: x > y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value > rhs.value;
@@ -178,7 +158,7 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('>'), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('>'), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });
 
 g.test('greater_equals')
@@ -189,11 +169,7 @@ Expression: x >= y
 Accuracy: Correct result
 `
   )
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .fn(async t => {
     const truthFunc = (lhs, rhs) => {
       return lhs.value >= rhs.value;
@@ -207,5 +183,5 @@ Accuracy: Correct result
       });
     });
 
-    run(t, binary('>='), [TypeF32, TypeF32], TypeBool, t.params, cases);
+    await run(t, binary('>='), [TypeF32, TypeF32], TypeBool, t.params, cases);
   });

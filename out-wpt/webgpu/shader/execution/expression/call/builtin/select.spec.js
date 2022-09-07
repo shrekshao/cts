@@ -29,7 +29,7 @@ import {
   vec3,
   vec4,
 } from '../../../../../util/conversion.js';
-import { run } from '../../expression.js';
+import { run, allInputSources } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -66,7 +66,7 @@ g.test('scalar')
   .desc(`scalar tests`)
   .params(u =>
     u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
+      .combine('inputSource', allInputSources)
       .combine('component', ['b', 'f', 'i', 'u'])
       .combine('overload', ['scalar', 'vec2', 'vec3', 'vec4'])
   )
@@ -125,7 +125,7 @@ g.test('scalar')
 
     const overload = overloads[t.params.overload];
 
-    run(
+    await run(
       t,
       builtin('select'),
       [overload.type, overload.type, TypeBool],
@@ -140,7 +140,7 @@ g.test('vector')
   .desc(`vector tests`)
   .params(u =>
     u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
+      .combine('inputSource', allInputSources)
       .combine('component', ['b', 'f', 'i', 'u'])
       .combine('overload', ['vec2', 'vec3', 'vec4'])
   )
@@ -226,7 +226,7 @@ g.test('vector')
       }
     }
 
-    run(
+    await run(
       t,
       builtin('select'),
       [tests.dataType, tests.dataType, tests.boolType],

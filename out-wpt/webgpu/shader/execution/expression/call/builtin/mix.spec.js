@@ -17,65 +17,62 @@ Same as mix(e1,e2,T2(e3)).
 `;
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
+import { TypeF32 } from '../../../../../util/conversion.js';
+import { mixIntervals } from '../../../../../util/f32_interval.js';
+import { sparseF32Range } from '../../../../../util/math.js';
+import { allInputSources, makeTernaryToF32IntervalCase, run } from '../../expression.js';
+
+import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
 g.test('matching_abstract_float')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`abstract float tests with matching params`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .unimplemented();
 
 g.test('matching_f32')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`f32 test with matching third param`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
-  .unimplemented();
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const makeCase = (x, y, z) => {
+      return makeTernaryToF32IntervalCase(x, y, z, ...mixIntervals);
+    };
 
-g.test('scalar_f16')
+    const values = sparseF32Range();
+    const cases = [];
+    values.forEach(x => {
+      values.forEach(y => {
+        values.forEach(z => {
+          cases.push(makeCase(x, y, z));
+        });
+      });
+    });
+    await run(t, builtin('mix'), [TypeF32, TypeF32, TypeF32], TypeF32, t.params, cases);
+  });
+
+g.test('matching_f16')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`f16 tests with matching third param`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [undefined, 2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
   .unimplemented();
 
 g.test('nonmatching_abstract_float')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`abstract float tests with vector params and scalar third param`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [2, 3, 4]))
   .unimplemented();
 
 g.test('nonmatching_f32')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`f32 tests with vector params and scalar third param`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [2, 3, 4]))
   .unimplemented();
 
 g.test('monmatching_f16')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
   .desc(`f16 tests with vector params and scalar third param`)
-  .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'])
-      .combine('vectorize', [2, 3, 4])
-  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [2, 3, 4]))
   .unimplemented();

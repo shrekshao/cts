@@ -13,7 +13,7 @@ Also known as "clz" in some languages.
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeU32, u32Bits, u32, TypeI32, i32Bits, i32 } from '../../../../../util/conversion.js';
-import { Config, run } from '../../expression.js';
+import { allInputSources, Config, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
@@ -23,13 +23,11 @@ g.test('u32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
   .desc(`u32 tests`)
   .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
-      .combine('vectorize', [undefined, 2, 3, 4] as const)
+    u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4] as const)
   )
   .fn(async t => {
     const cfg: Config = t.params;
-    run(t, builtin('countLeadingZeros'), [TypeU32], TypeU32, cfg, [
+    await run(t, builtin('countLeadingZeros'), [TypeU32], TypeU32, cfg, [
       // Zero
       { input: u32Bits(0b00000000000000000000000000000000), expected: u32(32) },
 
@@ -140,13 +138,11 @@ g.test('i32')
   .specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions')
   .desc(`i32 tests`)
   .params(u =>
-    u
-      .combine('storageClass', ['uniform', 'storage_r', 'storage_rw'] as const)
-      .combine('vectorize', [undefined, 2, 3, 4] as const)
+    u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4] as const)
   )
   .fn(async t => {
     const cfg: Config = t.params;
-    run(t, builtin('countLeadingZeros'), [TypeI32], TypeI32, cfg, [
+    await run(t, builtin('countLeadingZeros'), [TypeI32], TypeI32, cfg, [
       // Zero
       { input: i32Bits(0b00000000000000000000000000000000), expected: i32(32) },
 

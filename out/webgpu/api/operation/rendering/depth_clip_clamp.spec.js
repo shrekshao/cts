@@ -65,8 +65,8 @@ fn(async (t) => {
       var<private> kDepths: array<f32, ${kNumDepthValues}> = array<f32, ${kNumDepthValues}>(
           -1.0, -0.5, 0.0, 0.25, 0.75, 1.0, 1.5, 2.0);
 
-      let vpMin: f32 = ${kViewportMinDepth};
-      let vpMax: f32 = ${kViewportMaxDepth};
+      const vpMin: f32 = ${kViewportMinDepth};
+      const vpMax: f32 = ${kViewportMaxDepth};
 
       // Draw the points in a straight horizontal row, one per pixel.
       fn vertexX(idx: u32) -> f32 {
@@ -93,7 +93,7 @@ fn(async (t) => {
         @location(0) @interpolate(flat) vertexIndex: u32,
       };
 
-      @stage(vertex)
+      @vertex
       fn vtest(@builtin(vertex_index) idx: u32) -> VFTest {
         var vf: VFTest;
         vf.pos = vec4<f32>(vertexX(idx), 0.0, vertexZ(idx), 1.0);
@@ -112,13 +112,13 @@ fn(async (t) => {
         output.fragInputZDiff[vf.vertexIndex] = vf.pos.z - expectedFragPosZ(vf.vertexIndex);
       }
 
-      @stage(fragment)
+      @fragment
       fn ftest_WriteDepth(vf: VFTest) -> @builtin(frag_depth) f32 {
         checkZ(vf);
         return kDepths[vf.vertexIndex % ${kNumDepthValues}u];
       }
 
-      @stage(fragment)
+      @fragment
       fn ftest_NoWriteDepth(vf: VFTest) {
         checkZ(vf);
       }
@@ -130,7 +130,7 @@ fn(async (t) => {
         @location(0) @interpolate(flat) vertexIndex: u32,
       };
 
-      @stage(vertex)
+      @vertex
       fn vcheck(@builtin(vertex_index) idx: u32) -> VFCheck {
         var vf: VFCheck;
         // Depth=0.5 because we want to render every point, not get clipped.
@@ -144,7 +144,7 @@ fn(async (t) => {
         @location(0) color: f32,
       };
 
-      @stage(fragment)
+      @fragment
       fn fcheck(vf: VFCheck) -> FCheck {
         let vertZ = vertexZ(vf.vertexIndex);
         let outOfRange = vertZ < 0.0 || vertZ > 1.0;
@@ -377,8 +377,8 @@ fn(async (t) => {
       var<private> kDepths: array<f32, ${kNumDepthValues}> = array<f32, ${kNumDepthValues}>(
           -1.0, -0.5, 0.0, 0.25, 0.75, 1.0, 1.5, 2.0);
 
-      let vpMin: f32 = ${kViewportMinDepth};
-      let vpMax: f32 = ${kViewportMaxDepth};
+      const vpMin: f32 = ${kViewportMinDepth};
+      const vpMax: f32 = ${kViewportMaxDepth};
 
       // Draw the points in a straight horizontal row, one per pixel.
       fn vertexX(idx: u32) -> f32 {
@@ -390,7 +390,7 @@ fn(async (t) => {
         @location(0) @interpolate(flat) vertexIndex: u32,
       };
 
-      @stage(vertex)
+      @vertex
       fn vmain(@builtin(vertex_index) idx: u32) -> VF {
         var vf: VF;
         // Depth=0.5 because we want to render every point, not get clipped.
@@ -399,7 +399,7 @@ fn(async (t) => {
         return vf;
       }
 
-      @stage(fragment)
+      @fragment
       fn finit(vf: VF) -> @builtin(frag_depth) f32 {
         // Expected values of the ftest pipeline.
         return clamp(kDepths[vf.vertexIndex], vpMin, vpMax);
@@ -410,7 +410,7 @@ fn(async (t) => {
         @location(0) color: f32,
       };
 
-      @stage(fragment)
+      @fragment
       fn ftest(vf: VF) -> FTest {
         var f: FTest;
         f.depth = kDepths[vf.vertexIndex]; // Should get clamped to the viewport.

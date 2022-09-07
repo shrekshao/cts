@@ -13,6 +13,9 @@ import {
   bufferBindingEntries,
   bufferBindingTypeInfo,
   kBindableResources,
+  kBufferBindingTypes,
+  kBufferUsages,
+  kLimitInfo,
   kTextureUsages,
   kTextureViewDimensions,
   sampledAndStorageBindingEntries,
@@ -155,16 +158,20 @@ g.test('texture_binding_must_have_correct_usage')
       entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, ...entry }],
     });
 
+    // The `RENDER_ATTACHMENT` usage must be specified if sampleCount > 1 according to WebGPU SPEC.
+    const appliedUsage =
+      info.resource === 'sampledTexMS' ? usage | GPUConst.TextureUsage.RENDER_ATTACHMENT : usage;
+
     const descriptor = {
       size: { width: 16, height: 16, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
-      usage,
+      usage: appliedUsage,
       sampleCount: info.resource === 'sampledTexMS' ? 4 : 1,
     };
 
     const resource = t.device.createTexture(descriptor).createView();
 
-    const shouldError = usage !== info.usage;
+    const shouldError = (usage & info.usage) === 0;
     t.expectValidationError(() => {
       t.device.createBindGroup({
         entries: [{ binding: 0, resource }],
@@ -296,6 +303,49 @@ g.test('texture_must_have_correct_dimension')
         layout: bindGroupLayout,
       });
     }, shouldError);
+  });
+
+g.test('multisampled_validation')
+  .desc(
+    `
+    Test that the sample count of the texture is greater than 1 if the BindGroup entry's
+    multisampled is true. Otherwise, the texture's sampleCount should be 1.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('multisampled', [true, false])
+      .beginSubcases()
+      .combine('sampleCount', [1, 4])
+  )
+  .fn(async t => {
+    const { multisampled, sampleCount } = t.params;
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { multisampled },
+        },
+      ],
+    });
+
+    const texture = t.device.createTexture({
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING,
+      sampleCount,
+    });
+
+    const isValid = (!multisampled && sampleCount === 1) || (multisampled && sampleCount > 1);
+
+    const textureView = texture.createView();
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: textureView }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
   });
 
 g.test('buffer_offset_and_size_for_bind_groups_match')
@@ -474,8 +524,12 @@ g.test('texture,resource_state')
       ],
     });
 
+    // The `RENDER_ATTACHMENT` usage must be specified if sampleCount > 1 according to WebGPU SPEC.
+    const usage = entry.texture?.multisampled
+      ? info.usage | GPUConst.TextureUsage.RENDER_ATTACHMENT
+      : info.usage;
     const texture = t.createTextureWithState(state, {
-      usage: info.usage,
+      usage,
       size: [1, 1],
       format: 'rgba8unorm',
       sampleCount: entry.texture?.multisampled ? 4 : 1,
@@ -608,4 +662,214 @@ g.test('binding_resources,device_mismatch')
         ],
       });
     }, resource0Mismatched || resource1Mismatched);
+  });
+
+g.test('storage_texture,usage')
+  .desc(
+    `
+    Test that the texture usage contains STORAGE_BINDING if the BindGroup entry defines
+    storageTexture.
+  `
+  )
+  .params(u =>
+    u //
+      // If usage0 and usage1 are the same, the usage being test is a single usage. Otherwise, it's
+      // a combined usage.
+      .combine('usage0', kTextureUsages)
+      .combine('usage1', kTextureUsages)
+  )
+  .fn(async t => {
+    const { usage0, usage1 } = t.params;
+
+    const usage = usage0 | usage1;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          storageTexture: { access: 'write-only', format: 'rgba8unorm' },
+        },
+      ],
+    });
+
+    const texture = t.device.createTexture({
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage,
+    });
+
+    const isValid = GPUTextureUsage.STORAGE_BINDING & usage;
+
+    const textureView = texture.createView();
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: textureView }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
+  });
+
+g.test('storage_texture,mip_level_count')
+  .desc(
+    `
+    Test that the mip level count of the resource of the BindGroup entry as a descriptor is 1 if the
+    BindGroup entry defines storageTexture. If the mip level count is not 1, a validation error
+    should be generated.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('baseMipLevel', [1, 2])
+      .combine('mipLevelCount', [1, 2])
+  )
+  .fn(async t => {
+    const { baseMipLevel, mipLevelCount } = t.params;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          storageTexture: { access: 'write-only', format: 'rgba8unorm' },
+        },
+      ],
+    });
+
+    const MIP_LEVEL_COUNT = 4;
+    const texture = t.device.createTexture({
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+      format: 'rgba8unorm',
+      usage: GPUTextureUsage.STORAGE_BINDING,
+      mipLevelCount: MIP_LEVEL_COUNT,
+    });
+
+    const textureView = texture.createView({ baseMipLevel, mipLevelCount });
+
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: textureView }],
+        layout: bindGroupLayout,
+      });
+    }, mipLevelCount !== 1);
+  });
+
+g.test('buffer,usage')
+  .desc(
+    `
+    Test that the buffer usage contains 'UNIFORM' if the BindGroup entry defines buffer and it's
+    type is 'uniform', and the buffer usage contains 'STORAGE' if the BindGroup entry's buffer type
+    is 'storage'|read-only-storage'.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('type', kBufferBindingTypes)
+      // If usage0 and usage1 are the same, the usage being test is a single usage. Otherwise, it's
+      // a combined usage.
+      .beginSubcases()
+      .combine('usage0', kBufferUsages)
+      .combine('usage1', kBufferUsages)
+      .unless(
+        ({ usage0, usage1 }) =>
+          ((usage0 | usage1) & (GPUConst.BufferUsage.MAP_READ | GPUConst.BufferUsage.MAP_WRITE)) !==
+          0
+      )
+  )
+  .fn(async t => {
+    const { type, usage0, usage1 } = t.params;
+
+    const usage = usage0 | usage1;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type },
+        },
+      ],
+    });
+
+    const buffer = t.device.createBuffer({
+      size: 4,
+      usage,
+    });
+
+    let isValid = false;
+    if (type === 'uniform') {
+      isValid = GPUBufferUsage.UNIFORM & usage ? true : false;
+    } else if (type === 'storage' || type === 'read-only-storage') {
+      isValid = GPUBufferUsage.STORAGE & usage ? true : false;
+    }
+
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: { buffer } }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
+  });
+
+g.test('buffer,resource_offset')
+  .desc(
+    `
+    Test that the resource.offset of the BindGroup entry is a multiple of limits.
+    'minUniformBufferOffsetAlignment|minStorageBufferOffsetAlignment' if the BindGroup entry defines
+    buffer and the buffer type is 'uniform|storage|read-only-storage'.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('type', kBufferBindingTypes)
+      .beginSubcases()
+      .expand('offset', ({ type }) =>
+        type === 'uniform'
+          ? [
+              kLimitInfo.minUniformBufferOffsetAlignment.default,
+              kLimitInfo.minUniformBufferOffsetAlignment.default * 0.5,
+              kLimitInfo.minUniformBufferOffsetAlignment.default * 1.5,
+              kLimitInfo.minUniformBufferOffsetAlignment.default + 2,
+            ]
+          : [
+              kLimitInfo.minStorageBufferOffsetAlignment.default,
+              kLimitInfo.minStorageBufferOffsetAlignment.default * 0.5,
+              kLimitInfo.minStorageBufferOffsetAlignment.default * 1.5,
+              kLimitInfo.minStorageBufferOffsetAlignment.default + 2,
+            ]
+      )
+  )
+  .fn(async t => {
+    const { type, offset } = t.params;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type },
+        },
+      ],
+    });
+
+    let usage, isValid;
+    if (type === 'uniform') {
+      usage = GPUBufferUsage.UNIFORM;
+      isValid = offset % kLimitInfo.minUniformBufferOffsetAlignment.default === 0;
+    } else {
+      usage = GPUBufferUsage.STORAGE;
+      isValid = offset % kLimitInfo.minStorageBufferOffsetAlignment.default === 0;
+    }
+
+    const buffer = t.device.createBuffer({
+      size: 1024,
+      usage,
+    });
+
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: { buffer, offset } }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
   });
