@@ -186,6 +186,14 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "compute_pipeline",
+      "overrides"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "device",
       "lost"
     ]
@@ -316,6 +324,14 @@ export const listing = [
       "operation",
       "render_pipeline",
       "culling_tests"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pipeline",
+      "overrides"
     ]
   },
   {
@@ -1080,6 +1096,14 @@ export const listing = [
       "api",
       "validation",
       "render_pipeline",
+      "overrides"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
       "primitive_state"
     ]
   },
@@ -1159,6 +1183,14 @@ export const listing = [
       "validation",
       "shader_module",
       "entry_point"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "shader_module",
+      "overrides"
     ]
   },
   {

@@ -32,6 +32,7 @@ fractInterval,
 
 inverseSqrtInterval,
 ldexpInterval,
+lengthInterval,
 logInterval,
 log2Interval,
 maxInterval,
@@ -40,7 +41,9 @@ mixImpreciseInterval,
 mixPreciseInterval,
 multiplicationInterval,
 negationInterval,
+normalizeInterval,
 powInterval,
+quantizeToF16Interval,
 radiansInterval,
 remainderInterval,
 roundInterval,
@@ -1076,6 +1079,45 @@ fn((t) => {
 
 });
 
+g.test('lengthIntervalScalar').
+paramsSubcasesOnly(
+
+[
+// Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+// form due to the inherited nature of the errors.
+{ input: 0, expected: kAny }, // ~0
+{ input: 1.0, expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: -1.0, expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: 0.1, expected: [hexToF64(0x3fb99998, 0x90000000), hexToF64(0x3fb9999a, 0x70000000)] }, // ~0.1
+{ input: -0.1, expected: [hexToF64(0x3fb99998, 0x90000000), hexToF64(0x3fb9999a, 0x70000000)] }, // ~0.1
+{ input: 10.0, expected: [hexToF64(0x4023ffff, 0x70000000), hexToF64(0x40240000, 0xb0000000)] }, // ~10
+{ input: -10.0, expected: [hexToF64(0x4023ffff, 0x70000000), hexToF64(0x40240000, 0xb0000000)] }, // ~10
+
+// Subnormal Cases
+{ input: kValue.f32.subnormal.negative.min, expected: kAny },
+{ input: kValue.f32.subnormal.negative.max, expected: kAny },
+{ input: kValue.f32.subnormal.positive.min, expected: kAny },
+{ input: kValue.f32.subnormal.positive.max, expected: kAny },
+
+// Edge cases
+{ input: kValue.f32.infinity.positive, expected: kAny },
+{ input: kValue.f32.infinity.negative, expected: kAny },
+{ input: kValue.f32.negative.min, expected: kAny },
+{ input: kValue.f32.negative.max, expected: kAny },
+{ input: kValue.f32.positive.min, expected: kAny },
+{ input: kValue.f32.positive.max, expected: kAny }]).
+
+
+fn((t) => {
+  const expected = new F32Interval(...t.params.expected);
+
+  const got = lengthInterval(t.params.input);
+  t.expect(
+  objectEquals(expected, got),
+  `lengthInterval(${t.params.input}) returned ${got}. Expected ${expected}`);
+
+});
+
 g.test('logInterval').
 paramsSubcasesOnly(
 
@@ -1168,6 +1210,41 @@ fn((t) => {
   t.expect(
   objectEquals(expected, got),
   `negationInterval(${t.params.input}) returned ${got}. Expected ${expected}`);
+
+});
+
+g.test('quantizeToF16Interval').
+paramsSubcasesOnly(
+
+[
+{ input: kValue.f32.infinity.negative, expected: kAny },
+{ input: kValue.f32.negative.min, expected: kAny },
+{ input: kValue.f16.negative.min, expected: [kValue.f16.negative.min] },
+{ input: -1, expected: [-1] },
+{ input: -0.1, expected: [hexToF32(0xbdcce000), hexToF32(0xbdccc000)] }, // ~-0.1
+{ input: kValue.f16.negative.max, expected: [kValue.f16.negative.max] },
+{ input: kValue.f16.subnormal.negative.min, expected: [kValue.f16.subnormal.negative.min] },
+{ input: kValue.f16.subnormal.negative.max, expected: [kValue.f16.subnormal.negative.max] },
+{ input: kValue.f32.subnormal.negative.max, expected: [kValue.f16.subnormal.negative.max, 0] },
+{ input: 0, expected: [0] },
+{ input: kValue.f32.subnormal.positive.min, expected: [0, kValue.f16.subnormal.positive.min] },
+{ input: kValue.f16.subnormal.positive.min, expected: [kValue.f16.subnormal.positive.min] },
+{ input: kValue.f16.subnormal.positive.max, expected: [kValue.f16.subnormal.positive.max] },
+{ input: kValue.f16.positive.min, expected: [kValue.f16.positive.min] },
+{ input: 0.1, expected: [hexToF32(0x3dccc000), hexToF32(0x3dcce000)] }, // ~0.1
+{ input: 1, expected: [1] },
+{ input: kValue.f16.positive.max, expected: [kValue.f16.positive.max] },
+{ input: kValue.f32.positive.max, expected: kAny },
+{ input: kValue.f32.infinity.positive, expected: kAny }]).
+
+
+fn((t) => {
+  const expected = new F32Interval(...t.params.expected);
+
+  const got = quantizeToF16Interval(t.params.input);
+  t.expect(
+  objectEquals(expected, got),
+  `quantizeToF16Interval(${t.params.input}) returned ${got}. Expected ${expected}`);
 
 });
 
@@ -2440,6 +2517,55 @@ fn((t) => {
 
 
 
+g.test('lengthIntervalVector').
+paramsSubcasesOnly(
+
+[
+// Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+// form due to the inherited nature of the errors.
+// vec2
+{ input: [1.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 1.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [1.0, 1.0], expected: [hexToF64(0x3ff6a09d, 0xb0000000), hexToF64(0x3ff6a09f, 0x10000000)] }, // ~√2
+{ input: [-1.0, -1.0], expected: [hexToF64(0x3ff6a09d, 0xb0000000), hexToF64(0x3ff6a09f, 0x10000000)] }, // ~√2
+{ input: [-1.0, 1.0], expected: [hexToF64(0x3ff6a09d, 0xb0000000), hexToF64(0x3ff6a09f, 0x10000000)] }, // ~√2
+{ input: [0.1, 0.0], expected: [hexToF64(0x3fb99998, 0x90000000), hexToF64(0x3fb9999a, 0x70000000)] }, // ~0.1
+
+// vec3
+{ input: [1.0, 0.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 1.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 0.0, 1.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [1.0, 1.0, 1.0], expected: [hexToF64(0x3ffbb67a, 0x10000000), hexToF64(0x3ffbb67b, 0xb0000000)] }, // ~√3
+{ input: [-1.0, -1.0, -1.0], expected: [hexToF64(0x3ffbb67a, 0x10000000), hexToF64(0x3ffbb67b, 0xb0000000)] }, // ~√3
+{ input: [1.0, -1.0, -1.0], expected: [hexToF64(0x3ffbb67a, 0x10000000), hexToF64(0x3ffbb67b, 0xb0000000)] }, // ~√3
+{ input: [0.1, 0.0, 0.0], expected: [hexToF64(0x3fb99998, 0x90000000), hexToF64(0x3fb9999a, 0x70000000)] }, // ~0.1
+
+// vec4
+{ input: [1.0, 0.0, 0.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 1.0, 0.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 0.0, 1.0, 0.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [0.0, 0.0, 0.0, 1.0], expected: [hexToF64(0x3fefffff, 0x70000000), hexToF64(0x3ff00000, 0x90000000)] }, // ~1
+{ input: [1.0, 1.0, 1.0, 1.0], expected: [hexToF64(0x3fffffff, 0x70000000), hexToF64(0x40000000, 0x90000000)] }, // ~2
+{ input: [-1.0, -1.0, -1.0, -1.0], expected: [hexToF64(0x3fffffff, 0x70000000), hexToF64(0x40000000, 0x90000000)] }, // ~2
+{ input: [-1.0, 1.0, -1.0, 1.0], expected: [hexToF64(0x3fffffff, 0x70000000), hexToF64(0x40000000, 0x90000000)] }, // ~2
+{ input: [0.1, 0.0, 0.0, 0.0], expected: [hexToF64(0x3fb99998, 0x90000000), hexToF64(0x3fb9999a, 0x70000000)] } // ~0.1
+]).
+
+fn((t) => {
+  const expected = new F32Interval(...t.params.expected);
+
+  const got = lengthInterval(t.params.input);
+  t.expect(
+  objectEquals(expected, got),
+  `lengthInterval([${t.params.input}]) returned ${got}. Expected ${expected}`);
+
+});
+
+
+
+
+
+
 g.test('dotInterval').
 paramsSubcasesOnly(
 
@@ -2480,6 +2606,48 @@ fn((t) => {
   t.expect(
   objectEquals(expected, got),
   `dotInterval([${x}], [${y}]) returned ${got}. Expected ${expected}`);
+
+});
+
+
+
+
+
+
+g.test('normalizeInterval').
+paramsSubcasesOnly(
+
+[
+// vec2
+{ input: [1.0, 0.0], expected: [[hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0]
+{ input: [0.0, 1.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)]] }, // [ ~0.0, ~1.0]
+{ input: [-1.0, 0.0], expected: [[hexToF64(0xbff00000, 0xb0000000), hexToF64(0xbfeffffe, 0x70000000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0]
+{ input: [1.0, 1.0], expected: [[hexToF64(0x3fe6a09d, 0x50000000), hexToF64(0x3fe6a09f, 0x90000000)], [hexToF64(0x3fe6a09d, 0x50000000), hexToF64(0x3fe6a09f, 0x90000000)]] }, // [ ~1/√2, ~1/√2]
+
+// vec3
+{ input: [1.0, 0.0, 0.0], expected: [[hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0, ~0.0]
+{ input: [0.0, 1.0, 0.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~0.0, ~1.0, ~0.0]
+{ input: [0.0, 0.0, 1.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)]] }, // [ ~0.0, ~0.0, ~1.0]
+{ input: [-1.0, 0.0, 0.0], expected: [[hexToF64(0xbff00000, 0xb0000000), hexToF64(0xbfeffffe, 0x70000000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0, ~0.0]
+{ input: [1.0, 1.0, 1.0], expected: [[hexToF64(0x3fe279a6, 0x50000000), hexToF64(0x3fe279a8, 0x50000000)], [hexToF64(0x3fe279a6, 0x50000000), hexToF64(0x3fe279a8, 0x50000000)], [hexToF64(0x3fe279a6, 0x50000000), hexToF64(0x3fe279a8, 0x50000000)]] }, // [ ~1/√3, ~1/√3, ~1/√3]
+
+// vec4
+{ input: [1.0, 0.0, 0.0, 0.0], expected: [[hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0, ~0.0, ~0.0]
+{ input: [0.0, 1.0, 0.0, 0.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~0.0, ~1.0, ~0.0, ~0.0]
+{ input: [0.0, 0.0, 1.0, 0.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~0.0, ~0.0, ~1.0, ~0.0]
+{ input: [0.0, 0.0, 0.0, 1.0], expected: [[hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF64(0x3feffffe, 0x70000000), hexToF64(0x3ff00000, 0xb0000000)]] }, // [ ~0.0, ~0.0, ~0.0, ~1.0]
+{ input: [-1.0, 0.0, 0.0, 0.0], expected: [[hexToF64(0xbff00000, 0xb0000000), hexToF64(0xbfeffffe, 0x70000000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)], [hexToF32(0x81200000), hexToF32(0x01200000)]] }, // [ ~1.0, ~0.0, ~0.0, ~0.0]
+{ input: [1.0, 1.0, 1.0, 1.0], expected: [[hexToF64(0x3fdffffe, 0x70000000), hexToF64(0x3fe00000, 0xb0000000)], [hexToF64(0x3fdffffe, 0x70000000), hexToF64(0x3fe00000, 0xb0000000)], [hexToF64(0x3fdffffe, 0x70000000), hexToF64(0x3fe00000, 0xb0000000)], [hexToF64(0x3fdffffe, 0x70000000), hexToF64(0x3fe00000, 0xb0000000)]] } // [ ~1/√4, ~1/√4, ~1/√4]
+]).
+
+fn((t) => {
+  const x = t.params.input;
+  const expected = t.params.expected.map((e) => new F32Interval(...e));
+
+  const got = normalizeInterval(x);
+  t.expect(
+  objectEquals(expected, got),
+  `normalizeInterval([${x}]) returned ${got}. Expected ${expected}`);
 
 });
 //# sourceMappingURL=f32_interval.spec.js.map

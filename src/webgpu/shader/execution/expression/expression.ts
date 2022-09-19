@@ -1,3 +1,4 @@
+import { globalTestConfig } from '../../../../common/framework/test_config.js';
 import { assert } from '../../../../common/util/util.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { compare, Comparator, anyOf } from '../../../util/compare.js';
@@ -18,14 +19,21 @@ import {
   PointToInterval,
   TernaryToInterval,
   VectorPairToInterval,
+  VectorToInterval,
+  VectorToVector,
 } from '../../../util/f32_interval.js';
 import { quantizeToF32 } from '../../../util/math.js';
 
-export type Expectation = Value | F32Interval | Comparator;
+export type Expectation = Value | F32Interval | F32Interval[] | Comparator;
 
 /** Is this expectation actually a Comparator */
 function isComparator(e: Expectation): boolean {
-  return !(e instanceof F32Interval || e instanceof Scalar || e instanceof Vector);
+  return !(
+    e instanceof F32Interval ||
+    e instanceof Scalar ||
+    e instanceof Vector ||
+    e instanceof Array
+  );
 }
 
 /** Helper for converting Values to Comparators */
@@ -235,6 +243,9 @@ function submitBatch(
   pass.dispatchWorkgroups(1);
   pass.end();
 
+  // Heartbeat to ensure CTS runners know we're alive.
+  globalTestConfig.testHeartbeatCallback();
+
   t.queue.submit([encoder.finish()]);
 
   // Return a function that can check the results of the shader
@@ -263,6 +274,9 @@ function submitBatch(
 
       return errs.length > 0 ? new Error(errs.join('\n\n')) : undefined;
     };
+
+    // Heartbeat to ensure CTS runners know we're alive.
+    globalTestConfig.testHeartbeatCallback();
 
     t.expectGPUBufferValuesPassCheck(outputBuffer, checkExpectation, {
       type: Uint8Array,
@@ -546,10 +560,8 @@ function packScalarsToVector(
  */
 export function makeUnaryToF32IntervalCase(param: number, ...ops: PointToInterval[]): Case {
   param = quantizeToF32(param);
-  const intervals: Array<F32Interval> = new Array<F32Interval>();
-  for (const op of ops) {
-    intervals.push(op(param));
-  }
+
+  const intervals = ops.map(o => o(param));
   return { input: [f32(param)], expected: anyOf(...intervals) };
 }
 
@@ -567,10 +579,8 @@ export function makeBinaryToF32IntervalCase(
 ): Case {
   param0 = quantizeToF32(param0);
   param1 = quantizeToF32(param1);
-  const intervals: Array<F32Interval> = new Array<F32Interval>();
-  for (const op of ops) {
-    intervals.push(op(param0, param1));
-  }
+
+  const intervals = ops.map(o => o(param0, param1));
   return { input: [f32(param0), f32(param1)], expected: anyOf(...intervals) };
 }
 
@@ -592,12 +602,27 @@ export function makeTernaryToF32IntervalCase(
   param0 = quantizeToF32(param0);
   param1 = quantizeToF32(param1);
   param2 = quantizeToF32(param2);
-  const intervals: Array<F32Interval> = new Array<F32Interval>();
-  for (const op of ops) {
-    intervals.push(op(param0, param1, param2));
-  }
+
+  const intervals = ops.map(o => o(param0, param1, param2));
   return {
     input: [f32(param0), f32(param1), f32(param2)],
+    expected: anyOf(...intervals),
+  };
+}
+
+/**
+ * Generates a Case for the param and vector interval generator provided.
+ * @param param the param to pass into the operation
+ * @param ops callbacks that implement generating an acceptance interval for a
+ *            vector.
+ */
+export function makeVectorToF32IntervalCase(param: number[], ...ops: VectorToInterval[]): Case {
+  param = param.map(quantizeToF32);
+  const param_f32 = param.map(f32);
+
+  const intervals = ops.map(o => o(param));
+  return {
+    input: [new Vector(param_f32)],
     expected: anyOf(...intervals),
   };
 }
@@ -622,6 +647,23 @@ export function makeVectorPairToF32IntervalCase(
   const intervals = ops.map(o => o(param0, param1));
   return {
     input: [new Vector(param0_f32), new Vector(param1_f32)],
+    expected: anyOf(...intervals),
+  };
+}
+
+/**
+ * Generates a Case for the param and vector of intervals generator provided.
+ * @param param the param to pass into the operation
+ * @param ops callbacks that implement generating an vector of acceptance intervals for a
+ *            vector.
+ */
+export function makeVectorToVectorIntervalCase(param: number[], ...ops: VectorToVector[]): Case {
+  param = param.map(quantizeToF32);
+  const param_f32 = param.map(f32);
+
+  const intervals = ops.map(o => o(param));
+  return {
+    input: [new Vector(param_f32)],
     expected: anyOf(...intervals),
   };
 }

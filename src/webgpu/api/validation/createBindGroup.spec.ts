@@ -11,10 +11,12 @@ import {
   bindingTypeInfo,
   bufferBindingEntries,
   bufferBindingTypeInfo,
+  kAllTextureFormats,
   kBindableResources,
   kBufferBindingTypes,
   kBufferUsages,
   kLimitInfo,
+  kTextureFormatInfo,
   kTextureUsages,
   kTextureViewDimensions,
   sampledAndStorageBindingEntries,
@@ -31,6 +33,8 @@ function clone<T extends GPUTextureDescriptor>(descriptor: T): T {
 }
 
 export const g = makeTestGroup(ValidationTest);
+
+const kStorageTextureFormats = kAllTextureFormats.filter(f => kTextureFormatInfo[f].storage);
 
 g.test('binding_count_mismatch')
   .desc('Test that the number of entries must match the number of entries in the BindGroupLayout.')
@@ -329,7 +333,7 @@ g.test('multisampled_validation')
     const texture = t.device.createTexture({
       size: { width: 16, height: 16, depthOrArrayLayers: 1 },
       format: 'rgba8unorm' as const,
-      usage: GPUTextureUsage.TEXTURE_BINDING,
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
       sampleCount,
     });
 
@@ -747,6 +751,47 @@ g.test('storage_texture,mip_level_count')
     }, mipLevelCount !== 1);
   });
 
+g.test('storage_texture,format')
+  .desc(
+    `
+    Test that the format of the storage texture is equal to resource's descriptor format if the
+    BindGroup entry defines storageTexture.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('storageTextureFormat', kStorageTextureFormats)
+      .combine('resourceFormat', kStorageTextureFormats)
+  )
+  .fn(async t => {
+    const { storageTextureFormat, resourceFormat } = t.params;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          storageTexture: { access: 'write-only', format: storageTextureFormat },
+        },
+      ],
+    });
+
+    const texture = t.device.createTexture({
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+      format: resourceFormat,
+      usage: GPUTextureUsage.STORAGE_BINDING,
+    });
+
+    const isValid = storageTextureFormat === resourceFormat;
+    const textureView = texture.createView({ format: resourceFormat });
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: textureView }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
+  });
+
 g.test('buffer,usage')
   .desc(
     `
@@ -862,6 +907,69 @@ g.test('buffer,resource_offset')
     t.expectValidationError(() => {
       t.device.createBindGroup({
         entries: [{ binding: 0, resource: { buffer, offset } }],
+        layout: bindGroupLayout,
+      });
+    }, !isValid);
+  });
+
+g.test('buffer,resource_binding_size')
+  .desc(
+    `
+    Test that the buffer binding size of the BindGroup entry is equal to or less than limits.
+    'maxUniformBufferBindingSize|maxStorageBufferBindingSize' if the BindGroup entry defines
+    buffer and the buffer type is 'uniform|storage|read-only-storage'.
+  `
+  )
+  .params(u =>
+    u //
+      .combine('type', kBufferBindingTypes)
+      .beginSubcases()
+      // Test a size of 1 to ensure there's no alignment requirement,
+      // then values just within and just above the limit.
+      .expand('bindingSize', ({ type }) =>
+        type === 'uniform'
+          ? [
+              1,
+              kLimitInfo.maxUniformBufferBindingSize.default,
+              kLimitInfo.maxUniformBufferBindingSize.default + 1,
+            ]
+          : [
+              1,
+              kLimitInfo.maxStorageBufferBindingSize.default,
+              kLimitInfo.maxStorageBufferBindingSize.default + 1,
+            ]
+      )
+  )
+  .fn(async t => {
+    const { type, bindingSize } = t.params;
+
+    const bindGroupLayout = t.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type },
+        },
+      ],
+    });
+
+    let usage, isValid;
+    if (type === 'uniform') {
+      usage = GPUBufferUsage.UNIFORM;
+      isValid = bindingSize <= kLimitInfo.maxUniformBufferBindingSize.default;
+    } else {
+      usage = GPUBufferUsage.STORAGE;
+      isValid = bindingSize <= kLimitInfo.maxStorageBufferBindingSize.default;
+    }
+
+    const buffer = t.device.createBuffer({
+      size: kLimitInfo.maxStorageBufferBindingSize.default,
+      usage,
+    });
+
+    t.expectValidationError(() => {
+      t.device.createBindGroup({
+        entries: [{ binding: 0, resource: { buffer, size: bindingSize } }],
         layout: bindGroupLayout,
       });
     }, !isValid);
