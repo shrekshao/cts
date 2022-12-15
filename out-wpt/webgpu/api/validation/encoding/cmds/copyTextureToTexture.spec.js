@@ -54,7 +54,6 @@ class F extends ValidationTest {
           height: physicalHeightAtLevel,
           depthOrArrayLayers: textureSize.depthOrArrayLayers,
         };
-
       case '3d':
         return {
           width: physicalWidthAtLevel,
@@ -116,33 +115,31 @@ g.test('texture,device_mismatch')
   })
   .fn(async t => {
     const { srcMismatched, dstMismatched } = t.params;
-    const mismatched = srcMismatched || dstMismatched;
 
-    const device = mismatched ? t.mismatchedDevice : t.device;
     const size = { width: 4, height: 4, depthOrArrayLayers: 1 };
     const format = 'rgba8unorm';
 
-    const srcTexture = device.createTexture({
+    const srcTextureDevice = srcMismatched ? t.mismatchedDevice : t.device;
+    const srcTexture = srcTextureDevice.createTexture({
       size,
       format,
       usage: GPUTextureUsage.COPY_SRC,
     });
-
     t.trackForCleanup(srcTexture);
 
-    const dstTexture = device.createTexture({
+    const dstTextureDevice = dstMismatched ? t.mismatchedDevice : t.device;
+    const dstTexture = dstTextureDevice.createTexture({
       size,
       format,
       usage: GPUTextureUsage.COPY_DST,
     });
-
     t.trackForCleanup(dstTexture);
 
     t.TestCopyTextureToTexture(
       { texture: srcTexture },
       { texture: dstTexture },
       { width: 1, height: 1, depthOrArrayLayers: 1 },
-      mismatched ? 'FinishError' : 'Success'
+      srcMismatched || dstMismatched ? 'FinishError' : 'Success'
     );
   });
 
@@ -181,7 +178,6 @@ Test copyTextureToTexture must specify mipLevels that are in range.
       usage: GPUTextureUsage.COPY_SRC,
       mipLevelCount: srcLevelCount,
     });
-
     const dstTexture = t.device.createTexture({
       size: { width: 32, height: 1, depthOrArrayLayers: 1 },
       dimension,
@@ -220,7 +216,6 @@ Test that copyTextureToTexture source/destination need COPY_SRC/COPY_DST usages.
       format: 'rgba8unorm',
       usage: srcUsage,
     });
-
     const dstTexture = t.device.createTexture({
       size: { width: 4, height: 4, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
@@ -260,7 +255,6 @@ Test that textures in copyTextureToTexture must have the same sample count.
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
       sampleCount: srcSampleCount,
     });
-
     const dstTexture = t.device.createTexture({
       size: { width: 4, height: 4, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
@@ -318,7 +312,6 @@ TODO: Check the source and destination constraints separately.
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
       sampleCount: 4,
     });
-
     const dstTexture = t.device.createTexture({
       size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
@@ -452,7 +445,6 @@ Note: this is only tested for 2D textures as it is the only dimension compatible
       mipLevelCount: kMipLevelCount,
       usage: GPUTextureUsage.COPY_SRC,
     });
-
     const dstTexture = t.device.createTexture({
       size: { width: dstTextureSize.width, height: dstTextureSize.height, depthOrArrayLayers: 1 },
       format,
@@ -552,7 +544,6 @@ Test that copyTextureToTexture copy boxes must be in range of the subresource.
       mipLevelCount,
       usage: GPUTextureUsage.COPY_SRC,
     });
-
     const dstTexture = t.device.createTexture({
       size: textureSize,
       format: kFormat,
@@ -713,7 +704,6 @@ Test the validations on the member 'aspect' of GPUImageCopyTexture in CopyTextur
       format,
       usage: GPUTextureUsage.COPY_SRC,
     });
-
     const dstTexture = t.device.createTexture({
       size: kTextureSize,
       format,
@@ -792,7 +782,6 @@ TODO: Express the offsets in "block size" so as to be able to test non-4x4 compr
       height: 12 * blockHeight,
       depthOrArrayLayers: 3,
     };
-
     const kMipLevelCount = 4;
 
     const srcTexture = t.device.createTexture({
@@ -802,7 +791,6 @@ TODO: Express the offsets in "block size" so as to be able to test non-4x4 compr
       mipLevelCount: kMipLevelCount,
       usage: GPUTextureUsage.COPY_SRC,
     });
-
     const dstTexture = t.device.createTexture({
       size: kTextureSize,
       format,

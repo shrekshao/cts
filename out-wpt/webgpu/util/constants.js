@@ -40,15 +40,14 @@ export const kBit = {
         quarter: 0x3f49_0fdb,
         sixth: 0x3f06_0a92,
       },
-
       e: 0x402d_f854,
     },
-
     negative: {
       max: 0x8080_0000,
       min: 0xff7f_ffff,
       zero: 0x8000_0000,
       nearest_min: 0xff7f_fffe,
+      less_than_one: 0xbf7f_ffff,
       pi: {
         whole: 0xc04_90fdb,
         three_quarters: 0xc016_cbe4,
@@ -58,31 +57,26 @@ export const kBit = {
         sixth: 0xbf06_0a92,
       },
     },
-
     subnormal: {
       positive: {
         min: 0x0000_0001,
         max: 0x007f_ffff,
       },
-
       negative: {
         max: 0x8000_0001,
         min: 0x807f_ffff,
       },
     },
-
     nan: {
       negative: {
         s: 0xff80_0001,
         q: 0xffc0_0001,
       },
-
       positive: {
         s: 0x7f80_0001,
         q: 0x7fc0_0001,
       },
     },
-
     infinity: {
       positive: 0x7f80_0000,
       negative: 0xff80_0000,
@@ -96,37 +90,31 @@ export const kBit = {
       max: 0x7bff,
       zero: 0x0000,
     },
-
     negative: {
       max: 0x8400,
       min: 0xfbff,
       zero: 0x8000,
     },
-
     subnormal: {
       positive: {
         min: 0x0001,
         max: 0x03ff,
       },
-
       negative: {
         max: 0x8001,
         min: 0x83ff,
       },
     },
-
     nan: {
       negative: {
         s: 0xfc01,
         q: 0xfe01,
       },
-
       positive: {
         s: 0x7c01,
         q: 0x7e01,
       },
     },
-
     infinity: {
       positive: 0x7c00,
       negative: 0xfc00,
@@ -275,6 +263,26 @@ export const kBit = {
 };
 
 /**
+ * Converts a 64-bit hex value to a 64-bit float value
+ *
+ * Using a locally defined function here to avoid compile time dependency
+ * issues.
+ * */
+function hexToF64(hex) {
+  return new Float64Array(new BigInt64Array([hex]).buffer)[0];
+}
+
+/**
+ * Converts a 64-bit float value to a 64-bit hex value
+ *
+ * Using a locally defined function here to avoid compile time dependency
+ * issues.
+ * */
+function f64ToHex(number) {
+  return new BigUint64Array(new Float64Array([number]).buffer)[0];
+}
+
+/**
  * Converts a 32-bit hex value to a 32-bit float value
  *
  * Using a locally defined function here to avoid compile time dependency
@@ -301,14 +309,13 @@ export const kValue = {
       min: 0,
       max: 2147483647,
     },
-
     negative: {
       min: -2147483648,
       max: 0,
     },
   },
 
-  // Limits of uint32
+  // Limits of u32
   u32: {
     min: 0,
     max: 4294967295,
@@ -329,14 +336,18 @@ export const kValue = {
         quarter: hexToF32(kBit.f32.positive.pi.quarter),
         sixth: hexToF32(kBit.f32.positive.pi.sixth),
       },
-
       e: hexToF32(kBit.f32.positive.e),
+      first_f64_not_castable: hexToF32(kBit.f32.positive.max) / 2 + 2 ** 127, // mid point of 2**128 and largest f32
+      last_f64_castable: hexToF64(
+        f64ToHex(hexToF32(kBit.f32.positive.max) / 2 + 2 ** 127) - BigInt(1)
+      ),
+      // first_f64_not_castable minus one fraction bit of the 64 bit float representation
     },
-
     negative: {
       max: hexToF32(kBit.f32.negative.max),
       min: hexToF32(kBit.f32.negative.min),
       nearest_min: hexToF32(kBit.f32.negative.nearest_min),
+      less_than_one: hexToF32(kBit.f32.negative.less_than_one), // -0.999999940395
       pi: {
         whole: hexToF32(kBit.f32.negative.pi.whole),
         three_quarters: hexToF32(kBit.f32.negative.pi.three_quarters),
@@ -345,24 +356,44 @@ export const kValue = {
         quarter: hexToF32(kBit.f32.negative.pi.quarter),
         sixth: hexToF32(kBit.f32.negative.pi.sixth),
       },
+      first_f64_not_castable: -(hexToF32(kBit.f32.positive.max) / 2 + 2 ** 127), // mid point of -2**128 and largest f32
+      last_f64_castable: -hexToF64(
+        f64ToHex(hexToF32(kBit.f32.positive.max) / 2 + 2 ** 127) - BigInt(1)
+      ),
+      // first_f64_not_castable minus one fraction bit of the 64 bit float representation
     },
-
     subnormal: {
       positive: {
         min: hexToF32(kBit.f32.subnormal.positive.min),
         max: hexToF32(kBit.f32.subnormal.positive.max),
       },
-
       negative: {
         max: hexToF32(kBit.f32.subnormal.negative.max),
         min: hexToF32(kBit.f32.subnormal.negative.min),
       },
     },
-
     infinity: {
       positive: hexToF32(kBit.f32.infinity.positive),
       negative: hexToF32(kBit.f32.infinity.negative),
     },
+  },
+
+  // Limits of i16
+  i16: {
+    positive: {
+      min: 0,
+      max: 32767,
+    },
+    negative: {
+      min: -32768,
+      max: 0,
+    },
+  },
+
+  // Limits of u16
+  u16: {
+    min: 0,
+    max: 65535,
   },
 
   // Limits of f16
@@ -371,26 +402,32 @@ export const kValue = {
       min: hexToF16(kBit.f16.positive.min),
       max: hexToF16(kBit.f16.positive.max),
       zero: hexToF16(kBit.f16.positive.zero),
+      first_f64_not_castable: hexToF16(kBit.f16.positive.max) / 2 + 2 ** 16, // mid point of 2**16 and largest f16
+      last_f64_castable: hexToF64(
+        f64ToHex(hexToF16(kBit.f16.positive.max) / 2 + 2 ** 16) - BigInt(1)
+      ),
+      // first_f64_not_castable minus one fraction bit of the 64 bit float representation
     },
-
     negative: {
       max: hexToF16(kBit.f16.negative.max),
       min: hexToF16(kBit.f16.negative.min),
       zero: hexToF16(kBit.f16.negative.zero),
+      first_f64_not_castable: -(hexToF16(kBit.f16.positive.max) / 2 + 2 ** 16), // mid point of -2**16 and largest f16
+      last_f64_castable: -hexToF64(
+        f64ToHex(hexToF16(kBit.f16.positive.max) / 2 + 2 ** 16) - BigInt(1)
+      ),
+      // first_f64_not_castable minus one fraction bit of the 64 bit float representation
     },
-
     subnormal: {
       positive: {
         min: hexToF16(kBit.f16.subnormal.positive.min),
         max: hexToF16(kBit.f16.subnormal.positive.max),
       },
-
       negative: {
         max: hexToF16(kBit.f16.subnormal.negative.max),
         min: hexToF16(kBit.f16.subnormal.negative.min),
       },
     },
-
     infinity: {
       positive: hexToF16(kBit.f16.infinity.positive),
       negative: hexToF16(kBit.f16.infinity.negative),
@@ -465,7 +502,6 @@ export const kValue = {
     toMinus31: Math.pow(2, -31),
     toMinus32: Math.pow(2, -32),
   },
-
   negPowTwo: {
     to0: -Math.pow(2, 0),
     to1: -Math.pow(2, 1),
@@ -533,5 +569,23 @@ export const kValue = {
     toMinus30: -Math.pow(2, -30),
     toMinus31: -Math.pow(2, -31),
     toMinus32: -Math.pow(2, -32),
+  },
+
+  // Limits of i8
+  i8: {
+    positive: {
+      min: 0,
+      max: 127,
+    },
+    negative: {
+      min: -128,
+      max: 0,
+    },
+  },
+
+  // Limits of u8
+  u8: {
+    min: 0,
+    max: 255,
   },
 };

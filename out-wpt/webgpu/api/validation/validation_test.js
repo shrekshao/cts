@@ -58,7 +58,6 @@ export class ValidationTest extends GPUTest {
           ...descriptor,
           usage: descriptor.usage | GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_SRC,
         });
-
         void this.device.popErrorScope();
         return buffer;
       }
@@ -171,7 +170,6 @@ export class ValidationTest extends GPUTest {
       format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING,
     });
-
     void this.device.popErrorScope();
     return texture;
   }
@@ -313,19 +311,15 @@ export class ValidationTest extends GPUTest {
         module: this.device.createShaderModule({
           code: this.getNoOpShaderCode('VERTEX'),
         }),
-
         entryPoint: 'main',
       },
-
       fragment: {
         module: this.device.createShaderModule({
           code: this.getNoOpShaderCode('FRAGMENT'),
         }),
-
         entryPoint: 'main',
         targets: [{ format: 'rgba8unorm', writeMask: 0 }],
       },
-
       primitive: { topology: 'triangle-list' },
     });
   }
@@ -339,11 +333,9 @@ export class ValidationTest extends GPUTest {
         module: this.device.createShaderModule({
           code: '',
         }),
-
         entryPoint: '',
       },
     });
-
     void this.device.popErrorScope();
     return pipeline;
   }
@@ -356,7 +348,6 @@ export class ValidationTest extends GPUTest {
         module: this.device.createShaderModule({
           code: this.getNoOpShaderCode('COMPUTE'),
         }),
-
         entryPoint: 'main',
       },
     });
@@ -371,11 +362,9 @@ export class ValidationTest extends GPUTest {
         module: this.device.createShaderModule({
           code: '',
         }),
-
         entryPoint: '',
       },
     });
-
     void this.device.popErrorScope();
     return pipeline;
   }
@@ -390,32 +379,44 @@ export class ValidationTest extends GPUTest {
   }
 
   /** Helper for testing createRenderPipeline(Async) validation */
-  doCreateRenderPipelineTest(isAsync, _success, descriptor) {
+  doCreateRenderPipelineTest(isAsync, _success, descriptor, errorTypeName = 'OperationError') {
     if (isAsync) {
       if (_success) {
         this.shouldResolve(this.device.createRenderPipelineAsync(descriptor));
       } else {
-        this.shouldReject('OperationError', this.device.createRenderPipelineAsync(descriptor));
+        this.shouldReject(errorTypeName, this.device.createRenderPipelineAsync(descriptor));
       }
     } else {
-      this.expectValidationError(() => {
-        this.device.createRenderPipeline(descriptor);
-      }, !_success);
+      if (errorTypeName === 'OperationError') {
+        this.expectValidationError(() => {
+          this.device.createRenderPipeline(descriptor);
+        }, !_success);
+      } else {
+        this.shouldThrow(_success ? false : errorTypeName, () => {
+          this.device.createRenderPipeline(descriptor);
+        });
+      }
     }
   }
 
   /** Helper for testing createComputePipeline(Async) validation */
-  doCreateComputePipelineTest(isAsync, _success, descriptor) {
+  doCreateComputePipelineTest(isAsync, _success, descriptor, errorTypeName = 'OperationError') {
     if (isAsync) {
       if (_success) {
         this.shouldResolve(this.device.createComputePipelineAsync(descriptor));
       } else {
-        this.shouldReject('OperationError', this.device.createComputePipelineAsync(descriptor));
+        this.shouldReject(errorTypeName, this.device.createComputePipelineAsync(descriptor));
       }
     } else {
-      this.expectValidationError(() => {
-        this.device.createComputePipeline(descriptor);
-      }, !_success);
+      if (errorTypeName === 'OperationError') {
+        this.expectValidationError(() => {
+          this.device.createComputePipeline(descriptor);
+        }, !_success);
+      } else {
+        this.shouldThrow(_success ? false : errorTypeName, () => {
+          this.device.createComputePipeline(descriptor);
+        });
+      }
     }
   }
 }

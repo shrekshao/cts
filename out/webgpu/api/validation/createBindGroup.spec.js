@@ -15,7 +15,9 @@ kAllTextureFormats,
 kBindableResources,
 kBufferBindingTypes,
 kBufferUsages,
+kCompareFunctions,
 kLimitInfo,
+kSamplerBindingTypes,
 kTextureFormatInfo,
 kTextureUsages,
 kTextureViewDimensions,
@@ -51,8 +53,8 @@ fn(async (t) => {
     layoutEntries.push({
       binding: i,
       visibility: GPUShaderStage.COMPUTE,
-      buffer: { type: 'storage' } });
-
+      buffer: { type: 'storage' }
+    });
   }
   const bindGroupLayout = t.device.createBindGroupLayout({ entries: layoutEntries });
 
@@ -60,16 +62,16 @@ fn(async (t) => {
   for (let i = 0; i < bindGroupEntryCount; ++i) {
     entries.push({
       binding: i,
-      resource: { buffer: t.getStorageBuffer() } });
-
+      resource: { buffer: t.getStorageBuffer() }
+    });
   }
 
   const shouldError = layoutEntryCount !== bindGroupEntryCount;
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries,
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, shouldError);
 });
 
@@ -87,14 +89,14 @@ fn(async (t) => {
 
   const bindGroupLayout = t.device.createBindGroupLayout({
     entries: [
-    { binding: layoutBinding, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }] });
+    { binding: layoutBinding, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }]
 
-
+  });
 
   const descriptor = {
     entries: [{ binding, resource: { buffer: t.getStorageBuffer() } }],
-    layout: bindGroupLayout };
-
+    layout: bindGroupLayout
+  };
 
   const shouldError = layoutBinding !== binding;
   t.expectValidationError(() => {
@@ -116,8 +118,8 @@ fn((t) => {
   const info = bindingTypeInfo(entry);
 
   const layout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, ...entry }] });
-
+    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, ...entry }]
+  });
 
   const resource = t.getBindingResource(resourceType);
 
@@ -157,8 +159,8 @@ fn(async (t) => {
   const info = texBindingTypeInfo(entry);
 
   const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, ...entry }] });
-
+    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, ...entry }]
+  });
 
   // The `RENDER_ATTACHMENT` usage must be specified if sampleCount > 1 according to WebGPU SPEC.
   const appliedUsage =
@@ -168,16 +170,16 @@ fn(async (t) => {
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
     usage: appliedUsage,
-    sampleCount: info.resource === 'sampledTexMS' ? 4 : 1 };
-
+    sampleCount: info.resource === 'sampledTexMS' ? 4 : 1
+  };
   const resource = t.device.createTexture(descriptor).createView();
 
   const shouldError = (usage & info.usage) === 0;
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, shouldError);
 });
 
@@ -197,10 +199,10 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      texture: { sampleType } }] });
+      texture: { sampleType }
+    }]
 
-
-
+  });
 
   let format;
   if (sampleType === 'float') {
@@ -216,19 +218,19 @@ fn(async (t) => {
   const goodDescriptor = {
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format,
-    usage: GPUTextureUsage.TEXTURE_BINDING };
-
+    usage: GPUTextureUsage.TEXTURE_BINDING
+  };
 
   // Control case
   t.device.createBindGroup({
     entries: [
     {
       binding: 0,
-      resource: t.device.createTexture(goodDescriptor).createView() }],
+      resource: t.device.createTexture(goodDescriptor).createView()
+    }],
 
-
-    layout: bindGroupLayout });
-
+    layout: bindGroupLayout
+  });
 
   function* mismatchedTextureFormats() {
     if (sampleType !== 'float') {
@@ -250,8 +252,8 @@ fn(async (t) => {
     t.expectValidationError(() => {
       t.device.createBindGroup({
         entries: [{ binding: 0, resource: t.device.createTexture(badDescriptor).createView() }],
-        layout: bindGroupLayout });
-
+        layout: bindGroupLayout
+      });
     });
   }
 });
@@ -260,25 +262,43 @@ g.test('texture_must_have_correct_dimension').
 desc(
 `
     Test that bound texture views match the dimensions supplied in the BindGroupLayout
-    - Test for every GPUTextureViewDimension`).
+      - Test for every GPUTextureViewDimension
+      - Test for both TEXTURE_BINDING and STORAGE_BINDING.
+  `).
 
 params((u) =>
 u.
+combine('usage', [
+GPUConst.TextureUsage.TEXTURE_BINDING,
+GPUConst.TextureUsage.STORAGE_BINDING]).
+
 combine('viewDimension', kTextureViewDimensions).
+unless(
+(p) =>
+p.usage === GPUConst.TextureUsage.STORAGE_BINDING && (
+p.viewDimension === 'cube' || p.viewDimension === 'cube-array')).
+
 beginSubcases().
 combine('dimension', kTextureViewDimensions)).
 
 fn(async (t) => {
-  const { viewDimension, dimension } = t.params;
+  const { usage, viewDimension, dimension } = t.params;
+
   const bindGroupLayout = t.device.createBindGroupLayout({
     entries: [
+    usage === GPUTextureUsage.TEXTURE_BINDING ?
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      texture: { viewDimension } }] });
+      texture: { viewDimension }
+    } :
+    {
+      binding: 0,
+      visibility: GPUShaderStage.FRAGMENT,
+      storageTexture: { access: 'write-only', format: 'rgba8unorm', viewDimension }
+    }]
 
-
-
+  });
 
   let height = 16;
   let depthOrArrayLayers = 6;
@@ -290,9 +310,9 @@ fn(async (t) => {
   const texture = t.device.createTexture({
     size: { width: 16, height, depthOrArrayLayers },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.TEXTURE_BINDING,
-    dimension: getTextureDimensionFromView(dimension) });
-
+    usage,
+    dimension: getTextureDimensionFromView(dimension)
+  });
 
   const shouldError = viewDimension !== dimension;
   const textureView = texture.createView({ dimension });
@@ -300,8 +320,8 @@ fn(async (t) => {
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: textureView }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, shouldError);
 });
 
@@ -325,17 +345,17 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      texture: { multisampled } }] });
+      texture: { multisampled }
+    }]
 
-
-
+  });
 
   const texture = t.device.createTexture({
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
-    sampleCount });
-
+    sampleCount
+  });
 
   const isValid = !multisampled && sampleCount === 1 || multisampled && sampleCount > 1;
 
@@ -343,8 +363,8 @@ fn(async (t) => {
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: textureView }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 
@@ -385,23 +405,23 @@ fn(async (t) => {
   const { offset, size, _success } = t.params;
 
   const bindGroupLayout = t.device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }] });
-
+    entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } }]
+  });
 
   const buffer = t.device.createBuffer({
     size: 1024,
-    usage: GPUBufferUsage.STORAGE });
-
+    usage: GPUBufferUsage.STORAGE
+  });
 
   const descriptor = {
     entries: [
     {
       binding: 0,
-      resource: { buffer, offset, size } }],
+      resource: { buffer, offset, size }
+    }],
 
-
-    layout: bindGroupLayout };
-
+    layout: bindGroupLayout
+  };
 
   if (_success) {
     // Control case
@@ -418,10 +438,10 @@ g.test('minBindingSize').
 desc('Tests that minBindingSize is correctly enforced.').
 paramsSubcasesOnly((u) =>
 u //
-.combine('minBindingSize', [undefined, 4, 256]).
+.combine('minBindingSize', [undefined, 4, 8, 256]).
 expand('size', ({ minBindingSize }) =>
 minBindingSize !== undefined ?
-[minBindingSize - 1, minBindingSize, minBindingSize + 1] :
+[minBindingSize - 4, minBindingSize, minBindingSize + 4] :
 [4, 256])).
 
 
@@ -435,16 +455,16 @@ fn((t) => {
       visibility: GPUShaderStage.FRAGMENT,
       buffer: {
         type: 'storage',
-        minBindingSize } }] });
+        minBindingSize
+      }
+    }]
 
-
-
-
+  });
 
   const storageBuffer = t.device.createBuffer({
     size,
-    usage: GPUBufferUsage.STORAGE });
-
+    usage: GPUBufferUsage.STORAGE
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
@@ -453,11 +473,11 @@ fn((t) => {
       {
         binding: 0,
         resource: {
-          buffer: storageBuffer } }] });
+          buffer: storageBuffer
+        }
+      }]
 
-
-
-
+    });
   }, minBindingSize !== undefined && size < minBindingSize);
 });
 
@@ -477,15 +497,15 @@ fn((t) => {
     {
       ...entry,
       binding: 0,
-      visibility: info.validStages }] });
+      visibility: info.validStages
+    }]
 
-
-
+  });
 
   const buffer = t.createBufferWithState(state, {
     usage: info.usage,
-    size: 4 });
-
+    size: 4
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
@@ -494,11 +514,11 @@ fn((t) => {
       {
         binding: 0,
         resource: {
-          buffer } }] });
+          buffer
+        }
+      }]
 
-
-
-
+    });
   }, state === 'invalid');
 });
 
@@ -518,10 +538,10 @@ fn((t) => {
     {
       ...entry,
       binding: 0,
-      visibility: info.validStages }] });
+      visibility: info.validStages
+    }]
 
-
-
+  });
 
   // The `RENDER_ATTACHMENT` usage must be specified if sampleCount > 1 according to WebGPU SPEC.
   const usage = entry.texture?.multisampled ?
@@ -531,8 +551,8 @@ fn((t) => {
     usage,
     size: [1, 1],
     format: 'rgba8unorm',
-    sampleCount: entry.texture?.multisampled ? 4 : 1 });
-
+    sampleCount: entry.texture?.multisampled ? 4 : 1
+  });
 
   let textureView;
   t.expectValidationError(() => {
@@ -545,10 +565,10 @@ fn((t) => {
       entries: [
       {
         binding: 0,
-        resource: textureView }] });
+        resource: textureView
+      }]
 
-
-
+    });
   }, state === 'invalid');
 });
 
@@ -563,17 +583,17 @@ beforeAllSubcases((t) => {
 fn(async (t) => {
   const mismatched = t.params.mismatched;
 
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const bgl = device.createBindGroupLayout({
+  const bgl = sourceDevice.createBindGroupLayout({
     entries: [
     {
       binding: 0,
       visibility: GPUConst.ShaderStage.VERTEX,
-      buffer: {} }] });
+      buffer: {}
+    }]
 
-
-
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
@@ -581,10 +601,10 @@ fn(async (t) => {
       entries: [
       {
         binding: 0,
-        resource: { buffer: t.getUniformBuffer() } }] });
+        resource: { buffer: t.getUniformBuffer() }
+      }]
 
-
-
+    });
   }, mismatched);
 });
 
@@ -634,15 +654,15 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: info.validStages,
-      ...entry },
-
+      ...entry
+    },
     {
       binding: 1,
       visibility: info.validStages,
-      ...entry }] });
+      ...entry
+    }]
 
-
-
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
@@ -650,14 +670,14 @@ fn(async (t) => {
       entries: [
       {
         binding: 0,
-        resource: resource0 },
-
+        resource: resource0
+      },
       {
         binding: 1,
-        resource: resource1 }] });
+        resource: resource1
+      }]
 
-
-
+    });
   }, resource0Mismatched || resource1Mismatched);
 });
 
@@ -685,16 +705,16 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      storageTexture: { access: 'write-only', format: 'rgba8unorm' } }] });
+      storageTexture: { access: 'write-only', format: 'rgba8unorm' }
+    }]
 
-
-
+  });
 
   const texture = t.device.createTexture({
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
-    usage });
-
+    usage
+  });
 
   const isValid = GPUTextureUsage.STORAGE_BINDING & usage;
 
@@ -702,8 +722,8 @@ fn(async (t) => {
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: textureView }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 
@@ -728,26 +748,26 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      storageTexture: { access: 'write-only', format: 'rgba8unorm' } }] });
+      storageTexture: { access: 'write-only', format: 'rgba8unorm' }
+    }]
 
-
-
+  });
 
   const MIP_LEVEL_COUNT = 4;
   const texture = t.device.createTexture({
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
     usage: GPUTextureUsage.STORAGE_BINDING,
-    mipLevelCount: MIP_LEVEL_COUNT });
-
+    mipLevelCount: MIP_LEVEL_COUNT
+  });
 
   const textureView = texture.createView({ baseMipLevel, mipLevelCount });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: textureView }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, mipLevelCount !== 1);
 });
 
@@ -771,24 +791,24 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.FRAGMENT,
-      storageTexture: { access: 'write-only', format: storageTextureFormat } }] });
+      storageTexture: { access: 'write-only', format: storageTextureFormat }
+    }]
 
-
-
+  });
 
   const texture = t.device.createTexture({
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format: resourceFormat,
-    usage: GPUTextureUsage.STORAGE_BINDING });
-
+    usage: GPUTextureUsage.STORAGE_BINDING
+  });
 
   const isValid = storageTextureFormat === resourceFormat;
   const textureView = texture.createView({ format: resourceFormat });
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: textureView }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 
@@ -824,15 +844,15 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.COMPUTE,
-      buffer: { type } }] });
+      buffer: { type }
+    }]
 
-
-
+  });
 
   const buffer = t.device.createBuffer({
     size: 4,
-    usage });
-
+    usage
+  });
 
   let isValid = false;
   if (type === 'uniform') {
@@ -844,8 +864,8 @@ fn(async (t) => {
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: { buffer } }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 
@@ -885,10 +905,10 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.COMPUTE,
-      buffer: { type } }] });
+      buffer: { type }
+    }]
 
-
-
+  });
 
   let usage, isValid;
   if (type === 'uniform') {
@@ -901,14 +921,14 @@ fn(async (t) => {
 
   const buffer = t.device.createBuffer({
     size: 1024,
-    usage });
-
+    usage
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: { buffer, offset } }],
-      layout: bindGroupLayout });
-
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 
@@ -921,10 +941,10 @@ desc(
   `).
 
 params((u) =>
-u //
-.combine('type', kBufferBindingTypes).
+u.
+combine('type', kBufferBindingTypes).
 beginSubcases()
-// Test a size of 1 to ensure there's no alignment requirement,
+// Test a size of 1 (for uniform buffer) or 4 (for storage and read-only storage buffer)
 // then values just within and just above the limit.
 .expand('bindingSize', ({ type }) =>
 type === 'uniform' ?
@@ -934,9 +954,9 @@ kLimitInfo.maxUniformBufferBindingSize.default,
 kLimitInfo.maxUniformBufferBindingSize.default + 1] :
 
 [
-1,
+4,
 kLimitInfo.maxStorageBufferBindingSize.default,
-kLimitInfo.maxStorageBufferBindingSize.default + 1])).
+kLimitInfo.maxStorageBufferBindingSize.default + 4])).
 
 
 
@@ -948,10 +968,10 @@ fn(async (t) => {
     {
       binding: 0,
       visibility: GPUShaderStage.COMPUTE,
-      buffer: { type } }] });
+      buffer: { type }
+    }]
 
-
-
+  });
 
   let usage, isValid;
   if (type === 'uniform') {
@@ -964,14 +984,149 @@ fn(async (t) => {
 
   const buffer = t.device.createBuffer({
     size: kLimitInfo.maxStorageBufferBindingSize.default,
-    usage });
-
+    usage
+  });
 
   t.expectValidationError(() => {
     t.device.createBindGroup({
       entries: [{ binding: 0, resource: { buffer, size: bindingSize } }],
-      layout: bindGroupLayout });
+      layout: bindGroupLayout
+    });
+  }, !isValid);
+});
 
+g.test('buffer,effective_buffer_binding_size').
+desc(
+`
+  Test that the effective buffer binding size of the BindGroup entry must be a multiple of 4 if the
+  buffer type is 'storage|read-only-storage', while there is no such restriction on uniform buffers.
+`).
+
+params((u) =>
+u.
+combine('type', kBufferBindingTypes).
+beginSubcases().
+expand('offset', ({ type }) =>
+type === 'uniform' ?
+[0, kLimitInfo.minUniformBufferOffsetAlignment.default] :
+[0, kLimitInfo.minStorageBufferOffsetAlignment.default]).
+
+expand('bufferSize', ({ type }) =>
+type === 'uniform' ?
+[
+kLimitInfo.minUniformBufferOffsetAlignment.default + 8,
+kLimitInfo.minUniformBufferOffsetAlignment.default + 10] :
+
+[
+kLimitInfo.minStorageBufferOffsetAlignment.default + 8,
+kLimitInfo.minStorageBufferOffsetAlignment.default + 10]).
+
+
+combine('bindingSize', [undefined, 2, 4, 6])).
+
+fn(async (t) => {
+  const { type, offset, bufferSize, bindingSize } = t.params;
+
+  const bindGroupLayout = t.device.createBindGroupLayout({
+    entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.COMPUTE,
+      buffer: { type }
+    }]
+
+  });
+
+  const effectiveBindingSize = bindingSize ?? bufferSize - offset;
+  let usage, isValid;
+  if (type === 'uniform') {
+    usage = GPUBufferUsage.UNIFORM;
+    isValid = true;
+  } else {
+    usage = GPUBufferUsage.STORAGE;
+    isValid = effectiveBindingSize % 4 === 0;
+  }
+
+  const buffer = t.device.createBuffer({
+    size: bufferSize,
+    usage
+  });
+
+  t.expectValidationError(() => {
+    t.device.createBindGroup({
+      entries: [{ binding: 0, resource: { buffer, offset, size: bindingSize } }],
+      layout: bindGroupLayout
+    });
+  }, !isValid);
+});
+
+g.test('sampler,device_mismatch').
+desc(`Tests createBindGroup cannot be called with a sampler created from another device.`).
+paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
+beforeAllSubcases((t) => {
+  t.selectMismatchedDeviceOrSkipTestCase(undefined);
+}).
+fn(async (t) => {
+  const { mismatched } = t.params;
+
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
+
+  const bindGroupLayout = t.device.createBindGroupLayout({
+    entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.FRAGMENT,
+      sampler: { type: 'filtering' }
+    }]
+
+  });
+
+  const sampler = sourceDevice.createSampler();
+  t.expectValidationError(() => {
+    t.device.createBindGroup({
+      entries: [{ binding: 0, resource: sampler }],
+      layout: bindGroupLayout
+    });
+  }, mismatched);
+});
+
+g.test('sampler,compare_function_with_binding_type').
+desc(
+`
+  Test that the sampler of the BindGroup has a 'compareFunction' value if the sampler type of the
+  BindGroupLayout is 'comparison'. Other sampler types should not have 'compare' field in
+  the descriptor of the sampler.
+  `).
+
+params((u) =>
+u //
+.combine('bgType', kSamplerBindingTypes).
+beginSubcases().
+combine('compareFunction', [undefined, ...kCompareFunctions])).
+
+fn(async (t) => {
+  const { bgType, compareFunction } = t.params;
+
+  const bindGroupLayout = t.device.createBindGroupLayout({
+    entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.FRAGMENT,
+      sampler: { type: bgType }
+    }]
+
+  });
+
+  const isValid =
+  bgType === 'comparison' ? compareFunction !== undefined : compareFunction === undefined;
+
+  const sampler = t.device.createSampler({ compare: compareFunction });
+
+  t.expectValidationError(() => {
+    t.device.createBindGroup({
+      entries: [{ binding: 0, resource: sampler }],
+      layout: bindGroupLayout
+    });
   }, !isValid);
 });
 //# sourceMappingURL=createBindGroup.spec.js.map

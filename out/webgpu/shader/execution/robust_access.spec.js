@@ -8,6 +8,7 @@ TODO: add tests to check that textureLoad operations stay in-bounds.
 `;import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert } from '../../../common/util/util.js';
 import { GPUTest } from '../../gpu_test.js';
+import { align } from '../../util/math.js';
 import { generateTypes, supportedScalarTypes, supportsAtomics } from '../types.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -37,8 +38,8 @@ dynamicOffsets)
 
   const resultBuffer = t.device.createBuffer({
     size: 4,
-    usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE });
-
+    usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE
+  });
 
   const source = `
 struct Constants {
@@ -63,21 +64,21 @@ fn main() {
   const module = t.device.createShaderModule({ code: source });
   const pipeline = t.device.createComputePipeline({
     layout,
-    compute: { module, entryPoint: 'main' } });
-
+    compute: { module, entryPoint: 'main' }
+  });
 
   const group = t.device.createBindGroup({
     layout: pipeline.getBindGroupLayout(1),
     entries: [
     { binding: 0, resource: { buffer: constantsBuffer } },
-    { binding: 1, resource: { buffer: resultBuffer } }] });
+    { binding: 1, resource: { buffer: resultBuffer } }]
 
-
+  });
 
   const testGroup = t.device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
-    entries: testBindings });
-
+    entries: testBindings
+  });
 
   const encoder = t.device.createCommandEncoder();
   const pass = encoder.beginComputePass();
@@ -131,22 +132,22 @@ combineWithParams([
   storageClass: 'storage',
   storageMode: 'read_write',
   access: 'read',
-  dynamicOffset: false },
-
+  dynamicOffset: false
+},
 {
   storageClass: 'storage',
   storageMode: 'read_write',
   access: 'write',
-  dynamicOffset: false },
-
+  dynamicOffset: false
+},
 { storageClass: 'storage', storageMode: 'read', access: 'read', dynamicOffset: true },
 { storageClass: 'storage', storageMode: 'read_write', access: 'read', dynamicOffset: true },
 {
   storageClass: 'storage',
   storageMode: 'read_write',
   access: 'write',
-  dynamicOffset: true },
-
+  dynamicOffset: true
+},
 { storageClass: 'uniform', access: 'read', dynamicOffset: false },
 { storageClass: 'uniform', access: 'read', dynamicOffset: true },
 { storageClass: 'private', access: 'read' },
@@ -160,6 +161,11 @@ combineWithParams([
 { containerType: 'array' },
 { containerType: 'matrix' },
 { containerType: 'vector' }]).
+
+combineWithParams([
+{ shadowingMode: 'none' },
+{ shadowingMode: 'module-scope' },
+{ shadowingMode: 'function-scope' }]).
 
 expand('isAtomic', (p) => supportsAtomics(p) ? [false, true] : [false]).
 beginSubcases().
@@ -176,8 +182,9 @@ fn(async (t) => {
     containerType,
     baseType,
     type,
-    _kTypeInfo } =
-  t.params;
+    shadowingMode,
+    _kTypeInfo
+  } = t.params;
 
   assert(_kTypeInfo !== undefined, 'not an indexable type');
   assert('arrayLength' in _kTypeInfo);
@@ -206,7 +213,7 @@ struct S {
       {
         assert(_kTypeInfo.layout !== undefined);
         const layout = _kTypeInfo.layout;
-        bufferBindingSize = layout.size;
+        bufferBindingSize = align(layout.size, layout.alignment);
         const qualifiers = storageClass === 'storage' ? `storage, ${storageMode}` : storageClass;
         globalSource += `
 struct TestData {
@@ -224,9 +231,9 @@ struct TestData {
             storageMode === 'read' ?
             'read-only-storage' :
             'storage',
-            hasDynamicOffset: dynamicOffset } });
-
-
+            hasDynamicOffset: dynamicOffset
+          }
+        });
       }
       break;
 
@@ -353,13 +360,45 @@ struct TestData {
   }`;
   }
 
+  // Shadowing case declarations
+  let moduleScopeShadowDecls = '';
+  let functionScopeShadowDecls = '';
+
+  switch (shadowingMode) {
+    case 'module-scope':
+      // Shadow the builtins likely used by robustness as module-scope variables
+      moduleScopeShadowDecls = `
+var<private> min = 0;
+var<private> max = 0;
+var<private> arrayLength = 0;
+`;
+      // Make sure that these are referenced by the function.
+      // This ensures that compilers don't strip away unused variables.
+      functionScopeShadowDecls = `
+  _ = min;
+  _ = max;
+  _ = arrayLength;
+`;
+      break;
+    case 'function-scope':
+      // Shadow the builtins likely used by robustness as function-scope variables
+      functionScopeShadowDecls = `
+  let min = 0;
+  let max = 0;
+  let arrayLength = 0;
+`;
+      break;}
+
+
   // Run the test
 
   // First aggregate the test source
   const testSource = `
-      ${globalSource}
+${globalSource}
+${moduleScopeShadowDecls}
 
 fn runTest() -> u32 {
+  ${functionScopeShadowDecls}
   ${testFunctionSource}
   return 0u;
 }`;
@@ -367,28 +406,28 @@ fn runTest() -> u32 {
   const layout = t.device.createPipelineLayout({
     bindGroupLayouts: [
     t.device.createBindGroupLayout({
-      entries: testGroupBGLEntires }),
-
+      entries: testGroupBGLEntires
+    }),
     t.device.createBindGroupLayout({
       entries: [
       {
         binding: 0,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'uniform' } },
-
-
+          type: 'uniform'
+        }
+      },
       {
         binding: 1,
         visibility: GPUShaderStage.COMPUTE,
         buffer: {
-          type: 'storage' } }] })] });
+          type: 'storage'
+        }
+      }]
 
+    })]
 
-
-
-
-
+  });
 
   // Run it.
   if (bufferBindingSize !== undefined && baseType !== 'bool') {
@@ -396,8 +435,8 @@ fn runTest() -> u32 {
     const bufferBindingEnd = bufferBindingOffset + bufferBindingSize;
     testFillArrayBuffer(expectedData, baseType, {
       zeroByteStart: bufferBindingOffset,
-      zeroByteCount: bufferBindingSize });
-
+      zeroByteCount: bufferBindingSize
+    });
 
     // Create a buffer that contains zeroes in the allowed access area, and 42s everywhere else.
     const testBuffer = t.makeBufferWithContents(
@@ -420,9 +459,9 @@ fn runTest() -> u32 {
       resource: {
         buffer: testBuffer,
         offset: dynamicOffset ? 0 : bufferBindingOffset,
-        size: bufferBindingSize } }],
-
-
+        size: bufferBindingSize
+      }
+    }],
 
     dynamicOffset ? [bufferBindingOffset] : undefined);
 

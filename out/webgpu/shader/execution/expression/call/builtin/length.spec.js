@@ -11,12 +11,12 @@ Returns the length of e (e.g. abs(e) if T is a scalar, or sqrt(e[0]^2 + e[1]^2 +
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeF32, TypeVec } from '../../../../../util/conversion.js';
 import { lengthInterval } from '../../../../../util/f32_interval.js';
-import { fullF32Range, kVectorTestValues } from '../../../../../util/math.js';
+import { fullF32Range, vectorF32Range } from '../../../../../util/math.js';
+import { makeCaseCache } from '../../case_cache.js';
 import {
 allInputSources,
-
-makeUnaryToF32IntervalCase,
-makeVectorToF32IntervalCase,
+generateUnaryToF32IntervalCases,
+generateVectorToF32IntervalCases,
 run } from
 '../../expression.js';
 
@@ -24,10 +24,29 @@ import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
-/** @returns a `length` Case for a vector of f32s input */
-const makeCaseVecF32 = (x) => {
-  return makeVectorToF32IntervalCase(x, lengthInterval);
-};
+export const d = makeCaseCache('length', {
+  f32: () => {
+    return generateUnaryToF32IntervalCases(fullF32Range(), 'unfiltered', lengthInterval);
+  },
+  f32_vec2_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(2), 'f32-only', lengthInterval);
+  },
+  f32_vec2_non_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(2), 'unfiltered', lengthInterval);
+  },
+  f32_vec3_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(3), 'f32-only', lengthInterval);
+  },
+  f32_vec3_non_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(3), 'unfiltered', lengthInterval);
+  },
+  f32_vec4_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(4), 'f32-only', lengthInterval);
+  },
+  f32_vec4_non_const: () => {
+    return generateVectorToF32IntervalCases(vectorF32Range(4), 'unfiltered', lengthInterval);
+  }
+});
 
 g.test('abstract_float').
 specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
@@ -42,11 +61,7 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const makeCase = (x) => {
-    return makeUnaryToF32IntervalCase(x, lengthInterval);
-  };
-  const cases = fullF32Range().map(makeCase);
-
+  const cases = await d.get('f32');
   await run(t, builtin('length'), [TypeF32], TypeF32, t.params, cases);
 });
 
@@ -55,7 +70,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec2s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[2].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec2_const' : 'f32_vec2_non_const');
 
   await run(t, builtin('length'), [TypeVec(2, TypeF32)], TypeF32, t.params, cases);
 });
@@ -65,7 +81,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec3s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[3].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec3_const' : 'f32_vec3_non_const');
 
   await run(t, builtin('length'), [TypeVec(3, TypeF32)], TypeF32, t.params, cases);
 });
@@ -75,7 +92,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec4s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[4].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec4_const' : 'f32_vec4_non_const');
 
   await run(t, builtin('length'), [TypeVec(4, TypeF32)], TypeF32, t.params, cases);
 });

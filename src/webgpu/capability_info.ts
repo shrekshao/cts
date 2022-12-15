@@ -72,10 +72,12 @@ export const kErrorScopeFilterInfo: {
   readonly [k in GPUErrorFilter]: {};
 } = /* prettier-ignore */ {
   'out-of-memory': {},
-  'validation': {},
+  'validation':    {},
+  'internal':      {},
 };
-/** List of all GPUTextureAspect values. */
+/** List of all GPUErrorFilter values. */
 export const kErrorScopeFilters = keysOf(kErrorScopeFilterInfo);
+export const kGeneratableErrorScopeFilters = kErrorScopeFilters.filter(e => e !== 'internal');
 
 // Textures
 
@@ -1061,6 +1063,7 @@ export const kFeatureNameInfo: {
   'indirect-first-instance': {},
   'shader-f16': {},
   'bgra8unorm-storage': {},
+  'rg11b10ufloat-renderable': {},
 };
 /** List of all GPUFeatureName values. */
 export const kFeatureNames = keysOf(kFeatureNameInfo);

@@ -1,12 +1,17 @@
 export const description = `
 copyExternalImageToTexture Validation Tests in Queue.
+Note that we don't need to add tests on the destination texture dimension as currently we require
+the destination texture should have RENDER_ATTACHMENT usage, which is only allowed to be used on 2D
+textures.
 `;
 
-import { getResourcePath } from '../../../../../common/framework/resources.js';
+import {
+  getResourcePath,
+  getCrossOriginResourcePath,
+} from '../../../../../common/framework/resources.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { raceWithRejectOnTimeout, unreachable, assert } from '../../../../../common/util/util.js';
 import {
-  kTextureDimensions,
   kTextureFormatInfo,
   kTextureFormats,
   kTextureUsages,
@@ -134,6 +139,8 @@ function generateCopySizeForDstOOB({ mipLevel, dstOrigin }: WithDstOriginMipLeve
 }
 
 class CopyExternalImageToTextureTest extends ValidationTest {
+  onlineCrossOriginUrl = 'https://raw.githubusercontent.com/gpuweb/gpuweb/main/logo/webgpu.png';
+
   getImageData(width: number, height: number): ImageData {
     if (typeof ImageData === 'undefined') {
       this.skip('ImageData is not supported.');
@@ -299,9 +306,6 @@ g.test('source_image,crossOrigin')
   images.
 
   Check whether 'SecurityError' is generated when source image is not origin clean.
-
-  TODO: make this test case work offline, ref link to achieve this :
-  https://web-platform-tests.org/writing-tests/server-features.html#tests-involving-multiple-origins
   `
   )
   .params(u =>
@@ -321,9 +325,8 @@ g.test('source_image,crossOrigin')
       t.skip('DOM is not available to create an image element.');
     }
 
-    const crossOriginUrl = 'https://get.webgl.org/conformance-resources/opengl_logo.jpg';
-    const originCleanUrl = getResourcePath('Di-3d.png');
-
+    const crossOriginUrl = getCrossOriginResourcePath('webgpu.png', t.onlineCrossOriginUrl);
+    const originCleanUrl = getResourcePath('webgpu.png');
     const img = document.createElement('img');
     img.src = isOriginClean ? originCleanUrl : crossOriginUrl;
 
@@ -335,8 +338,7 @@ g.test('source_image,crossOrigin')
       if (isOriginClean) {
         throw e;
       } else {
-        t.warn('Something wrong happens in get.webgl.org');
-        t.skip('Cannot load image in time');
+        t.skip('Cannot load cross origin image in time');
         return;
       }
     }
@@ -473,7 +475,7 @@ g.test('source_canvas,state')
     const { state, copySize } = t.params;
     const canvas = createOnscreenCanvas(t, 1, 1);
     if (typeof canvas.transferControlToOffscreen === 'undefined') {
-      t.skip("Browser doesn't support HTMLCanvasElement transfer control right");
+      t.skip("Browser doesn't support HTMLCanvasElement.transferControlToOffscreen");
       return;
     }
 
@@ -633,10 +635,10 @@ g.test('destination_texture,device_mismatch')
   })
   .fn(async t => {
     const { mismatched } = t.params;
-    const device = mismatched ? t.mismatchedDevice : t.device;
+    const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
     const copySize = { width: 1, height: 1, depthOrArrayLayers: 1 };
 
-    const texture = device.createTexture({
+    const texture = sourceDevice.createTexture({
       size: copySize,
       format: 'rgba8unorm',
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
@@ -709,36 +711,6 @@ g.test('destination_texture,sample_count')
     });
 
     t.runTest({ source: imageBitmap }, { texture: dstTexture }, copySize, sampleCount === 1);
-  });
-
-g.test('destination_texture,dimension')
-  .desc(
-    `
-  Test dst texture dimension.
-
-  Check that an error is generated when dimension is not 2d.
-  `
-  )
-  .params(u =>
-    u //
-      .combine('dimension', kTextureDimensions)
-      .beginSubcases()
-      .combine('copySize', [
-        { width: 0, height: 0, depthOrArrayLayers: 0 },
-        { width: 1, height: 1, depthOrArrayLayers: 1 },
-      ])
-  )
-  .fn(async t => {
-    const { dimension, copySize } = t.params;
-    const imageBitmap = await t.createImageBitmap(t.getImageData(1, 1));
-    const dstTexture = t.device.createTexture({
-      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
-      dimension,
-      format: 'bgra8unorm',
-      usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    t.runTest({ source: imageBitmap }, { texture: dstTexture }, copySize, dimension === '2d');
   });
 
 g.test('destination_texture,mipLevel')

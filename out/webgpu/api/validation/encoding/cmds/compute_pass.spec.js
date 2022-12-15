@@ -22,8 +22,8 @@ class F extends ValidationTest {
   createIndirectBuffer(state, data) {
     const descriptor = {
       size: data.byteLength,
-      usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST };
-
+      usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST
+    };
 
     if (state === 'invalid') {
       descriptor.usage = 0xffff; // Invalid GPUBufferUsage
@@ -42,8 +42,8 @@ class F extends ValidationTest {
     }
 
     return buffer;
-  }}
-
+  }
+}
 
 export const g = makeTestGroup(F);
 
@@ -71,17 +71,17 @@ beforeAllSubcases((t) => {
 }).
 fn(async (t) => {
   const { mismatched } = t.params;
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const pipeline = device.createComputePipeline({
+  const pipeline = sourceDevice.createComputePipeline({
     layout: 'auto',
     compute: {
-      module: device.createShaderModule({
-        code: '@compute @workgroup_size(1) fn main() {}' }),
-
-      entryPoint: 'main' } });
-
-
+      module: sourceDevice.createShaderModule({
+        code: '@compute @workgroup_size(1) fn main() {}'
+      }),
+      entryPoint: 'main'
+    }
+  });
 
   const { encoder, validateFinish } = t.createEncoder('compute pass');
   encoder.setPipeline(pipeline);
@@ -192,12 +192,12 @@ fn(async (t) => {
 
   const pipeline = t.createNoOpComputePipeline();
 
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const buffer = device.createBuffer({
+  const buffer = sourceDevice.createBuffer({
     size: 16,
-    usage: GPUBufferUsage.INDIRECT });
-
+    usage: GPUBufferUsage.INDIRECT
+  });
   t.trackForCleanup(buffer);
 
   const { encoder, validateFinish } = t.createEncoder('compute pass');
@@ -236,8 +236,8 @@ fn(async (t) => {
 
   const buffer = t.device.createBuffer({
     size: 16,
-    usage: bufferUsage });
-
+    usage: bufferUsage
+  });
   t.trackForCleanup(buffer);
 
   const success = (GPUBufferUsage.INDIRECT & bufferUsage) !== 0;

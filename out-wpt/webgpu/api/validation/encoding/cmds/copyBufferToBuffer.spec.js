@@ -64,7 +64,6 @@ g.test('buffer_state')
       size: 16,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
-
     const dstBuffer = t.createBufferWithState(dstBufferState, {
       size: 16,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
@@ -102,22 +101,19 @@ g.test('buffer,device_mismatch')
   })
   .fn(async t => {
     const { srcMismatched, dstMismatched } = t.params;
-    const mismatched = srcMismatched || dstMismatched;
 
-    const device = mismatched ? t.mismatchedDevice : t.device;
-
-    const srcBuffer = device.createBuffer({
+    const srcBufferDevice = srcMismatched ? t.mismatchedDevice : t.device;
+    const srcBuffer = srcBufferDevice.createBuffer({
       size: 16,
       usage: GPUBufferUsage.COPY_SRC,
     });
-
     t.trackForCleanup(srcBuffer);
 
-    const dstBuffer = device.createBuffer({
+    const dstBufferDevice = dstMismatched ? t.mismatchedDevice : t.device;
+    const dstBuffer = dstBufferDevice.createBuffer({
       size: 16,
       usage: GPUBufferUsage.COPY_DST,
     });
-
     t.trackForCleanup(dstBuffer);
 
     t.TestCopyBufferToBuffer({
@@ -126,7 +122,7 @@ g.test('buffer,device_mismatch')
       dstBuffer,
       dstOffset: 0,
       copySize: 8,
-      expectation: mismatched ? 'FinishError' : 'Success',
+      expectation: srcMismatched || dstMismatched ? 'FinishError' : 'Success',
     });
   });
 
@@ -143,7 +139,6 @@ g.test('buffer_usage')
       size: 16,
       usage: srcUsage,
     });
-
     const dstBuffer = t.device.createBuffer({
       size: 16,
       usage: dstUsage,
@@ -177,7 +172,6 @@ g.test('copy_size_alignment')
       size: 16,
       usage: GPUBufferUsage.COPY_SRC,
     });
-
     const dstBuffer = t.device.createBuffer({
       size: 16,
       usage: GPUBufferUsage.COPY_DST,
@@ -213,7 +207,6 @@ g.test('copy_offset_alignment')
       size: 16,
       usage: GPUBufferUsage.COPY_SRC,
     });
-
     const dstBuffer = t.device.createBuffer({
       size: 16,
       usage: GPUBufferUsage.COPY_DST,
@@ -251,7 +244,6 @@ g.test('copy_overflow')
       size: 16,
       usage: GPUBufferUsage.COPY_SRC,
     });
-
     const dstBuffer = t.device.createBuffer({
       size: 16,
       usage: GPUBufferUsage.COPY_DST,
@@ -287,7 +279,6 @@ g.test('copy_out_of_bounds')
       size: 32,
       usage: GPUBufferUsage.COPY_SRC,
     });
-
     const dstBuffer = t.device.createBuffer({
       size: 32,
       usage: GPUBufferUsage.COPY_DST,

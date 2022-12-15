@@ -51,8 +51,8 @@ fn(async (t) => {
   const descriptor = t.getDescriptor({
     noFragment: true,
     depthStencil: depthStencilState,
-    targets: hasColor ? [{ format: 'rgba8unorm' }] : [] });
-
+    targets: hasColor ? [{ format: 'rgba8unorm' }] : []
+  });
 
   t.doCreateRenderPipelineTest(isAsync, true, descriptor);
 });
@@ -68,27 +68,27 @@ beforeAllSubcases((t) => {
 fn(async (t) => {
   const { isAsync, mismatched } = t.params;
 
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const layout = device.createPipelineLayout({ bindGroupLayouts: [] });
+  const layout = sourceDevice.createPipelineLayout({ bindGroupLayouts: [] });
 
   const format = 'rgba8unorm';
   const descriptor = {
     layout,
     vertex: {
       module: t.device.createShaderModule({
-        code: kDefaultVertexShaderCode }),
-
-      entryPoint: 'main' },
-
+        code: kDefaultVertexShaderCode
+      }),
+      entryPoint: 'main'
+    },
     fragment: {
       module: t.device.createShaderModule({
-        code: kDefaultFragmentShaderCode }),
-
+        code: kDefaultFragmentShaderCode
+      }),
       entryPoint: 'main',
-      targets: [{ format }] } };
-
-
+      targets: [{ format }]
+    }
+  };
 
   t.doCreateRenderPipelineTest(isAsync, !mismatched, descriptor);
 });

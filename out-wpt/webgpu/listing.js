@@ -379,7 +379,7 @@ export const listing = [
       "api",
       "operation",
       "rendering",
-      "blending"
+      "color_target_state"
     ]
   },
   {
@@ -420,6 +420,14 @@ export const listing = [
       "operation",
       "rendering",
       "robust_access_index"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "stencil"
     ]
   },
   {
@@ -660,6 +668,13 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "debugMarker"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "encoding",
       "beginComputePass"
     ]
@@ -827,6 +842,14 @@ export const listing = [
       "api",
       "validation",
       "encoding",
+      "encoder_open_state"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
       "encoder_state"
     ]
   },
@@ -888,6 +911,13 @@ export const listing = [
       "api",
       "validation",
       "error_scope"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "getBindGroupLayout"
     ]
   },
   {
@@ -1221,6 +1251,14 @@ export const listing = [
   },
   {
     "file": [
+      "api",
+      "validation",
+      "texture",
+      "rg11b10ufloat_renderable"
+    ]
+  },
+  {
+    "file": [
       "examples"
     ]
   },
@@ -1264,6 +1302,15 @@ export const listing = [
       "expression",
       "binary",
       "bitwise"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "bool_logical"
     ]
   },
   {
@@ -2380,6 +2427,15 @@ export const listing = [
       "execution",
       "expression",
       "unary",
+      "bool_logical"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
       "f32_arithmetic"
     ]
   },
@@ -2419,6 +2475,13 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "padding"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "robust_access"
     ]
   },
@@ -2427,14 +2490,6 @@ export const listing = [
       "shader",
       "execution",
       "robust_access_vertex"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "execution",
-      "sampling",
-      "gradients_in_varying_loop"
     ]
   },
   {
@@ -2695,7 +2750,7 @@ export const listing = [
       "web_platform",
       "reftests"
     ],
-    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#918): Test all possible color spaces (once we have more than 1)\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?\nTODO(#1093): Test rgba16float values which are out of gamut of the canvas but under SDR luminance.\nTODO(#1093): Test rgba16float values which are above SDR luminance.\nTODO(#1116): Test canvas scaling."
+    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#918): Test all possible color spaces (once we have more than 1)\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?\nTODO(#1093): Test rgba16float values which are out of gamut of the canvas but under SDR luminance.\nTODO(#1093): Test rgba16float values which are above SDR luminance.\nTODO(#1116): Test canvas scaling.\nTODO: Test transferControlToOffscreen, used from {the same,another} thread"
   },
   {
     "file": [

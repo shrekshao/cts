@@ -40,23 +40,21 @@ g.test('device_mismatch')
   })
   .fn(async t => {
     const { bundle0Mismatched, bundle1Mismatched } = t.params;
-    const mismatched = bundle0Mismatched || bundle1Mismatched;
-
-    const device = mismatched ? t.mismatchedDevice : t.device;
 
     const descriptor = {
       colorFormats: ['rgba8unorm'],
     };
 
-    const bundle0Encoder = device.createRenderBundleEncoder(descriptor);
-    const bundle0 = bundle0Encoder.finish();
-    const bundle1Encoder = device.createRenderBundleEncoder(descriptor);
-    const bundle1 = bundle1Encoder.finish();
+    const bundle0Device = bundle0Mismatched ? t.mismatchedDevice : t.device;
+    const bundle0 = bundle0Device.createRenderBundleEncoder(descriptor).finish();
+
+    const bundle1Device = bundle1Mismatched ? t.mismatchedDevice : t.device;
+    const bundle1 = bundle1Device.createRenderBundleEncoder(descriptor).finish();
 
     const encoder = t.createEncoder('render pass');
     encoder.encoder.executeBundles([bundle0, bundle1]);
 
-    encoder.validateFinish(!mismatched);
+    encoder.validateFinish(!(bundle0Mismatched || bundle1Mismatched));
   });
 
 g.test('color_formats_mismatch')
@@ -75,26 +73,22 @@ g.test('color_formats_mismatch')
         bundleFormats: ['bgra8unorm', 'rg8unorm'],
         passFormats: ['bgra8unorm', 'rg8unorm'],
         _compatible: true,
-      },
-      // control case
+      }, // control case
       {
         bundleFormats: ['bgra8unorm', 'rg8unorm'],
         passFormats: ['bgra8unorm', 'bgra8unorm'],
         _compatible: false,
       },
-
       {
         bundleFormats: ['bgra8unorm', 'rg8unorm'],
         passFormats: ['rg8unorm', 'bgra8unorm'],
         _compatible: false,
       },
-
       {
         bundleFormats: ['bgra8unorm', 'rg8unorm', 'rgba8unorm'],
         passFormats: ['rg8unorm', 'bgra8unorm'],
         _compatible: false,
       },
-
       {
         bundleFormats: ['bgra8unorm', 'rg8unorm'],
         passFormats: ['rg8unorm', 'bgra8unorm', 'rgba8unorm'],
@@ -108,7 +102,6 @@ g.test('color_formats_mismatch')
     const bundleEncoder = t.device.createRenderBundleEncoder({
       colorFormats: bundleFormats,
     });
-
     const bundle = bundleEncoder.finish();
 
     const encoder = t.createEncoder('render pass', {
@@ -116,7 +109,6 @@ g.test('color_formats_mismatch')
         colorFormats: passFormats,
       },
     });
-
     encoder.encoder.executeBundles([bundle]);
 
     encoder.validateFinish(_compatible);
@@ -151,7 +143,6 @@ g.test('depth_stencil_formats_mismatch')
       colorFormats: [],
       depthStencilFormat: bundleFormat,
     });
-
     const bundle = bundleEncoder.finish();
 
     const encoder = t.createEncoder('render pass', {
@@ -160,7 +151,6 @@ g.test('depth_stencil_formats_mismatch')
         depthStencilFormat: passFormat,
       },
     });
-
     encoder.encoder.executeBundles([bundle]);
 
     encoder.validateFinish(compatible);
@@ -216,7 +206,6 @@ g.test('depth_stencil_readonly_mismatch')
       depthReadOnly: bundleDepthReadOnly,
       stencilReadOnly: bundleStencilReadOnly,
     });
-
     const bundle = bundleEncoder.finish();
 
     const encoder = t.createEncoder('render pass', {
@@ -227,7 +216,6 @@ g.test('depth_stencil_readonly_mismatch')
         stencilReadOnly: passStencilReadOnly,
       },
     });
-
     encoder.encoder.executeBundles([bundle]);
 
     encoder.validateFinish(compatible);
@@ -257,7 +245,6 @@ g.test('sample_count_mismatch')
       colorFormats: ['bgra8unorm'],
       sampleCount: bundleSamples,
     });
-
     const bundle = bundleEncoder.finish();
 
     const encoder = t.createEncoder('render pass', {
@@ -266,7 +253,6 @@ g.test('sample_count_mismatch')
         sampleCount: passSamples,
       },
     });
-
     encoder.encoder.executeBundles([bundle]);
 
     encoder.validateFinish(compatible);

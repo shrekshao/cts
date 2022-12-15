@@ -9,6 +9,7 @@ TODO: add tests to check that textureLoad operations stay in-bounds.
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert } from '../../../common/util/util.js';
 import { GPUTest } from '../../gpu_test.js';
+import { align } from '../../util/math.js';
 import { generateTypes, supportedScalarTypes, supportsAtomics } from '../types.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -123,14 +124,12 @@ g.test('linear_memory')
           access: 'read',
           dynamicOffset: false,
         },
-
         {
           storageClass: 'storage',
           storageMode: 'read_write',
           access: 'write',
           dynamicOffset: false,
         },
-
         { storageClass: 'storage', storageMode: 'read', access: 'read', dynamicOffset: true },
         { storageClass: 'storage', storageMode: 'read_write', access: 'read', dynamicOffset: true },
         {
@@ -139,7 +138,6 @@ g.test('linear_memory')
           access: 'write',
           dynamicOffset: true,
         },
-
         { storageClass: 'uniform', access: 'read', dynamicOffset: false },
         { storageClass: 'uniform', access: 'read', dynamicOffset: true },
         { storageClass: 'private', access: 'read' },
@@ -153,6 +151,11 @@ g.test('linear_memory')
         { containerType: 'array' },
         { containerType: 'matrix' },
         { containerType: 'vector' },
+      ])
+      .combineWithParams([
+        { shadowingMode: 'none' },
+        { shadowingMode: 'module-scope' },
+        { shadowingMode: 'function-scope' },
       ])
       .expand('isAtomic', p => (supportsAtomics(p) ? [false, true] : [false]))
       .beginSubcases()
@@ -169,6 +172,7 @@ g.test('linear_memory')
       containerType,
       baseType,
       type,
+      shadowingMode,
       _kTypeInfo,
     } = t.params;
 
@@ -199,7 +203,7 @@ struct S {
         {
           assert(_kTypeInfo.layout !== undefined);
           const layout = _kTypeInfo.layout;
-          bufferBindingSize = layout.size;
+          bufferBindingSize = align(layout.size, layout.alignment);
           const qualifiers = storageClass === 'storage' ? `storage, ${storageMode}` : storageClass;
           globalSource += `
 struct TestData {
@@ -347,13 +351,45 @@ struct TestData {
   }`;
     }
 
+    // Shadowing case declarations
+    let moduleScopeShadowDecls = '';
+    let functionScopeShadowDecls = '';
+
+    switch (shadowingMode) {
+      case 'module-scope':
+        // Shadow the builtins likely used by robustness as module-scope variables
+        moduleScopeShadowDecls = `
+var<private> min = 0;
+var<private> max = 0;
+var<private> arrayLength = 0;
+`;
+        // Make sure that these are referenced by the function.
+        // This ensures that compilers don't strip away unused variables.
+        functionScopeShadowDecls = `
+  _ = min;
+  _ = max;
+  _ = arrayLength;
+`;
+        break;
+      case 'function-scope':
+        // Shadow the builtins likely used by robustness as function-scope variables
+        functionScopeShadowDecls = `
+  let min = 0;
+  let max = 0;
+  let arrayLength = 0;
+`;
+        break;
+    }
+
     // Run the test
 
     // First aggregate the test source
     const testSource = `
-      ${globalSource}
+${globalSource}
+${moduleScopeShadowDecls}
 
 fn runTest() -> u32 {
+  ${functionScopeShadowDecls}
   ${testFunctionSource}
   return 0u;
 }`;
@@ -363,7 +399,6 @@ fn runTest() -> u32 {
         t.device.createBindGroupLayout({
           entries: testGroupBGLEntires,
         }),
-
         t.device.createBindGroupLayout({
           entries: [
             {
@@ -373,7 +408,6 @@ fn runTest() -> u32 {
                 type: 'uniform',
               },
             },
-
             {
               binding: 1,
               visibility: GPUShaderStage.COMPUTE,

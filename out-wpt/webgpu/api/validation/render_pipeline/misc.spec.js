@@ -64,9 +64,9 @@ g.test('pipeline_layout,device_mismatch')
   .fn(async t => {
     const { isAsync, mismatched } = t.params;
 
-    const device = mismatched ? t.mismatchedDevice : t.device;
+    const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-    const layout = device.createPipelineLayout({ bindGroupLayouts: [] });
+    const layout = sourceDevice.createPipelineLayout({ bindGroupLayouts: [] });
 
     const format = 'rgba8unorm';
     const descriptor = {
@@ -75,15 +75,12 @@ g.test('pipeline_layout,device_mismatch')
         module: t.device.createShaderModule({
           code: kDefaultVertexShaderCode,
         }),
-
         entryPoint: 'main',
       },
-
       fragment: {
         module: t.device.createShaderModule({
           code: kDefaultFragmentShaderCode,
         }),
-
         entryPoint: 'main',
         targets: [{ format }],
       },

@@ -36,25 +36,25 @@ beforeAllSubcases((t) => {
 }).
 fn(async (t) => {
   const { encoderType, mismatched } = t.params;
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const pipeline = device.createRenderPipeline({
+  const pipeline = sourceDevice.createRenderPipeline({
     layout: 'auto',
     vertex: {
-      module: device.createShaderModule({
-        code: `@vertex fn main() -> @builtin(position) vec4<f32> { return vec4<f32>(); }` }),
-
-      entryPoint: 'main' },
-
+      module: sourceDevice.createShaderModule({
+        code: `@vertex fn main() -> @builtin(position) vec4<f32> { return vec4<f32>(); }`
+      }),
+      entryPoint: 'main'
+    },
     fragment: {
-      module: device.createShaderModule({
-        code: '@fragment fn main() {}' }),
-
+      module: sourceDevice.createShaderModule({
+        code: '@fragment fn main() {}'
+      }),
       entryPoint: 'main',
-      targets: [{ format: 'rgba8unorm', writeMask: 0 }] },
-
-    primitive: { topology: 'triangle-list' } });
-
+      targets: [{ format: 'rgba8unorm', writeMask: 0 }]
+    },
+    primitive: { topology: 'triangle-list' }
+  });
 
   const { encoder, validateFinish } = t.createEncoder(encoderType);
   encoder.setPipeline(pipeline);

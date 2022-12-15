@@ -29,8 +29,8 @@ fn(async (t) => {
   const { bufferState } = t.params;
   const buffer = t.createBufferWithState(bufferState, {
     size: 16,
-    usage: GPUBufferUsage.COPY_DST });
-
+    usage: GPUBufferUsage.COPY_DST
+  });
   const data = new Uint8Array(16);
   const _valid = bufferState === 'valid';
 
@@ -62,8 +62,8 @@ fn(async (t) => {
     const bufferSize = 16 * elementSize;
     const buffer = t.device.createBuffer({
       size: bufferSize,
-      usage: GPUBufferUsage.COPY_DST });
-
+      usage: GPUBufferUsage.COPY_DST
+    });
     const arraySm = testBuffer ?
     new arrayType(8).buffer :
     new arrayType(8);
@@ -184,12 +184,12 @@ beforeAllSubcases((t) => {
 }).
 fn(async (t) => {
   const { mismatched } = t.params;
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const buffer = device.createBuffer({
+  const buffer = sourceDevice.createBuffer({
     size: 16,
-    usage: GPUBufferUsage.COPY_DST });
-
+    usage: GPUBufferUsage.COPY_DST
+  });
   t.trackForCleanup(buffer);
 
   const data = new Uint8Array(16);

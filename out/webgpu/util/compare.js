@@ -1,6 +1,12 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { Colors } from '../../common/util/colors.js';import { toComparator } from '../shader/execution/expression/expression.js';
+**/import { getIsBuildingDataCache } from '../../common/framework/data_cache.js';import { Colors } from '../../common/util/colors.js';import {
+deserializeExpectation,
+
+serializeExpectation } from
+'../shader/execution/expression/case_cache.js';
+import { toComparator } from '../shader/execution/expression/expression.js';
+
 import { isFloatValue, Scalar, Vector } from './conversion.js';
 import { F32Interval } from './f32_interval.js';
 
@@ -32,8 +38,8 @@ function compareValue(got, expected) {
       return {
         matched: false,
         got: `${Colors.red(gTy.toString())}(${got})`,
-        expected: `${Colors.red(eTy.toString())}(${expected})` };
-
+        expected: `${Colors.red(eTy.toString())}(${expected})`
+      };
     }
   }
 
@@ -46,8 +52,8 @@ function compareValue(got, expected) {
     return {
       matched,
       got: g.toString(),
-      expected: matched ? Colors.green(e.toString()) : Colors.red(e.toString()) };
-
+      expected: matched ? Colors.green(e.toString()) : Colors.red(e.toString())
+    };
   }
 
   if (got instanceof Vector) {
@@ -77,8 +83,8 @@ function compareValue(got, expected) {
     return {
       matched,
       got: `${got.type}(${gElements.join(', ')})`,
-      expected: `${expected.type}(${eElements.join(', ')})` };
-
+      expected: `${expected.type}(${eElements.join(', ')})`
+    };
   }
   throw new Error(`unhandled type '${typeof got}`);
 }
@@ -97,8 +103,8 @@ function compareInterval(got, expected) {
       return {
         matched: false,
         got: `${Colors.red(gTy.toString())}(${got})`,
-        expected: `floating point value` };
-
+        expected: `floating point value`
+      };
     }
   }
 
@@ -108,8 +114,8 @@ function compareInterval(got, expected) {
     return {
       matched,
       got: g.toString(),
-      expected: matched ? Colors.green(expected.toString()) : Colors.red(expected.toString()) };
-
+      expected: matched ? Colors.green(expected.toString()) : Colors.red(expected.toString())
+    };
   }
 
   // Vector results are currently not handled
@@ -128,8 +134,8 @@ function compareVector(got, expected) {
     return {
       matched: false,
       got: `${Colors.red((typeof got).toString())}(${got})`,
-      expected: `Vector` };
-
+      expected: `Vector`
+    };
   }
 
   // Check element type
@@ -139,8 +145,8 @@ function compareVector(got, expected) {
       return {
         matched: false,
         got: `${Colors.red(gTy.toString())}(${got})`,
-        expected: `floating point elements` };
-
+        expected: `floating point elements`
+      };
     }
   }
 
@@ -148,8 +154,8 @@ function compareVector(got, expected) {
     return {
       matched: false,
       got: `Vector of ${got.elements.length} elements`,
-      expected: `${expected.length} elements` };
-
+      expected: `${expected.length} elements`
+    };
   }
 
   const results = got.elements.map((_, idx) => {
@@ -165,15 +171,15 @@ function compareVector(got, expected) {
     return {
       matched: false,
       got: `[${got.elements}]`,
-      expected: `[${expected_string}]` };
-
+      expected: `[${expected_string}]`
+    };
   }
 
   return {
     matched: true,
     got: `[${got.elements}]`,
-    expected: `[${Colors.green(expected.toString())}]` };
-
+    expected: `[${Colors.green(expected.toString())}]`
+  };
 }
 
 /**
@@ -195,8 +201,10 @@ export function compare(got, expected) {
 }
 
 /** @returns a Comparator that checks whether a test value matches any of the provided options */
-export function anyOf(...expectations) {
-  return (got) => {
+export function anyOf(
+...expectations)
+{
+  const comparator = (got) => {
     const failed = new Set();
     for (const e of expectations) {
       const cmp = toComparator(e)(got);
@@ -207,5 +215,37 @@ export function anyOf(...expectations) {
     }
     return { matched: false, got: got.toString(), expected: [...failed].join(' or ') };
   };
+
+  if (getIsBuildingDataCache()) {
+    // If there's an active DataCache, and it supports storing, then append the
+    // comparator kind and serialized expectations to the comparator, so it can
+    // be serialized.
+    comparator.kind = 'anyOf';
+    comparator.data = expectations.map((e) => serializeExpectation(e));
+  }
+  return comparator;
+}
+
+/** SerializedComparatorAnyOf is the serialized type of an `anyOf` comparator. */
+
+
+
+
+
+
+
+
+/**
+ * Deserializes a comparator from a SerializedComparator.
+ * @param data the SerializedComparator
+ * @returns the deserialized Comparator.
+ */
+export function deserializeComparator(data) {
+  switch (data.kind) {
+    case 'anyOf':{
+        return anyOf(...data.data.map((e) => deserializeExpectation(e)));
+      }}
+
+  throw `unhandled comparator kind: ${data.kind}`;
 }
 //# sourceMappingURL=compare.js.map

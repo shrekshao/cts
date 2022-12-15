@@ -52,7 +52,6 @@ class F extends ValidationTest {
             usage: GPUBufferUsage.STORAGE,
           }),
         };
-
       default:
         unreachable('unknown resource type');
     }
@@ -75,7 +74,6 @@ class F extends ValidationTest {
         ...(resourceType === 'buffer' ? { buffer: { type: 'storage' } } : { texture: {} }),
       })),
     });
-
     const bindGroup = this.device.createBindGroup({
       layout,
       entries: indices.map(binding => ({
@@ -106,7 +104,7 @@ g.test('state_and_binding_index')
   )
   .fn(async t => {
     const { encoderType, state, resourceType } = t.params;
-    const maxBindGroups = t.device.limits?.maxBindGroups ?? 4;
+    const maxBindGroups = t.device.limits.maxBindGroups;
 
     async function runTest(index) {
       const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -141,14 +139,14 @@ g.test('bind_group,device_mismatch')
   })
   .fn(async t => {
     const { encoderType, useU32Array, mismatched } = t.params;
-    const device = mismatched ? t.mismatchedDevice : t.device;
+    const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-    const buffer = device.createBuffer({
+    const buffer = sourceDevice.createBuffer({
       size: 4,
       usage: GPUBufferUsage.STORAGE,
     });
 
-    const layout = device.createBindGroupLayout({
+    const layout = sourceDevice.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -158,7 +156,7 @@ g.test('bind_group,device_mismatch')
       ],
     });
 
-    const bindGroup = device.createBindGroup({
+    const bindGroup = sourceDevice.createBindGroup({
       layout,
       entries: [
         {
@@ -217,7 +215,7 @@ g.test('dynamic_offsets_match_expectations_in_pass_encoder')
       .combine('useU32array', [false, true])
   )
   .fn(async t => {
-    const kBindingSize = 9;
+    const kBindingSize = 12;
 
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [
@@ -229,7 +227,6 @@ g.test('dynamic_offsets_match_expectations_in_pass_encoder')
             hasDynamicOffset: true,
           },
         },
-
         {
           binding: 1,
           visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
@@ -261,7 +258,6 @@ g.test('dynamic_offsets_match_expectations_in_pass_encoder')
             size: kBindingSize,
           },
         },
-
         {
           binding: 1,
           resource: {
@@ -293,7 +289,6 @@ g.test('u32array_start_and_length')
       dynamicOffsetsDataLength: 2,
       _success: false,
     },
-
     // dynamicOffsetsDataStart + dynamicOffsetsDataLength > offsets.length
     {
       offsets: [0],
@@ -301,21 +296,18 @@ g.test('u32array_start_and_length')
       dynamicOffsetsDataLength: 1,
       _success: false,
     },
-
     {
       offsets: [0, 0],
       dynamicOffsetsDataStart: 1,
       dynamicOffsetsDataLength: 1,
       _success: true,
     },
-
     {
       offsets: [0, 0, 0],
       dynamicOffsetsDataStart: 1,
       dynamicOffsetsDataLength: 1,
       _success: true,
     },
-
     {
       offsets: [0, 0],
       dynamicOffsetsDataStart: 0,
@@ -347,7 +339,6 @@ g.test('u32array_start_and_length')
             size: kBindingSize,
             usage: GPUBufferUsage.STORAGE,
           }),
-
           size: kBindingSize,
         },
       })),
@@ -408,7 +399,7 @@ g.test('buffer_dynamic_offsets')
   )
   .fn(async t => {
     const { type, dynamicOffset, encoderType } = t.params;
-    const kBindingSize = 9;
+    const kBindingSize = 12;
 
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [

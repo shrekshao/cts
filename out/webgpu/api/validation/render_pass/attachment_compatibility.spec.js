@@ -92,8 +92,8 @@ class F extends ValidationTest {
       size: [16, 16, 1],
       format,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
-      sampleCount }).
-
+      sampleCount
+    }).
     createView();
   }
 
@@ -107,8 +107,8 @@ class F extends ValidationTest {
       view: this.createAttachmentTextureView(format, sampleCount),
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
-      storeOp: 'store' };
-
+      storeOp: 'store'
+    };
   }
 
   createDepthAttachment(
@@ -116,8 +116,8 @@ class F extends ValidationTest {
   sampleCount)
   {
     const attachment = {
-      view: this.createAttachmentTextureView(format, sampleCount) };
-
+      view: this.createAttachmentTextureView(format, sampleCount)
+    };
     if (kTextureFormatInfo[format].depth) {
       attachment.depthClearValue = 0;
       attachment.depthLoadOp = 'clear';
@@ -144,23 +144,23 @@ class F extends ValidationTest {
           code: `
             @vertex fn main() -> @builtin(position) vec4<f32> {
               return vec4<f32>(0.0, 0.0, 0.0, 0.0);
-            }` }),
-
-        entryPoint: 'main' },
-
+            }`
+        }),
+        entryPoint: 'main'
+      },
       fragment: {
         module: this.device.createShaderModule({
-          code: '@fragment fn main() {}' }),
-
+          code: '@fragment fn main() {}'
+        }),
         entryPoint: 'main',
-        targets },
-
+        targets
+      },
       primitive: { topology: 'triangle-list', cullMode },
       depthStencil,
-      multisample: { count: sampleCount } });
-
-  }}
-
+      multisample: { count: sampleCount }
+    });
+  }
+}
 
 export const g = makeTestGroup(F);
 
@@ -179,14 +179,14 @@ combine('bundleFormat', kColorAttachmentFormats)).
 fn((t) => {
   const { passFormat, bundleFormat } = t.params;
   const bundleEncoder = t.device.createRenderBundleEncoder({
-    colorFormats: [bundleFormat] });
-
+    colorFormats: [bundleFormat]
+  });
   const bundle = bundleEncoder.finish();
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
   const pass = encoder.beginRenderPass({
-    colorAttachments: [t.createColorAttachment(passFormat)] });
-
+    colorAttachments: [t.createColorAttachment(passFormat)]
+  });
   pass.executeBundles([bundle]);
   pass.end();
   validateFinishAndSubmit(passFormat === bundleFormat, true);
@@ -206,14 +206,14 @@ combine('bundleCount', kColorAttachmentCounts)).
 fn((t) => {
   const { passCount, bundleCount } = t.params;
   const bundleEncoder = t.device.createRenderBundleEncoder({
-    colorFormats: range(bundleCount, () => 'rgba8unorm') });
-
+    colorFormats: range(bundleCount, () => 'rgba8unorm')
+  });
   const bundle = bundleEncoder.finish();
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
   const pass = encoder.beginRenderPass({
-    colorAttachments: range(passCount, () => t.createColorAttachment('rgba8unorm')) });
-
+    colorAttachments: range(passCount, () => t.createColorAttachment('rgba8unorm'))
+  });
   pass.executeBundles([bundle]);
   pass.end();
   validateFinishAndSubmit(passCount === bundleCount, true);
@@ -242,8 +242,8 @@ fn((t) => {
   const { passAttachments, bundleAttachments } = t.params;
   const colorFormats = bundleAttachments.map((i) => i ? 'rgba8unorm' : null);
   const bundleEncoder = t.device.createRenderBundleEncoder({
-    colorFormats });
-
+    colorFormats
+  });
   const bundle = bundleEncoder.finish();
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
@@ -251,8 +251,8 @@ fn((t) => {
   t.createColorAttachment(i ? 'rgba8unorm' : null));
 
   const pass = encoder.beginRenderPass({
-    colorAttachments });
-
+    colorAttachments
+  });
   pass.executeBundles([bundle]);
   pass.end();
   validateFinishAndSubmit(
@@ -284,16 +284,16 @@ fn(async (t) => {
 
   const bundleEncoder = t.device.createRenderBundleEncoder({
     colorFormats: ['rgba8unorm'],
-    depthStencilFormat: bundleFormat });
-
+    depthStencilFormat: bundleFormat
+  });
   const bundle = bundleEncoder.finish();
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
   const pass = encoder.beginRenderPass({
     colorAttachments: [t.createColorAttachment('rgba8unorm')],
     depthStencilAttachment:
-    passFormat !== undefined ? t.createDepthAttachment(passFormat) : undefined });
-
+    passFormat !== undefined ? t.createDepthAttachment(passFormat) : undefined
+  });
   pass.executeBundles([bundle]);
   pass.end();
   validateFinishAndSubmit(passFormat === bundleFormat, true);
@@ -310,16 +310,41 @@ fn((t) => {
   const { renderSampleCount, bundleSampleCount } = t.params;
   const bundleEncoder = t.device.createRenderBundleEncoder({
     colorFormats: ['rgba8unorm'],
-    sampleCount: bundleSampleCount });
-
+    sampleCount: bundleSampleCount
+  });
   const bundle = bundleEncoder.finish();
   const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
   const pass = encoder.beginRenderPass({
-    colorAttachments: [t.createColorAttachment('rgba8unorm', renderSampleCount)] });
-
+    colorAttachments: [t.createColorAttachment('rgba8unorm', renderSampleCount)]
+  });
   pass.executeBundles([bundle]);
   pass.end();
   validateFinishAndSubmit(renderSampleCount === bundleSampleCount, true);
+});
+
+g.test('render_pass_and_bundle,device_mismatch').
+desc('Test that render passes cannot be called with bundles created from another device.').
+paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
+beforeAllSubcases((t) => {
+  t.selectMismatchedDeviceOrSkipTestCase(undefined);
+}).
+fn((t) => {
+  const { mismatched } = t.params;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
+
+  const format = 'r16float';
+  const bundleEncoder = sourceDevice.createRenderBundleEncoder({
+    colorFormats: [format]
+  });
+  const bundle = bundleEncoder.finish();
+
+  const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [t.createColorAttachment(format)]
+  });
+  pass.executeBundles([bundle]);
+  pass.end();
+  validateFinishAndSubmit(!mismatched, true);
 });
 
 g.test('render_pass_or_bundle_and_pipeline,color_format').
@@ -340,8 +365,8 @@ fn((t) => {
   const pipeline = t.createRenderPipeline([{ format: pipelineFormat, writeMask: 0 }]);
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-    attachmentInfo: { colorFormats: [encoderFormat] } });
-
+    attachmentInfo: { colorFormats: [encoderFormat] }
+  });
   encoder.setPipeline(pipeline);
   validateFinishAndSubmit(encoderFormat === pipelineFormat, true);
 });
@@ -367,8 +392,8 @@ fn((t) => {
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-    attachmentInfo: { colorFormats: range(encoderCount, () => 'rgba8unorm') } });
-
+    attachmentInfo: { colorFormats: range(encoderCount, () => 'rgba8unorm') }
+  });
   encoder.setPipeline(pipeline);
   validateFinishAndSubmit(encoderCount === pipelineCount, true);
 });
@@ -403,8 +428,8 @@ fn((t) => {
 
   const colorFormats = encoderAttachments.map((i) => i ? 'rgba8unorm' : null);
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-    attachmentInfo: { colorFormats } });
-
+    attachmentInfo: { colorFormats }
+  });
   encoder.setPipeline(pipeline);
   validateFinishAndSubmit(
   encoderAttachments.every((v, i) => v === pipelineAttachments[i]),
@@ -444,8 +469,8 @@ fn(async (t) => {
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-    attachmentInfo: { colorFormats: ['rgba8unorm'], depthStencilFormat: encoderFormat } });
-
+    attachmentInfo: { colorFormats: ['rgba8unorm'], depthStencilFormat: encoderFormat }
+  });
   encoder.setPipeline(pipeline);
   validateFinishAndSubmit(encoderFormat === pipelineFormat, true);
 });
@@ -516,8 +541,8 @@ fn(async (t) => {
     stencilWriteMask,
     cullMode,
     stencilFront,
-    stencilBack } =
-  t.params;
+    stencilBack
+  } = t.params;
 
   const pipeline = t.createRenderPipeline(
   [{ format: 'rgba8unorm', writeMask: 0 }],
@@ -528,8 +553,8 @@ fn(async (t) => {
     depthWriteEnabled,
     stencilWriteMask,
     stencilFront,
-    stencilBack },
-
+    stencilBack
+  },
   1,
   cullMode);
 
@@ -539,9 +564,9 @@ fn(async (t) => {
       colorFormats: ['rgba8unorm'],
       depthStencilFormat: format,
       depthReadOnly,
-      stencilReadOnly } });
-
-
+      stencilReadOnly
+    }
+  });
   encoder.setPipeline(pipeline);
 
   let writesDepth = false;
@@ -607,8 +632,8 @@ fn((t) => {
 
 
   const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-    attachmentInfo: { colorFormats, depthStencilFormat, sampleCount: encoderSampleCount } });
-
+    attachmentInfo: { colorFormats, depthStencilFormat, sampleCount: encoderSampleCount }
+  });
   encoder.setPipeline(pipeline);
   validateFinishAndSubmit(encoderSampleCount === pipelineSampleCount, true);
 });

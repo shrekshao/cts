@@ -15,8 +15,8 @@ class F extends ValidationTest {
     this.expectValidationError(() => {
       encoder.finish();
     }, !success);
-  }}
-
+  }
+}
 
 export const g = makeTestGroup(F);
 
@@ -39,26 +39,26 @@ fn(async (t) => {
 
   const querySet = t.device.createQuerySet({
     type: 'timestamp',
-    count: 2 });
-
+    count: 2
+  });
 
   const timestampWriteA = {
     querySet,
     queryIndex: 0,
-    location: locationA };
-
+    location: locationA
+  };
 
   const timestampWriteB = {
     querySet,
     queryIndex: 1,
-    location: locationB };
-
+    location: locationB
+  };
 
   const isValid = locationA !== locationB;
 
   const descriptor = {
-    timestampWrites: [timestampWriteA, timestampWriteB] };
-
+    timestampWrites: [timestampWriteA, timestampWriteB]
+  };
 
   t.tryComputePass(isValid, descriptor);
 });
@@ -88,22 +88,49 @@ fn(async (t) => {
   const timestampWriteA = {
     querySet: t.device.createQuerySet({ type: queryTypeA, count: 1 }),
     queryIndex: 0,
-    location: 'beginning' };
-
+    location: 'beginning'
+  };
 
   const timestampWriteB = {
     querySet: t.device.createQuerySet({ type: queryTypeB, count: 1 }),
     queryIndex: 0,
-    location: 'end' };
-
+    location: 'end'
+  };
 
   const isValid = queryTypeA === 'timestamp' && queryTypeB === 'timestamp';
 
   const descriptor = {
-    timestampWrites: [timestampWriteA, timestampWriteB] };
-
+    timestampWrites: [timestampWriteA, timestampWriteB]
+  };
 
   t.tryComputePass(isValid, descriptor);
+});
+
+g.test('timestampWrites,invalid_query_set').
+desc(`Tests that timestampWrite that has an invalid query set generates a validation error.`).
+params((u) => u.combine('querySetState', ['valid', 'invalid'])).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase(['timestamp-query']);
+}).
+fn(async (t) => {
+  const { querySetState } = t.params;
+
+  const querySet = t.createQuerySetWithState(querySetState, {
+    type: 'timestamp',
+    count: 1
+  });
+
+  const timestampWrite = {
+    querySet,
+    queryIndex: 0,
+    location: 'beginning'
+  };
+
+  const descriptor = {
+    timestampWrites: [timestampWrite]
+  };
+
+  t.tryComputePass(querySetState === 'valid', descriptor);
 });
 
 g.test('timestampWrites,query_index_count').
@@ -120,14 +147,14 @@ fn(async (t) => {
   const timestampWrite = {
     querySet: t.device.createQuerySet({ type: 'timestamp', count: querySetCount }),
     queryIndex,
-    location: 'beginning' };
-
+    location: 'beginning'
+  };
 
   const isValid = queryIndex < querySetCount;
 
   const descriptor = {
-    timestampWrites: [timestampWrite] };
-
+    timestampWrites: [timestampWrite]
+  };
 
   t.tryComputePass(isValid, descriptor);
 });
@@ -138,29 +165,29 @@ desc(
   Tests beginComputePass cannot be called with a timestamp query set created from another device.
   `).
 
-params((u) => u.combine('mismatched', [true, false])).
+paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
 beforeAllSubcases((t) => {
   t.selectDeviceOrSkipTestCase(['timestamp-query']);
   t.selectMismatchedDeviceOrSkipTestCase('timestamp-query');
 }).
 fn(async (t) => {
   const { mismatched } = t.params;
-  const device = mismatched ? t.mismatchedDevice : t.device;
+  const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-  const timestampQuerySet = device.createQuerySet({
+  const timestampQuerySet = sourceDevice.createQuerySet({
     type: 'timestamp',
-    count: 1 });
-
+    count: 1
+  });
 
   const timestampWrite = {
     querySet: timestampQuerySet,
     queryIndex: 0,
-    location: 'beginning' };
-
+    location: 'beginning'
+  };
 
   const descriptor = {
-    timestampWrites: [timestampWrite] };
-
+    timestampWrites: [timestampWrite]
+  };
 
   t.tryComputePass(!mismatched, descriptor);
 });

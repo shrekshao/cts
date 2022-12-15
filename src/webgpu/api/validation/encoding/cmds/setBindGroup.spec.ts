@@ -114,7 +114,7 @@ g.test('state_and_binding_index')
   )
   .fn(async t => {
     const { encoderType, state, resourceType } = t.params;
-    const maxBindGroups = t.device.limits?.maxBindGroups ?? 4;
+    const maxBindGroups = t.device.limits.maxBindGroups;
 
     async function runTest(index: number) {
       const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType);
@@ -149,14 +149,14 @@ g.test('bind_group,device_mismatch')
   })
   .fn(async t => {
     const { encoderType, useU32Array, mismatched } = t.params;
-    const device = mismatched ? t.mismatchedDevice : t.device;
+    const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-    const buffer = device.createBuffer({
+    const buffer = sourceDevice.createBuffer({
       size: 4,
       usage: GPUBufferUsage.STORAGE,
     });
 
-    const layout = device.createBindGroupLayout({
+    const layout = sourceDevice.createBindGroupLayout({
       entries: [
         {
           binding: 0,
@@ -166,7 +166,7 @@ g.test('bind_group,device_mismatch')
       ],
     });
 
-    const bindGroup = device.createBindGroup({
+    const bindGroup = sourceDevice.createBindGroup({
       layout,
       entries: [
         {
@@ -225,7 +225,7 @@ g.test('dynamic_offsets_match_expectations_in_pass_encoder')
       .combine('useU32array', [false, true])
   )
   .fn(async t => {
-    const kBindingSize = 9;
+    const kBindingSize = 12;
 
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [
@@ -409,7 +409,7 @@ g.test('buffer_dynamic_offsets')
   )
   .fn(async t => {
     const { type, dynamicOffset, encoderType } = t.params;
-    const kBindingSize = 9;
+    const kBindingSize = 12;
 
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [

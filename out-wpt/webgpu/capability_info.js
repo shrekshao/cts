@@ -22,7 +22,6 @@ export const kQueryTypeInfo = {
   occlusion: { feature: undefined },
   timestamp: { feature: 'timestamp-query' },
 };
-
 /** List of all GPUQueryType values. */
 export const kQueryTypes = keysOf(kQueryTypeInfo);
 
@@ -38,7 +37,6 @@ export const kBufferUsageCopyInfo = {
   COPY_DST: GPUConst.BufferUsage.COPY_DST,
   COPY_SRC_DST: GPUConst.BufferUsage.COPY_SRC | GPUConst.BufferUsage.COPY_DST,
 };
-
 /** List of all GPUBufferUsage copy values. */
 export const kBufferUsageCopy = keysOf(kBufferUsageCopyInfo);
 
@@ -62,10 +60,11 @@ export const kAllBufferUsageBits = kBufferUsages.reduce(
 export const kErrorScopeFilterInfo = {
   'out-of-memory': {},
   validation: {},
+  internal: {},
 };
-
-/** List of all GPUTextureAspect values. */
+/** List of all GPUErrorFilter values. */
 export const kErrorScopeFilters = keysOf(kErrorScopeFilterInfo);
+export const kGeneratableErrorScopeFilters = kErrorScopeFilters.filter(e => e !== 'internal');
 
 // Textures
 
@@ -326,7 +325,6 @@ const kBCTextureFormatInfo = makeTable(
     ],
   }
 );
-
 const kETC2TextureFormatInfo = makeTable(
   kTexFmtInfoHeader,
   [false, false, false, true, false, false, false, true, true, , , 4, 4, , undefined],
@@ -440,7 +438,6 @@ const kETC2TextureFormatInfo = makeTable(
     'eac-rg11snorm': [, , , , , , , , , 'float', 16, 4, 4, 'texture-compression-etc2'],
   }
 );
-
 const kASTCTextureFormatInfo = makeTable(
   kTexFmtInfoHeader,
   [false, false, false, true, false, false, false, true, true, , , , , , undefined],
@@ -1017,7 +1014,6 @@ export const kTextureDimensionInfo = {
   '2d': {},
   '3d': {},
 };
-
 /** List of all GPUTextureDimension values. */
 export const kTextureDimensions = keysOf(kTextureDimensionInfo);
 
@@ -1027,7 +1023,6 @@ export const kTextureAspectInfo = {
   'depth-only': {},
   'stencil-only': {},
 };
-
 /** List of all GPUTextureAspect values. */
 export const kTextureAspects = keysOf(kTextureAspectInfo);
 
@@ -1042,7 +1037,6 @@ export const kCompareFunctionInfo = {
   'greater-equal': {},
   always: {},
 };
-
 /** List of all GPUCompareFunction values. */
 export const kCompareFunctions = keysOf(kCompareFunctionInfo);
 
@@ -1057,7 +1051,6 @@ export const kStencilOperationInfo = {
   'increment-wrap': {},
   'decrement-wrap': {},
 };
-
 /** List of all GPUStencilOperation values. */
 export const kStencilOperations = keysOf(kStencilOperationInfo);
 
@@ -1068,7 +1061,6 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
     CopyT2B: [],
     texelAspectSize: { 'depth-only': -1, 'stencil-only': -1 },
   },
-
   'depth24plus-stencil8': {
     CopyB2T: ['stencil-only'],
     CopyT2B: ['stencil-only'],
@@ -1081,19 +1073,16 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
     CopyT2B: ['all', 'depth-only'],
     texelAspectSize: { 'depth-only': 2, 'stencil-only': -1 },
   },
-
   depth32float: {
     CopyB2T: [],
     CopyT2B: ['all', 'depth-only'],
     texelAspectSize: { 'depth-only': 4, 'stencil-only': -1 },
   },
-
   'depth32float-stencil8': {
     CopyB2T: ['stencil-only'],
     CopyT2B: ['depth-only', 'stencil-only'],
     texelAspectSize: { 'depth-only': 4, 'stencil-only': 1 },
   },
-
   stencil8: {
     CopyB2T: ['all', 'stencil-only'],
     CopyT2B: ['all', 'stencil-only'],
@@ -1111,7 +1100,6 @@ export const kDepthStencilFormatResolvedAspect = {
     'depth-only': 'depth24plus',
     'stencil-only': undefined,
   },
-
   'depth24plus-stencil8': {
     all: 'depth24plus-stencil8',
     'depth-only': 'depth24plus',
@@ -1124,19 +1112,16 @@ export const kDepthStencilFormatResolvedAspect = {
     'depth-only': 'depth16unorm',
     'stencil-only': undefined,
   },
-
   depth32float: {
     all: 'depth32float',
     'depth-only': 'depth32float',
     'stencil-only': undefined,
   },
-
   'depth32float-stencil8': {
     all: 'depth32float-stencil8',
     'depth-only': 'depth32float',
     'stencil-only': 'stencil8',
   },
-
   stencil8: {
     all: 'stencil8',
     'depth-only': undefined,
@@ -1209,7 +1194,6 @@ export const kTextureUsageTypeInfo = {
   storage: Number(GPUConst.TextureUsage.STORAGE_BINDING),
   render: Number(GPUConst.TextureUsage.RENDER_ATTACHMENT),
 };
-
 /** List of all GPUTextureUsage type values. */
 export const kTextureUsageType = keysOf(kTextureUsageTypeInfo);
 
@@ -1220,7 +1204,6 @@ export const kTextureUsageCopyInfo = {
   dst: Number(GPUConst.TextureUsage.COPY_DST),
   'src-dest': Number(GPUConst.TextureUsage.COPY_SRC) | Number(GPUConst.TextureUsage.COPY_DST),
 };
-
 /** List of all GPUTextureUsage copy values. */
 export const kTextureUsageCopy = keysOf(kTextureUsageCopyInfo);
 
@@ -1232,7 +1215,6 @@ export const kTextureUsageInfo = {
   [GPUConst.TextureUsage.STORAGE_BINDING]: {},
   [GPUConst.TextureUsage.RENDER_ATTACHMENT]: {},
 };
-
 /** List of all GPUTextureUsage values. */
 export const kTextureUsages = numericKeysOf(kTextureUsageInfo);
 
@@ -1249,7 +1231,6 @@ export const kTextureViewDimensionInfo = {
   'cube-array': { storage: false },
   '3d': { storage: true },
 };
-
 /** List of all GPUTextureDimension values. */
 export const kTextureViewDimensions = keysOf(kTextureViewDimensionInfo);
 
@@ -1298,7 +1279,6 @@ export const kVertexFormatInfo = makeTable(
     sint32x4: [4, 'sint', 4, 'vec4<i32>'],
   }
 );
-
 /** List of all GPUVertexFormat values. */
 export const kVertexFormats = keysOf(kVertexFormatInfo);
 
@@ -1399,7 +1379,6 @@ const kValidStagesAll = {
   validStages:
     GPUConst.ShaderStage.VERTEX | GPUConst.ShaderStage.FRAGMENT | GPUConst.ShaderStage.COMPUTE,
 };
-
 const kValidStagesStorageWrite = {
   validStages: GPUConst.ShaderStage.FRAGMENT | GPUConst.ShaderStage.COMPUTE,
 };
@@ -1694,8 +1673,8 @@ export const kFeatureNameInfo = {
   'indirect-first-instance': {},
   'shader-f16': {},
   'bgra8unorm-storage': {},
+  'rg11b10ufloat-renderable': {},
 };
-
 /** List of all GPUFeatureName values. */
 export const kFeatureNames = keysOf(kFeatureNameInfo);
 

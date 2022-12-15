@@ -39,13 +39,12 @@ g.test('index_buffer,device_mismatch')
   })
   .fn(async t => {
     const { encoderType, mismatched } = t.params;
-    const device = mismatched ? t.mismatchedDevice : t.device;
+    const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
-    const indexBuffer = device.createBuffer({
+    const indexBuffer = sourceDevice.createBuffer({
       size: 16,
       usage: GPUBufferUsage.INDEX,
     });
-
     t.trackForCleanup(indexBuffer);
 
     const { encoder, validateFinish } = t.createEncoder(encoderType);

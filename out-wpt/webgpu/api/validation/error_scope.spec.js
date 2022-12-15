@@ -12,7 +12,7 @@ import { Fixture } from '../../../common/framework/fixture.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { getGPU } from '../../../common/util/navigator_gpu.js';
 import { assert, raceWithRejectOnTimeout } from '../../../common/util/util.js';
-import { kErrorScopeFilters } from '../../capability_info.js';
+import { kErrorScopeFilters, kGeneratableErrorScopeFilters } from '../../capability_info.js';
 import { kMaxUnsignedLongLongValue } from '../../constants.js';
 
 class ErrorScopeTests extends Fixture {
@@ -44,7 +44,6 @@ class ErrorScopeTests extends Fixture {
           size: kMaxUnsignedLongLongValue, // Unrealistically massive buffer size
           usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
         });
-
         break;
       case 'validation':
         // Generating a validation error by passing in an invalid usage when creating a buffer.
@@ -66,6 +65,8 @@ class ErrorScopeTests extends Fixture {
         return error instanceof GPUOutOfMemoryError;
       case 'validation':
         return error instanceof GPUValidationError;
+      case 'internal':
+        return error instanceof GPUInternalError;
     }
   }
 
@@ -108,7 +109,7 @@ Tests that error scopes catches their expected errors, firing an uncaptured erro
     `
   )
   .params(u =>
-    u.combine('errorType', kErrorScopeFilters).combine('errorFilter', kErrorScopeFilters)
+    u.combine('errorType', kGeneratableErrorScopeFilters).combine('errorFilter', kErrorScopeFilters)
   )
   .fn(async t => {
     const { errorType, errorFilter } = t.params;
@@ -152,7 +153,9 @@ Tests that an error bubbles to the correct parent scope.
     `
   )
   .params(u =>
-    u.combine('errorFilter', kErrorScopeFilters).combine('stackDepth', [1, 10, 100, 1000])
+    u
+      .combine('errorFilter', kGeneratableErrorScopeFilters)
+      .combine('stackDepth', [1, 10, 100, 1000])
   )
   .fn(async t => {
     const { errorFilter, stackDepth } = t.params;
@@ -190,7 +193,9 @@ Tests that an error does not bubbles to parent scopes when local scope matches.
     `
   )
   .params(u =>
-    u.combine('errorFilter', kErrorScopeFilters).combine('stackDepth', [1, 10, 100, 1000, 100000])
+    u
+      .combine('errorFilter', kGeneratableErrorScopeFilters)
+      .combine('stackDepth', [1, 10, 100, 1000, 100000])
   )
   .fn(async t => {
     const { errorFilter, stackDepth } = t.params;

@@ -10,17 +10,34 @@ Returns a unit vector in the same direction as e.
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeF32, TypeVec } from '../../../../../util/conversion.js';
 import { normalizeInterval } from '../../../../../util/f32_interval.js';
-import { kVectorTestValues } from '../../../../../util/math.js';
-import { allInputSources, makeVectorToVectorIntervalCase, run } from '../../expression.js';
+import { vectorF32Range } from '../../../../../util/math.js';
+import { makeCaseCache } from '../../case_cache.js';
+import { allInputSources, generateVectorToVectorCases, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
-/** @returns a `normalize` Case for a vector of f32s input */
-const makeCaseVecF32 = (x) => {
-  return makeVectorToVectorIntervalCase(x, normalizeInterval);
-};
+export const d = makeCaseCache('normalize', {
+  f32_vec2_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(2), 'f32-only', normalizeInterval);
+  },
+  f32_vec2_non_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(2), 'unfiltered', normalizeInterval);
+  },
+  f32_vec3_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(3), 'f32-only', normalizeInterval);
+  },
+  f32_vec3_non_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(3), 'unfiltered', normalizeInterval);
+  },
+  f32_vec4_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(4), 'f32-only', normalizeInterval);
+  },
+  f32_vec4_non_const: () => {
+    return generateVectorToVectorCases(vectorF32Range(4), 'unfiltered', normalizeInterval);
+  }
+});
 
 g.test('abstract_float').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
@@ -35,7 +52,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec2s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[2].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec2_const' : 'f32_vec2_non_const');
 
   await run(t, builtin('normalize'), [TypeVec(2, TypeF32)], TypeVec(2, TypeF32), t.params, cases);
 });
@@ -45,7 +63,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec3s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[3].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec3_const' : 'f32_vec3_non_const');
 
   await run(t, builtin('normalize'), [TypeVec(3, TypeF32)], TypeVec(3, TypeF32), t.params, cases);
 });
@@ -55,7 +74,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec4s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorTestValues[4].map(makeCaseVecF32);
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec4_const' : 'f32_vec4_non_const');
 
   await run(t, builtin('normalize'), [TypeVec(4, TypeF32)], TypeVec(4, TypeF32), t.params, cases);
 });
