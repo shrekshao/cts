@@ -23,6 +23,14 @@ export const listing = [
       "api",
       "operation",
       "adapter",
+      "requestAdapter"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "adapter",
       "requestAdapterInfo"
     ]
   },
@@ -388,6 +396,14 @@ export const listing = [
       "operation",
       "rendering",
       "depth"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "depth_bias"
     ]
   },
   {

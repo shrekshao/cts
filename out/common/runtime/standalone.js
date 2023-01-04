@@ -8,7 +8,7 @@ import { Logger } from '../internal/logging/logger.js';
 import { parseQuery } from '../internal/query/parseQuery.js';
 
 import { TestTree } from '../internal/tree.js';
-import { assert } from '../util/util.js';
+import { assert, unreachable } from '../util/util.js';
 
 import { optionEnabled } from './helper/options.js';
 import { TestWorker } from './helper/test_worker.js';
@@ -32,6 +32,15 @@ const worker = optionEnabled('worker') ? new TestWorker(debug) : undefined;
 
 const autoCloseOnPass = document.getElementById('autoCloseOnPass');
 const resultsVis = document.getElementById('resultsVis');
+const progressElem = document.getElementById('progress');
+const progressTestNameElem = progressElem.querySelector('.progress-test-name');
+const stopButtonElem = progressElem.querySelector('button');
+let runDepth = 0;
+let stopRequested = false;
+
+stopButtonElem.addEventListener('click', () => {
+  stopRequested = true;
+});
 
 dataCache.setStore({
   load: async (path) => {
@@ -119,6 +128,7 @@ function makeCaseHTML(t) {
     if (clearRenderedResult) clearRenderedResult();
 
     const result = emptySubtreeResult();
+    progressTestNameElem.textContent = name;
 
     haveSomeResults = true;
     const [rec, res] = logger.record(name);
@@ -143,7 +153,9 @@ function makeCaseHTML(t) {
         break;
       case 'warn':
         result.warn++;
-        break;}
+        break;
+      default:
+        unreachable();}
 
 
     if (updateRenderedResult) updateRenderedResult();
@@ -212,9 +224,28 @@ function makeSubtreeHTML(n, parentLevel) {
 
 
   const runMySubtree = async () => {
+    if (runDepth === 0) {
+      stopRequested = false;
+      progressElem.style.display = '';
+    }
+    if (stopRequested) {
+      const result = emptySubtreeResult();
+      result.skip = 1;
+      result.total = 1;
+      return result;
+    }
+
+    ++runDepth;
+
     if (clearRenderedResult) clearRenderedResult();
     subtreeResult = await runSubtree();
     if (updateRenderedResult) updateRenderedResult();
+
+    --runDepth;
+    if (runDepth === 0) {
+      progressElem.style.display = 'none';
+    }
+
     return subtreeResult;
   };
 

@@ -32,6 +32,8 @@
 </script>
 <script type=module src=/webgpu/common/runtime/wpt.js></script>
 
+<meta name=variant content='webgpu:api,operation,adapter,requestAdapter:requestAdapter:*'>
+<meta name=variant content='webgpu:api,operation,adapter,requestAdapter:requestAdapter_no_parameters:*'>
 <meta name=variant content='webgpu:api,operation,adapter,requestAdapterInfo:adapter_info:*'>
 <meta name=variant content='webgpu:api,operation,adapter,requestAdapterInfo:adapter_info_with_hints:*'>
 <meta name=variant content='webgpu:api,operation,adapter,requestDevice:default:*'>
@@ -158,12 +160,13 @@
 <meta name=variant content='webgpu:api,operation,rendering,color_target_state:blend_constant,not_inherited:*'>
 <meta name=variant content='webgpu:api,operation,rendering,color_target_state:color_write_mask,channel_work:*'>
 <meta name=variant content='webgpu:api,operation,rendering,color_target_state:color_write_mask,blending_disabled:*'>
-<meta name=variant content='webgpu:api,operation,rendering,depth:depth_bias:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth:depth_disabled:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth:depth_write_disabled:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth:depth_test_fail:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth:depth_compare_func:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth:reverse_depth:*'>
+<meta name=variant content='webgpu:api,operation,rendering,depth_bias:depth_bias:*'>
+<meta name=variant content='webgpu:api,operation,rendering,depth_bias:depth_bias_24bit_format:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth_clip_clamp:depth_clamp_and_clip:*'>
 <meta name=variant content='webgpu:api,operation,rendering,depth_clip_clamp:depth_test_input_clamped:*'>
 <meta name=variant content='webgpu:api,operation,rendering,draw:arguments:*'>
@@ -174,7 +177,8 @@
 <meta name=variant content='webgpu:api,operation,rendering,indirect_draw:basics:*'>
 <meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_compare_func:*'>
 <meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_passOp_operation:*'>
-<meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_test_fail:*'>
+<meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_failOp_operation:*'>
+<meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_depthFailOp_operation:*'>
 <meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_read_write_mask:*'>
 <meta name=variant content='webgpu:api,operation,rendering,stencil:stencil_reference_initialized:*'>
 <meta name=variant content='webgpu:api,operation,resource_init,buffer:partial_write_buffer:*'>
