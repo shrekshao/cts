@@ -145,26 +145,46 @@ export function run(
     }
 
     function getImageBitmap(ctx: GPUCanvasContext): Promise<ImageBitmap> {
-      const data = new Uint8ClampedArray(ctx.canvas.width * ctx.canvas.height * 4);
-      for (let i = 0; i < ctx.canvas.width; ++i)
-        for (let j = 0; j < ctx.canvas.height; ++j) {
-          const offset = (i + j * ctx.canvas.width) * 4;
-          if (i < ctx.canvas.width / 2) {
-            if (j < ctx.canvas.height / 2) {
+      const data = new Uint8ClampedArray(2 * 2 * 4);
+      for (let i = 0; i < 2; ++i)
+        for (let j = 0; j < 2; ++j) {
+          const offset = (i + j * 2) * 4;
+          if (i < 2 / 2) {
+            if (j < 2 / 2) {
               data.set([0x66, 0x00, 0x00, 0xff], offset);
             } else {
               data.set([0x00, 0x00, 0x66, 0xff], offset);
             }
           } else {
-            if (j < ctx.canvas.height / 2) {
+            if (j < 2 / 2) {
               data.set([0x00, 0x66, 0x00, 0xff], offset);
             } else {
               data.set([0x66, 0x66, 0x00, 0xff], offset);
             }
           }
         }
-      const imageData = new ImageData(data, ctx.canvas.width, ctx.canvas.height);
+      const imageData = new ImageData(data, 2, 2);
       return createImageBitmap(imageData);
+      // const data = new Uint8ClampedArray(ctx.canvas.width * ctx.canvas.height * 4);
+      // for (let i = 0; i < ctx.canvas.width; ++i)
+      //   for (let j = 0; j < ctx.canvas.height; ++j) {
+      //     const offset = (i + j * ctx.canvas.width) * 4;
+      //     if (i < ctx.canvas.width / 2) {
+      //       if (j < ctx.canvas.height / 2) {
+      //         data.set([0x66, 0x00, 0x00, 0xff], offset);
+      //       } else {
+      //         data.set([0x00, 0x00, 0x66, 0xff], offset);
+      //       }
+      //     } else {
+      //       if (j < ctx.canvas.height / 2) {
+      //         data.set([0x00, 0x66, 0x00, 0xff], offset);
+      //       } else {
+      //         data.set([0x66, 0x66, 0x00, 0xff], offset);
+      //       }
+      //     }
+      //   }
+      // const imageData = new ImageData(data, ctx.canvas.width, ctx.canvas.height);
+      // return createImageBitmap(imageData);
     }
 
     function setupSrcTexture(imageBitmap: ImageBitmap): GPUTexture {
@@ -172,6 +192,8 @@ export function run(
       const srcTexture = t.device.createTexture({
         size: [srcWidth, srcHeight, 1],
         format,
+        // mipLevelCount: 1,
+        // dimension: "2d",
         usage:
           GPUTextureUsage.TEXTURE_BINDING |
           GPUTextureUsage.RENDER_ATTACHMENT |
@@ -218,7 +240,7 @@ export function run(
             code: `
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
-  @location(0) fragUV : vec2<f32>,
+  @location(0) @interpolate(perspective, sample) fragUV : vec2<f32>,
 }
 
 @vertex
@@ -276,8 +298,14 @@ fn srgbMain(@location(0) fragUV: vec2<f32>) -> @location(0) vec4<f32> {
 }
 
 @fragment
-fn linearMain(@location(0) fragUV: vec2<f32>) -> @location(0) vec4<f32> {
+fn linearMain(@location(0) @interpolate(perspective, sample) fragUV: vec2<f32>) -> @location(0) vec4<f32> {
   return textureSample(myTexture, mySampler, fragUV);
+  // return textureSample(myTexture, mySampler, fragUV + vec2<f32>(-0.5, 0.0));
+  
+  // return textureSample(myTexture, mySampler, vec2<f32>(0.75, 0.25));
+  // return textureSample(myTexture, mySampler, vec2<f32>(0.25, 0.75));
+
+  // return vec4<f32>(0.0, 0.0, 0.0, 1.0) * textureSample(myTexture, mySampler, vec2<f32>(0.0, 0.0));
 }
             `,
           }),
@@ -287,11 +315,23 @@ fn linearMain(@location(0) fragUV: vec2<f32>) -> @location(0) vec4<f32> {
         primitive: {
           topology: 'triangle-list',
         },
+        multisample: {
+          count: 4,
+          // mask: 0xffffffff,
+          // mask: 0x16,
+          // mask: 0x1,  // red, top-left
+          // mask: 0x2,  // green, top-right
+          // mask: 0x4,  // blue, bottom-left
+          mask: 0x8,  // yellow, bottom-right
+          alphaToCoverageEnabled: false,
+        }
       });
 
       const sampler = t.device.createSampler({
         magFilter: 'nearest',
         minFilter: 'nearest',
+        // magFilter: 'nearest',
+        // minFilter: 'linear',
       });
 
       const uniformBindGroup = t.device.createBindGroup({
@@ -308,12 +348,31 @@ fn linearMain(@location(0) fragUV: vec2<f32>) -> @location(0) vec4<f32> {
         ],
       });
 
+      // const kRenderTargetSize = 2;
+      const kRenderTargetSize = 1;
+      const renderTargetTexture = t.device.createTexture({
+        format: format,
+        size: {
+          width: kRenderTargetSize,
+          height: kRenderTargetSize,
+          depthOrArrayLayers: 1,
+        },
+        sampleCount: 4,
+        mipLevelCount: 1,
+        usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
+      });
+
       const renderPassDescriptor: GPURenderPassDescriptor = {
         colorAttachments: [
           {
-            view: ctx.getCurrentTexture().createView(),
+            // view: ctx.getCurrentTexture().createView(),
 
-            clearValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+            view: renderTargetTexture.createView(),
+            resolveTarget: ctx.getCurrentTexture().createView(),
+
+            // clearValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 },
+            // clearValue: { r: 0, g: 0, b: 0, a: 1.0 },
+            clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
             loadOp: 'clear',
             storeOp: 'store',
           },

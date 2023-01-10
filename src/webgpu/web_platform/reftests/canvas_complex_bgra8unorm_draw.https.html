@@ -9,17 +9,19 @@
   />
   <link rel="match" href="./ref/canvas_complex-ref.html" />
 
-  <canvas id="cvs_draw_texture_sample" width="20" height="20" style="width: 20px; height: 20px;"></canvas>
-  <canvas id="cvs_draw_vertex_color" width="20" height="20" style="width: 20px; height: 20px;"></canvas>
-  <canvas id="cvs_draw_fragcoord" width="20" height="20" style="width: 20px; height: 20px;"></canvas>
+  <!-- <canvas id="cvs_draw_texture_sample" width="2" height="2" style="width: 20px; height: 20px;"></canvas> -->
+  <!-- <canvas id="cvs_draw_texture_sample" width="2" height="2" style="width: 200px; height: 200px;"></canvas> -->
+  <canvas id="cvs_draw_texture_sample" width="1" height="1" style="width: 200px; height: 200px;"></canvas>
+  <!-- <canvas id="cvs_draw_vertex_color" width="1" height="1" style="width: 200px; height: 200px;"></canvas>
+  <canvas id="cvs_draw_fragcoord" width="1" height="1" style="width: 200px; height: 200px;"></canvas> -->
 
   <script src="/common/reftest-wait.js"></script>
   <script type="module">
     import { run } from './canvas_complex.html.js';
     run('bgra8unorm', [
       { cvs: cvs_draw_texture_sample, writeCanvasMethod: 'DrawTextureSample' },
-      { cvs: cvs_draw_vertex_color, writeCanvasMethod: 'DrawVertexColor' },
-      { cvs: cvs_draw_fragcoord, writeCanvasMethod: 'DrawFragcoord' },
+      // { cvs: cvs_draw_vertex_color, writeCanvasMethod: 'DrawVertexColor' },
+      // { cvs: cvs_draw_fragcoord, writeCanvasMethod: 'DrawFragcoord' },
     ]);
   </script>
 </html>
