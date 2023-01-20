@@ -109,40 +109,39 @@ class F extends GPUTest {
                 vec2<f32>(-0.2, -0.2),
                 vec2<f32>(-0.2,  0.2),
 
-                // Sub quads are representing rasterization mask and
-                // are slightly scaled to avoid covering the pixel center
+                // Sub quads are representing rasterization mask
 
                 // top-left quad
-                vec2<f32>( -0.01, 1.0),
-                vec2<f32>( -0.01, 0.01),
-                vec2<f32>(-1.0, 0.01),
-                vec2<f32>( -0.01, 1.0),
-                vec2<f32>(-1.0, 0.01),
+                vec2<f32>( -0.0, 1.0),
+                vec2<f32>( -0.0, 0.0),
+                vec2<f32>(-1.0, 0.0),
+                vec2<f32>( -0.0, 1.0),
+                vec2<f32>(-1.0, 0.0),
                 vec2<f32>(-1.0, 1.0),
 
                 // top-right quad
                 vec2<f32>(1.0, 1.0),
-                vec2<f32>(1.0, 0.01),
-                vec2<f32>(0.01, 0.01),
+                vec2<f32>(1.0, 0.0),
+                vec2<f32>(0.0, 0.0),
                 vec2<f32>(1.0, 1.0),
-                vec2<f32>(0.01, 0.01),
-                vec2<f32>(0.01, 1.0),
+                vec2<f32>(0.0, 0.0),
+                vec2<f32>(0.0, 1.0),
 
                 // bottom-left quad
-                vec2<f32>( -0.01,  -0.01),
-                vec2<f32>( -0.01, -1.0),
+                vec2<f32>( -0.0,  -0.0),
+                vec2<f32>( -0.0, -1.0),
                 vec2<f32>(-1.0, -1.0),
-                vec2<f32>( -0.01,  -0.01),
+                vec2<f32>( -0.0,  -0.0),
                 vec2<f32>(-1.0, -1.0),
-                vec2<f32>(-1.0,  -0.01),
+                vec2<f32>(-1.0,  -0.0),
 
                 // bottom-right quad
-                vec2<f32>(1.0,  -0.01),
+                vec2<f32>(1.0,  -0.0),
                 vec2<f32>(1.0, -1.0),
-                vec2<f32>(0.01, -1.0),
-                vec2<f32>(1.0,  -0.01),
-                vec2<f32>(0.01, -1.0),
-                vec2<f32>(0.01,  -0.01)
+                vec2<f32>(0.0, -1.0),
+                vec2<f32>(1.0,  -0.0),
+                vec2<f32>(0.0, -1.0),
+                vec2<f32>(0.0,  -0.0)
               );
           
             var uv = array<vec2<f32>, 30>(
