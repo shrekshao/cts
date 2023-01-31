@@ -5,9 +5,8 @@ Test related to depth buffer, depth op, compare func, etc.
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { TypedArrayBufferView } from '../../../../common/util/util.js';
 import { kDepthStencilFormats, kTextureFormatInfo } from '../../../capability_info.js';
-import { GPUTest } from '../../../gpu_test.js';
+import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 import { TexelView } from '../../../util/texture/texel_view.js';
-import { textureContentIsOKByT2B } from '../../../util/texture/texture_ok.js';
 
 const backgroundColor = [0x00, 0x00, 0x00, 0xff];
 const triangleColor = [0xff, 0xff, 0xff, 0xff];
@@ -22,24 +21,28 @@ type TestStates = {
   depth: number;
 };
 
-class DepthTest extends GPUTest {
+class DepthTest extends TextureTestMixin(GPUTest) {
   runDepthStateTest(testStates: TestStates[], expectedColor: Float32Array) {
     const renderTargetFormat = 'rgba8unorm';
 
-    const renderTarget = this.device.createTexture({
-      format: renderTargetFormat,
-      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    const renderTarget = this.trackForCleanup(
+      this.device.createTexture({
+        format: renderTargetFormat,
+        size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+        usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
+      })
+    );
 
     const depthStencilFormat: GPUTextureFormat = 'depth24plus-stencil8';
-    const depthTexture = this.device.createTexture({
-      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
-      format: depthStencilFormat,
-      sampleCount: 1,
-      mipLevelCount: 1,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
-    });
+    const depthTexture = this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 1, height: 1, depthOrArrayLayers: 1 },
+        format: depthStencilFormat,
+        sampleCount: 1,
+        mipLevelCount: 1,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
+      })
+    );
 
     const depthStencilAttachment: GPURenderPassDepthStencilAttachment = {
       view: depthTexture.createView(),
@@ -83,15 +86,7 @@ class DepthTest extends GPUTest {
     };
     const expTexelView = TexelView.fromTexelsAsColors(renderTargetFormat, coords => expColor);
 
-    const result = textureContentIsOKByT2B(
-      this,
-      { texture: renderTarget },
-      [1, 1],
-      { expTexelView },
-      { maxDiffULPsForNormFormat: 1 }
-    );
-    this.eventualExpectOK(result);
-    this.trackForCleanup(renderTarget);
+    this.expectTexelViewComparisonIsOkInTexture({ texture: renderTarget }, expTexelView, [1, 1]);
   }
 
   createRenderPipelineForTest(
@@ -150,7 +145,7 @@ export const g = makeTestGroup(DepthTest);
 
 g.test('depth_disabled')
   .desc('Tests render results with depth test disabled.')
-  .fn(async t => {
+  .fn(t => {
     const depthSpencilFormat: GPUTextureFormat = 'depth24plus-stencil8';
     const state = { format: depthSpencilFormat };
 
@@ -189,7 +184,7 @@ g.test('depth_write_disabled')
         { depthWriteEnabled: true, lastDepth: 1.0, _expectedColor: kRedStencilColor },
       ])
   )
-  .fn(async t => {
+  .fn(t => {
     const { depthWriteEnabled, lastDepth, _expectedColor } = t.params;
 
     const depthSpencilFormat: GPUTextureFormat = 'depth24plus-stencil8';
@@ -258,7 +253,7 @@ g.test('depth_test_fail')
         { secondDepth: 2.0, lastDepth: 0.9, _expectedColor: kGreenStencilColor }, // fail -> pass.
       ] as const)
   )
-  .fn(async t => {
+  .fn(t => {
     const { secondDepth, lastDepth, _expectedColor } = t.params;
 
     const depthSpencilFormat: GPUTextureFormat = 'depth24plus-stencil8';
@@ -344,7 +339,7 @@ g.test('depth_compare_func')
   .beforeAllSubcases(t => {
     t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
   })
-  .fn(async t => {
+  .fn(t => {
     const { depthCompare, depthClearValue, _expected, format } = t.params;
 
     const colorAttachmentFormat = 'rgba8unorm';
@@ -423,12 +418,12 @@ g.test('depth_compare_func')
     pass.end();
     t.device.queue.submit([encoder.finish()]);
 
-    t.expectSinglePixelIn2DTexture(
-      colorAttachment,
-      colorAttachmentFormat,
-      { x: 0, y: 0 },
-      { exp: new Uint8Array(_expected) }
-    );
+    t.expectSinglePixelComparisonsAreOkInTexture({ texture: colorAttachment }, [
+      {
+        coord: { x: 0, y: 0 },
+        exp: new Uint8Array(_expected),
+      },
+    ]);
   });
 
 g.test('reverse_depth')
@@ -438,7 +433,7 @@ g.test('reverse_depth')
 (see https://developer.nvidia.com/content/depth-precision-visualized).`
   )
   .params(u => u.combine('reversed', [false, true]))
-  .fn(async t => {
+  .fn(t => {
     const colorAttachmentFormat = 'rgba8unorm';
     const colorAttachment = t.device.createTexture({
       format: colorAttachmentFormat,
@@ -536,14 +531,12 @@ g.test('reverse_depth')
     pass.end();
     t.device.queue.submit([encoder.finish()]);
 
-    t.expectSinglePixelIn2DTexture(
-      colorAttachment,
-      colorAttachmentFormat,
-      { x: 0, y: 0 },
+    t.expectSinglePixelComparisonsAreOkInTexture({ texture: colorAttachment }, [
       {
+        coord: { x: 0, y: 0 },
         exp: new Uint8Array(
           t.params.reversed ? [0x00, 0xff, 0x00, 0xff] : [0xff, 0x00, 0x00, 0xff]
         ),
-      }
-    );
+      },
+    ]);
   });

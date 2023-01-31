@@ -14,7 +14,7 @@ desc(
 encoded by chaining together long sequences of compute passes, with expected
 results verified at the end of the test.`).
 
-fn(async (t) => {
+fn((t) => {
   const kNumElements = 64;
   const data = new Uint32Array([...iterRange(kNumElements, (x) => x)]);
   const buffer = t.makeBufferWithContents(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
@@ -44,7 +44,7 @@ fn(async (t) => {
     const pass = encoder.beginComputePass();
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.dispatch(kNumElements);
+    pass.dispatchWorkgroups(kNumElements);
     pass.end();
   }
   t.device.queue.submit([encoder.finish()]);
@@ -59,7 +59,7 @@ desc(
 `Tests submission of a huge number of command buffers to a GPUQueue by a single
 submit() call.`).
 
-fn(async (t) => {
+fn((t) => {
   const kNumElements = 64;
   const data = new Uint32Array([...iterRange(kNumElements, (x) => x)]);
   const buffer = t.makeBufferWithContents(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC);
@@ -90,7 +90,7 @@ fn(async (t) => {
     const pass = encoder.beginComputePass();
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.dispatch(kNumElements);
+    pass.dispatchWorkgroups(kNumElements);
     pass.end();
     buffers.push(encoder.finish());
   }

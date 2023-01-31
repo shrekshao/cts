@@ -16,7 +16,7 @@
 <li><a href="webgpu_util_math.html">webgpu/util/math</a></li></ul>
 <h1>Module webgpu/util/math</h1></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/shrekshao/cts/blob/0673bb6/src/webgpu/util/math.ts#L1">src/webgpu/util/math.ts:1</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/shrekshao/cts/blob/e2248b0/src/webgpu/util/math.ts#L1">src/webgpu/util/math.ts:1</a></li></ul></aside>
 <section class="tsd-panel-group">
 <section class="tsd-panel tsd-typography"></section></section>
 <section class="tsd-panel-group tsd-index-group">
@@ -34,6 +34,7 @@
 <h3 class="tsd-index-heading">Functions</h3>
 <div class="tsd-index-list"><a href="../functions/webgpu_util_math.align.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-function)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6" id="icon-64-path"></rect><path d="M9.39 16V7.24H14.55V8.224H10.446V11.128H14.238V12.112H10.47V16H9.39Z" fill="var(--color-text)" id="icon-64-text"></path></svg><span>align</span></a>
 <a href="../functions/webgpu_util_math.biasedRange.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>biased<wbr/>Range</span></a>
+<a href="../functions/webgpu_util_math.calculatePermutations.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>calculate<wbr/>Permutations</span></a>
 <a href="../functions/webgpu_util_math.cartesianProduct.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>cartesian<wbr/>Product</span></a>
 <a href="../functions/webgpu_util_math.clamp.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>clamp</span></a>
 <a href="../functions/webgpu_util_math.correctlyRoundedF16.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>correctly<wbr/>Rounded<wbr/>F16</span></a>
@@ -66,12 +67,15 @@
 <a href="../functions/webgpu_util_math.oneULP.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>oneULP</span></a>
 <a href="../functions/webgpu_util_math.quantizeToF32.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>quantize<wbr/>To<wbr/>F32</span></a>
 <a href="../functions/webgpu_util_math.quantizeToI32.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>quantize<wbr/>To<wbr/>I32</span></a>
+<a href="../functions/webgpu_util_math.quantizeToU32.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>quantize<wbr/>To<wbr/>U32</span></a>
 <a href="../functions/webgpu_util_math.roundDown.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>round<wbr/>Down</span></a>
 <a href="../functions/webgpu_util_math.signExtend.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>sign<wbr/>Extend</span></a>
 <a href="../functions/webgpu_util_math.sourceFilteredF32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>source<wbr/>Filtered<wbr/>F32<wbr/>Range</span></a>
 <a href="../functions/webgpu_util_math.sparseF32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>sparse<wbr/>F32<wbr/>Range</span></a>
+<a href="../functions/webgpu_util_math.sparseU32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>sparse<wbr/>U32<wbr/>Range</span></a>
 <a href="../functions/webgpu_util_math.sparseVectorF32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>sparse<wbr/>Vector<wbr/>F32<wbr/>Range</span></a>
 <a href="../functions/webgpu_util_math.vectorF32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>vector<wbr/>F32<wbr/>Range</span></a>
+<a href="../functions/webgpu_util_math.vectorU32Range.html" class="tsd-index-link tsd-kind-function tsd-parent-kind-module"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg><span>vector<wbr/>U32<wbr/>Range</span></a>
 </div></section></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
@@ -108,6 +112,7 @@
 <li class="tsd-kind-module"><a href="common_util_timeout.html">common/util/timeout</a></li>
 <li class="tsd-kind-module"><a href="common_util_types.html">common/util/types</a></li>
 <li class="tsd-kind-module"><a href="common_util_util.html">common/util/util</a></li>
+<li class="tsd-kind-module"><a href="common_util_wpt_reftest_wait.html">common/util/wpt_<wbr/>reftest_<wbr/>wait</a></li>
 <li class="tsd-kind-module"><a href="webgpu_api_operation_buffers_mapping_test.html">webgpu/api/operation/buffers/mapping_<wbr/>test</a></li>
 <li class="tsd-kind-module"><a href="webgpu_api_operation_command_buffer_programmable_programmable_state_test.html">webgpu/api/operation/command_<wbr/>buffer/programmable/programmable_<wbr/>state_<wbr/>test</a></li>
 <li class="tsd-kind-module"><a href="webgpu_api_operation_memory_sync_buffer_buffer_sync_test.html">webgpu/api/operation/memory_<wbr/>sync/buffer/buffer_<wbr/>sync_<wbr/>test</a></li>
@@ -133,6 +138,7 @@
 <li class="tsd-kind-module"><a href="webgpu_shader_execution_expression_unary_unary.html">webgpu/shader/execution/expression/unary/unary</a></li>
 <li class="tsd-kind-module"><a href="webgpu_shader_execution_memory_model_memory_model_setup.html">webgpu/shader/execution/memory_<wbr/>model/memory_<wbr/>model_<wbr/>setup</a></li>
 <li class="tsd-kind-module"><a href="webgpu_shader_types.html">webgpu/shader/types</a></li>
+<li class="tsd-kind-module"><a href="webgpu_shader_validation_resource_interface_util.html">webgpu/shader/validation/resource_<wbr/>interface/util</a></li>
 <li class="tsd-kind-module"><a href="webgpu_shader_validation_shader_io_util.html">webgpu/shader/validation/shader_<wbr/>io/util</a></li>
 <li class="tsd-kind-module"><a href="webgpu_shader_validation_shader_validation_test.html">webgpu/shader/validation/shader_<wbr/>validation_<wbr/>test</a></li>
 <li class="tsd-kind-module"><a href="webgpu_shader_values.html">webgpu/shader/values</a></li>
@@ -159,6 +165,7 @@
 <li class="tsd-kind-module"><a href="webgpu_util_texture_texel_view.html">webgpu/util/texture/texel_<wbr/>view</a></li>
 <li class="tsd-kind-module"><a href="webgpu_util_texture_texture_ok.html">webgpu/util/texture/texture_<wbr/>ok</a></li>
 <li class="tsd-kind-module"><a href="webgpu_util_unions.html">webgpu/util/unions</a></li>
+<li class="tsd-kind-module"><a href="webgpu_web_platform_reftests_create_pattern_data_url.html">webgpu/web_<wbr/>platform/reftests/create-<wbr/>pattern-<wbr/>data-<wbr/>url</a></li>
 <li class="tsd-kind-module"><a href="webgpu_web_platform_reftests_gpu_ref_test.html">webgpu/web_<wbr/>platform/reftests/gpu_<wbr/>ref_<wbr/>test</a></li>
 <li class="tsd-kind-module"><a href="webgpu_web_platform_util.html">webgpu/web_<wbr/>platform/util</a></li>
 <li class="tsd-kind-module"><a href="webgpu_web_platform_worker_worker.html">webgpu/web_<wbr/>platform/worker/worker</a></li>
@@ -169,6 +176,7 @@
 <li class="tsd-kind-variable tsd-parent-kind-module"><a href="../variables/webgpu_util_math.kMaxSafeMultipleOf8.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-32-path"></use><use href="#icon-32-text"></use></svg>k<wbr/>Max<wbr/>Safe<wbr/>Multiple<wbr/>Of8</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.align.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>align</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.biasedRange.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>biased<wbr/>Range</a></li>
+<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.calculatePermutations.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>calculate<wbr/>Permutations</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.cartesianProduct.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>cartesian<wbr/>Product</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.clamp.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>clamp</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.correctlyRoundedF16.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>correctly<wbr/>Rounded<wbr/>F16</a></li>
@@ -201,12 +209,15 @@
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.oneULP.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>oneULP</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.quantizeToF32.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>quantize<wbr/>To<wbr/>F32</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.quantizeToI32.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>quantize<wbr/>To<wbr/>I32</a></li>
+<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.quantizeToU32.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>quantize<wbr/>To<wbr/>U32</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.roundDown.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>round<wbr/>Down</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.signExtend.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>sign<wbr/>Extend</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.sourceFilteredF32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>source<wbr/>Filtered<wbr/>F32<wbr/>Range</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.sparseF32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>sparse<wbr/>F32<wbr/>Range</a></li>
+<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.sparseU32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>sparse<wbr/>U32<wbr/>Range</a></li>
 <li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.sparseVectorF32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>sparse<wbr/>Vector<wbr/>F32<wbr/>Range</a></li>
-<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.vectorF32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>vector<wbr/>F32<wbr/>Range</a></li></ul></nav></div></div>
+<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.vectorF32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>vector<wbr/>F32<wbr/>Range</a></li>
+<li class="tsd-kind-function tsd-parent-kind-module"><a href="../functions/webgpu_util_math.vectorU32Range.html" class="tsd-index-link"><svg class="tsd-kind-icon" width="24" height="24" viewBox="0 0 24 24"><use href="#icon-64-path"></use><use href="#icon-64-text"></use></svg>vector<wbr/>U32<wbr/>Range</a></li></ul></nav></div></div>
 <div class="container tsd-generator">
 <p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
 <div class="overlay"></div><script src="../assets/main.js"></script></body></html>

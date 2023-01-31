@@ -4,6 +4,7 @@
 import { kValue } from './constants.js';
 import { reinterpretF32AsU32, reinterpretU32AsF32 } from './conversion.js';
 import {
+calculatePermutations,
 cartesianProduct,
 correctlyRoundedF16,
 correctlyRoundedF32,
@@ -343,11 +344,7 @@ domain,
 impl)
 {
   return (x, y) => {
-    if (!domain.x.contains(x)) {
-      return F32Interval.any();
-    }
-
-    if (!domain.y.some((d) => d.contains(y))) {
+    if (!domain.x.some((d) => d.contains(x)) || !domain.y.some((d) => d.contains(y))) {
       return F32Interval.any();
     }
 
@@ -1098,31 +1095,32 @@ export function atanInterval(n) {
 }
 
 const Atan2IntervalOp = {
-  impl: (y, x) => {
-    // y/x is not defined meaningfully here
-    if (x === 0) {
-      return F32Interval.any();
-    }
-
-    // atan2's accuracy is only defined if y is normal
-    if (isSubnormalNumberF32(y)) {
-      return F32Interval.any();
-    }
-
-    const atan_yx = atanInterval(divisionInterval(y, x));
+  impl: limitBinaryToIntervalDomain(
+  {
+    // For atan2, there params are labelled (y, x), not (x, y), so domain.x is first parameter (y), and domain.y is
+    // the second parameter (x)
+    x: [
+    toF32Interval([kValue.f32.negative.min, kValue.f32.negative.max]),
+    toF32Interval([kValue.f32.positive.min, kValue.f32.positive.max])],
+    // first param must be finite and normal
+    y: [toF32Interval([-(2 ** 126), -(2 ** -126)]), toF32Interval([2 ** -126, 2 ** 126])] // inherited from division
+  },
+  (y, x) => {
+    const atan_yx = Math.atan(y / x);
     // x > 0, atan(y/x)
     if (x > 0) {
-      return atan_yx;
+      return ulpInterval(atan_yx, 4096);
     }
 
     // x < 0, y > 0, atan(y/x) + π
     if (y > 0) {
-      return additionInterval(atan_yx, kValue.f32.positive.pi.whole);
+      return ulpInterval(atan_yx + kValue.f32.positive.pi.whole, 4096);
     }
 
     // x < 0, y < 0, atan(y/x) - π
-    return subtractionInterval(atan_yx, kValue.f32.positive.pi.whole);
-  },
+    return ulpInterval(atan_yx - kValue.f32.positive.pi.whole, 4096);
+  }),
+
   extrema: (y, x) => {
     // There is discontinuity + undefined behaviour at y/x = 0 that will dominate the accuracy
     if (y.contains(0)) {
@@ -1324,7 +1322,7 @@ export function distanceInterval(x, y) {
 const DivisionIntervalOp = {
   impl: limitBinaryToIntervalDomain(
   {
-    x: toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max]),
+    x: [toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max])],
     y: [toF32Interval([-(2 ** 126), -(2 ** -126)]), toF32Interval([2 ** -126, 2 ** 126])]
   },
   (x, y) => {
@@ -1356,7 +1354,19 @@ const DotIntervalOp = {
     toF32Vector(y),
     MultiplicationIntervalOp);
 
-    return multiplications.reduce((previous, current) => additionInterval(previous, current));
+
+    // vec2 doesn't require permutations, since a + b = b + a for floats
+    if (multiplications.length === 2) {
+      return additionInterval(multiplications[0], multiplications[1]);
+    }
+
+    // The spec does not state the ordering of summation, so all of the permutations are calculated and their results
+    // spanned, since addition of more then two floats is not transitive, i.e. a + b + c is not guaranteed to equal
+    // b + a + c
+    const permutations = calculatePermutations(multiplications);
+    return F32Interval.span(
+    ...permutations.map((p) => p.reduce((prev, cur) => additionInterval(prev, cur))));
+
   }
 };
 
@@ -1510,7 +1520,7 @@ const LdexpIntervalOp = {
   // Implementing SPIR-V's more restrictive domain until
   // https://github.com/gpuweb/gpuweb/issues/3134 is resolved
   {
-    x: toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max]),
+    x: [toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max])],
     y: [toF32Interval([-126, 128])]
   },
   (e1, e2) => {
@@ -1793,7 +1803,7 @@ export function refractInterval(i, s, r) {
   const one_minus_dot_squared = subtractionInterval(1, dot_squared);
   const k = subtractionInterval(1.0, multiplicationInterval(r_squared, one_minus_dot_squared));
 
-  if (k.containsZeroOrSubnormals()) {
+  if (!k.isFinite() || k.containsZeroOrSubnormals()) {
     // There is a discontinuity at k == 0, due to sqrt(k) being calculated, so exiting early
     return kAnyVector[toF32Vector(i).length];
   }

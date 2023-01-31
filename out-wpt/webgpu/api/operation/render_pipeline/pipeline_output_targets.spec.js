@@ -5,12 +5,14 @@
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { range } from '../../../../common/util/util.js';
-import { kRenderableColorTextureFormats, kTextureFormatInfo } from '../../../capability_info.js';
-import { GPUTest } from '../../../gpu_test.js';
+import {
+  kLimitInfo,
+  kRenderableColorTextureFormats,
+  kTextureFormatInfo,
+} from '../../../capability_info.js';
+import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 import { getFragmentShaderCodeWithOutput, getPlainTypeInfo } from '../../../util/shader.js';
 import { kTexelRepresentationInfo } from '../../../util/texture/texel_data.js';
-import { TexelView } from '../../../util/texture/texel_view.js';
-import { textureContentIsOKByT2B } from '../../../util/texture/texture_ok.js';
 
 const kVertexShader = `
 @vertex fn main(
@@ -24,7 +26,7 @@ const kVertexShader = `
 }
 `;
 
-export const g = makeTestGroup(GPUTest);
+export const g = makeTestGroup(TextureTestMixin(GPUTest));
 
 // Values to write into each attachment
 // We make values different for each attachment index and each channel
@@ -50,13 +52,21 @@ g.test('color,attachments')
       .combine('format', kRenderableColorTextureFormats)
       .beginSubcases()
       .combine('attachmentCount', [2, 3, 4])
+      .filter(t => {
+        // We only need to test formats that have a valid color attachment bytes per sample.
+        const pixelByteCost = kTextureFormatInfo[t.format].renderTargetPixelByteCost;
+        return (
+          pixelByteCost !== undefined &&
+          pixelByteCost * t.attachmentCount <= kLimitInfo.maxColorAttachmentBytesPerSample.default
+        );
+      })
       .expand('emptyAttachmentId', p => range(p.attachmentCount, i => i))
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
     t.selectDeviceOrSkipTestCase(info.feature);
   })
-  .fn(async t => {
+  .fn(t => {
     const { format, attachmentCount, emptyAttachmentId } = t.params;
     const componentCount = kTexelRepresentationInfo[format].componentOrder.length;
     const info = kTextureFormatInfo[format];
@@ -126,25 +136,14 @@ g.test('color,attachments')
     pass.end();
     t.device.queue.submit([encoder.finish()]);
 
-    const promises = range(attachmentCount, i => {
+    for (let i = 0; i < attachmentCount; i++) {
       if (i === emptyAttachmentId) {
-        return undefined;
+        continue;
       }
-      return textureContentIsOKByT2B(
-        t,
-        { texture: renderTargets[i] },
-        [1, 1, 1],
-        {
-          expTexelView: TexelView.fromTexelsAsColors(format, coords => writeValues[i]),
-        },
-        {
-          maxIntDiff: 0,
-          maxDiffULPsForNormFormat: 1,
-          maxDiffULPsForFloatFormat: 1,
-        }
-      );
-    });
-    t.eventualExpectOK(Promise.all(promises));
+      t.expectSinglePixelComparisonsAreOkInTexture({ texture: renderTargets[i] }, [
+        { coord: { x: 0, y: 0 }, exp: writeValues[i] },
+      ]);
+    }
   });
 
 g.test('color,component_count')
@@ -162,7 +161,7 @@ g.test('color,component_count')
     const info = kTextureFormatInfo[t.params.format];
     t.selectDeviceOrSkipTestCase(info.feature);
   })
-  .fn(async t => {
+  .fn(t => {
     const { format, componentCount } = t.params;
     const info = kTextureFormatInfo[format];
 
@@ -368,7 +367,7 @@ The attachment has a load value of [1, 0, 0, 1]
     const info = kTextureFormatInfo[t.params.format];
     t.selectDeviceOrSkipTestCase(info.feature);
   })
-  .fn(async t => {
+  .fn(t => {
     const {
       format,
       _result,

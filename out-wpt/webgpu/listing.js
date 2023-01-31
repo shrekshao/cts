@@ -323,14 +323,6 @@ export const listing = [
       "api",
       "operation",
       "render_pipeline",
-      "alpha_to_coverage"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "render_pipeline",
       "culling_tests"
     ]
   },
@@ -1345,6 +1337,24 @@ export const listing = [
       "expression",
       "binary",
       "f32_logical"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "i32_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "u32_arithmetic"
     ]
   },
   {
@@ -2459,6 +2469,15 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "unary",
+      "i32_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "memory_model",
       "atomicity"
     ]
@@ -2598,6 +2617,14 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "semicolon"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "source"
     ]
   },
@@ -2606,7 +2633,23 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "static_assert"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "var_and_let"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "resource_interface",
+      "bindings"
     ]
   },
   {
@@ -2653,8 +2696,8 @@ export const listing = [
     "file": [
       "shader",
       "validation",
-      "shader_io",
-      "shareable_types"
+      "static_assert",
+      "static_assert"
     ]
   },
   {
