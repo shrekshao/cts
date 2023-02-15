@@ -30,6 +30,18 @@ const kColors = [
   new Uint8Array([0xff, 0xff, 0, 0xff]),
 ];
 
+// Used for texture to sample from
+const kReversedColors = [
+  // Yellow
+  new Uint8Array([0xff, 0xff, 0, 0xff]),
+  // Blue
+  new Uint8Array([0, 0, 0xff, 0xff]),
+  // Green
+  new Uint8Array([0, 0xff, 0, 0xff]),
+  // Red
+  new Uint8Array([0xff, 0, 0, 0xff]),
+];
+
 const kDepthClearValue = 1.0;
 const kDepthWriteValue = 0.0;
 const kStencilClearValue = 0;
@@ -73,6 +85,10 @@ function getExpectedColorData(
         hasSample(rasterizationMask, sampleMask, fragmentShaderOutputMaskOrAlphaToCoverageMask, i)
       ) {
         const o = i * 4;
+        // expectedData[o + 0] = 0x12;
+        // expectedData[o + 1] = 0x12;
+        // expectedData[o + 2] = 0x12;
+        // expectedData[o + 3] = 0x12;
         expectedData[o + 0] = kColors[i][0] / 0xff;
         expectedData[o + 1] = kColors[i][1] / 0xff;
         expectedData[o + 2] = kColors[i][2] / 0xff;
@@ -124,7 +140,7 @@ function getExpectedStencilData(
 const kSampleMaskTestVertexShader = `
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
-  @location(0) @interpolate(perspective, sample) fragUV : vec2<f32>,
+  @location(0) @interpolate(perspective, sample) fragUV : vec4<f32>,
 }
 
 @vertex
@@ -176,46 +192,46 @@ fn main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
       vec2<f32>(0.01,  -0.01)
     );
 
-  var uv = array<vec2<f32>, 30>(
+  var uv = array<vec4<f32>, 30>(
       // center quad
-      vec2<f32>(1.0, 0.0),
-      vec2<f32>(1.0, 1.0),
-      vec2<f32>(0.0, 1.0),
-      vec2<f32>(1.0, 0.0),
-      vec2<f32>(0.0, 1.0),
-      vec2<f32>(0.0, 0.0),
+      vec4<f32>(1.0, 0.0, 0.0, 0.0),
+      vec4<f32>(1.0, 1.0, 0.0, 0.0),
+      vec4<f32>(0.0, 1.0, 0.0, 0.0),
+      vec4<f32>(1.0, 0.0, 0.0, 0.0),
+      vec4<f32>(0.0, 1.0, 0.0, 0.0),
+      vec4<f32>(0.0, 0.0, 0.0, 0.0),
 
       // top-left quad (texel 0)
-      vec2<f32>(0.5, 0.0),
-      vec2<f32>(0.5, 0.5),
-      vec2<f32>(0.0, 0.5),
-      vec2<f32>(0.5, 0.0),
-      vec2<f32>(0.0, 0.5),
-      vec2<f32>(0.0, 0.0),
+      vec4<f32>(0.5, 0.0, 0.0, 0.0),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0),
+      vec4<f32>(0.0, 0.5, 0.0, 0.0),
+      vec4<f32>(0.5, 0.0, 0.0, 0.0),
+      vec4<f32>(0.0, 0.5, 0.0, 0.0),
+      vec4<f32>(0.0, 0.0, 0.0, 0.0),
 
       // top-right quad (texel 1)
-      vec2<f32>(1.0, 0.0),
-      vec2<f32>(1.0, 0.5),
-      vec2<f32>(0.5, 0.5),
-      vec2<f32>(1.0, 0.0),
-      vec2<f32>(0.5, 0.5),
-      vec2<f32>(0.5, 0.0),
+      vec4<f32>(1.0, 0.0, 0.0, 0.0),
+      vec4<f32>(1.0, 0.5, 0.0, 0.0),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0),
+      vec4<f32>(1.0, 0.0, 0.0, 0.0),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0),
+      vec4<f32>(0.5, 0.0, 0.0, 0.0),
 
       // bottom-left quad (texel 2)
-      vec2<f32>(0.5, 0.5),
-      vec2<f32>(0.5, 1.0),
-      vec2<f32>(0.0, 1.0),
-      vec2<f32>(0.5, 0.5),
-      vec2<f32>(0.0, 1.0),
-      vec2<f32>(0.0, 0.5),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0),
+      vec4<f32>(0.5, 1.0, 0.0, 0.0),
+      vec4<f32>(0.0, 1.0, 0.0, 0.0),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0),
+      vec4<f32>(0.0, 1.0, 0.0, 0.0),
+      vec4<f32>(0.0, 0.5, 0.0, 0.0),
 
       // bottom-right quad (texel 3)
-      vec2<f32>(1.0, 0.5),
-      vec2<f32>(1.0, 1.0),
-      vec2<f32>(0.5, 1.0),
-      vec2<f32>(1.0, 0.5),
-      vec2<f32>(0.5, 1.0),
-      vec2<f32>(0.5, 0.5)
+      vec4<f32>(1.0, 0.5, 0.0, 0.0),
+      vec4<f32>(1.0, 1.0, 0.0, 0.0),
+      vec4<f32>(0.5, 1.0, 0.0, 0.0),
+      vec4<f32>(1.0, 0.5, 0.0, 0.0),
+      vec4<f32>(0.5, 1.0, 0.0, 0.0),
+      vec4<f32>(0.5, 0.5, 0.0, 0.0)
     );
 
   var output : VertexOutput;
@@ -239,7 +255,8 @@ class F extends TextureTestMixin(GPUTest) {
     this.sampleTexture = this.createTextureFromTexelView(
       TexelView.fromTexelsAsBytes(format, coord => {
         const id = coord.x + coord.y * kSampleTextureSize;
-        return kColors[id];
+        return kReversedColors[id];
+        // return kColors[id];
       }),
       {
         size: [kSampleTextureSize, kSampleTextureSize, 1],
@@ -378,6 +395,22 @@ class F extends TextureTestMixin(GPUTest) {
         // draw bottom-right quad
         passEncoder.draw(6, 1, 24);
       }
+      // if ((rasterizationMask & 1) !== 0) {
+      //   // draw bottom-right quad
+      //   passEncoder.draw(6, 1, 24);
+      // }
+      // if ((rasterizationMask & 2) !== 0) {
+      //   // draw bottom-left quad
+      //   passEncoder.draw(6, 1, 18);
+      // }
+      // if ((rasterizationMask & 4) !== 0) {
+      //   // draw top-right quad
+      //   passEncoder.draw(6, 1, 12);
+      // }
+      // if ((rasterizationMask & 8) !== 0) {
+      //   // draw top-left quad
+      //   passEncoder.draw(6, 1, 6);
+      // }
     }
     passEncoder.end();
     this.device.queue.submit([commandEncoder.finish()]);
@@ -535,8 +568,8 @@ textureLoad each sample index from the texture and write to a storage buffer to 
           }
 
           @fragment
-          fn main(@location(0) @interpolate(perspective, sample) fragUV: vec2<f32>) -> FragmentOutput {
-            return FragmentOutput(fragMask, textureSample(myTexture, mySampler, fragUV));
+          fn main(@location(0) @interpolate(perspective, sample) fragUV: vec4<f32>) -> FragmentOutput {
+            return FragmentOutput(fragMask, textureSample(myTexture, mySampler, fragUV.xy));
           }`,
         }),
         entryPoint: 'main',
@@ -663,8 +696,8 @@ color' <= color.
           }
 
           @fragment
-          fn main(@location(0) @interpolate(perspective, sample) fragUV: vec2<f32>) -> FragmentOutput {
-            var c = textureSample(myTexture, mySampler, fragUV);
+          fn main(@location(0) @interpolate(perspective, sample) fragUV: vec4<f32>) -> FragmentOutput {
+            var c = textureSample(myTexture, mySampler, fragUV.xy);
             var output: FragmentOutput;
             output.color0 = c;
             output.color0.a = alpha[0];
