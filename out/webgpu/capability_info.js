@@ -112,7 +112,7 @@ const kRegularTextureFormatInfo = makeTable(
   'rgba8snorm': [false, false, false,,,, true,,, 'float', 4],
   'rgba8uint': [true, true, false,,,, true,,, 'uint', 4,,, 4, 1],
   'rgba8sint': [true, true, false,,,, true,,, 'sint', 4,,, 4, 1],
-  'bgra8unorm': [true, true, true,,,, true,,, 'float', 4,,, 8, 1,, 'bgra8unorm'],
+  'bgra8unorm': [true, true, true,,,, false,,, 'float', 4,,, 8, 1,, 'bgra8unorm'],
   'bgra8unorm-srgb': [true, true, true,,,, false,,, 'float', 4,,, 8, 1,, 'bgra8unorm'],
   // Packed 32-bit formats
   'rgb10a2unorm': [true, true, true,,,, false,,, 'float', 4,,, 8, 4],
@@ -973,6 +973,15 @@ GPUConst.ShaderStage.COMPUTE];
 
 /** List of all possible combinations of GPUShaderStage values. */
 export const kShaderStageCombinations = [0, 1, 2, 3, 4, 5, 6, 7];
+export const kShaderStageCombinationsWithStage = [
+1,
+2,
+3,
+4,
+5,
+6,
+7];
+
 
 /**
  * List of all possible texture sampleCount values.
@@ -1032,6 +1041,7 @@ export const kLimitInfo = makeTable(
   'maxTextureArrayLayers': [, 256],
 
   'maxBindGroups': [, 4],
+  'maxBindingsPerBindGroup': [, 640],
   'maxDynamicUniformBuffersPerPipelineLayout': [, 8],
   'maxDynamicStorageBuffersPerPipelineLayout': [, 4],
   'maxSampledTexturesPerShaderStage': [, 16],
@@ -1050,6 +1060,7 @@ export const kLimitInfo = makeTable(
   'maxVertexAttributes': [, 16],
   'maxVertexBufferArrayStride': [, 2048],
   'maxInterStageShaderComponents': [, 60],
+  'maxInterStageShaderVariables': [, 16],
 
   'maxColorAttachments': [, 8],
   'maxColorAttachmentBytesPerSample': [, 32],
@@ -1085,6 +1096,7 @@ export const kDrawIndexedIndirectParametersSize = 5;
 export const kFeatureNameInfo =
 
 {
+  'bgra8unorm-storage': {},
   'depth-clip-control': {},
   'depth32float-stencil8': {},
   'texture-compression-bc': {},

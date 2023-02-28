@@ -627,6 +627,195 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "capability_checks",
+      "limits",
+      "maxBindGroups"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxBindingsPerBindGroup"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxBufferSize"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxDynamicStorageBuffersPerPipelineLayout"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxDynamicUniformBuffersPerPipelineLayout"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxInterStageShaderComponents"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxInterStageShaderVariables"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxSampledTexturesPerShaderStage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxSamplersPerShaderStage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxStorageBufferBindingSize"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxStorageBuffersPerShaderStage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxStorageTexturesPerShaderStage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxTextureArrayLayers"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxTextureDimension1D"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxTextureDimension2D"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxTextureDimension3D"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxUniformBufferBindingSize"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxUniformBuffersPerShaderStage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxVertexAttributes"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxVertexBufferArrayStride"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxVertexBuffers"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "compute_pipeline"
     ]
   },
@@ -1254,6 +1443,14 @@ export const listing = [
       "api",
       "validation",
       "texture",
+      "bgra8unorm_storage"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "texture",
       "destroy"
     ]
   },
@@ -1337,6 +1534,15 @@ export const listing = [
       "expression",
       "binary",
       "f32_logical"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "f32_matrix_arithmetic"
     ]
   },
   {
@@ -2478,6 +2684,62 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "flow_control",
+      "call"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "for"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "if"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "loop"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "return"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "switch"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "flow_control",
+      "while"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "memory_model",
       "atomicity"
     ]
@@ -2568,6 +2830,14 @@ export const listing = [
     "file": [
       "shader",
       "validation",
+      "const_assert",
+      "const_assert"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
       "parse",
       "align"
     ]
@@ -2577,7 +2847,31 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "attribute"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "binary_ops"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "blankspace"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "break"
     ]
   },
   {
@@ -2601,6 +2895,30 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "const"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "const_assert"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "discard"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "identifiers"
     ]
   },
@@ -2610,6 +2928,14 @@ export const listing = [
       "validation",
       "parse",
       "literal"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "pipeline_stage"
     ]
   },
   {
@@ -2633,7 +2959,7 @@ export const listing = [
       "shader",
       "validation",
       "parse",
-      "static_assert"
+      "unary_ops"
     ]
   },
   {
@@ -2690,14 +3016,6 @@ export const listing = [
       "validation",
       "shader_io",
       "locations"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "static_assert",
-      "static_assert"
     ]
   },
   {
