@@ -2,11 +2,12 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { keysOf } from '../../../../../common/util/data_tables.js';import { align, roundDown } from '../../../../util/math.js';
 import {
-kLimitBaseParams,
+kMaximumLimitBaseParams,
 makeLimitTestGroup,
 
+getDefaultLimit } from
 
-kLimitValueTestKeys } from
+
 './limit_utils.js';
 
 const BufferParts = {
@@ -27,6 +28,9 @@ function getSizeAndOffsetForBufferPart(device, bufferPart, size) {
 }
 
 const kStorageBufferRequiredSizeAlignment = 4;
+
+// We also need to update the maxBufferSize limit when testing.
+const kExtraLimits = { maxBufferSize: 'maxLimit' };
 
 function getDeviceLimitToRequest(
 limitValueTest,
@@ -78,10 +82,10 @@ export const { g, description } = makeLimitTestGroup(limit);
 
 g.test('createBindGroup,at_over').
 desc(`Test using createBindGroup at and over ${limit} limit`).
-params(kLimitBaseParams.combine('bufferPart', kBufferPartsKeys)).
+params(kMaximumLimitBaseParams.combine('bufferPart', kBufferPartsKeys)).
 fn(async (t) => {
   const { limitTest, testValueName, bufferPart } = t.params;
-  const { adapter, defaultLimit, maximumLimit } = await t.getAdapterAndLimits();
+  const { defaultLimit, adapterLimit: maximumLimit } = t;
   const { requestedLimit, testValue } = getDeviceLimitToRequestAndValueToTest(
   limitTest,
   testValueName,
@@ -90,7 +94,6 @@ fn(async (t) => {
 
 
   await t.testDeviceWithSpecificLimits(
-  adapter,
   requestedLimit,
   testValue,
   async ({ device, testValue, shouldError }) => {
@@ -105,6 +108,13 @@ fn(async (t) => {
     });
 
     const { size, offset } = getSizeAndOffsetForBufferPart(device, bufferPart, testValue);
+
+    // If the size of the buffer exceeds the related but separate maxBufferSize limit, we can
+    // skip the validation since the allocation will fail with a validation error.
+    if (size > device.limits.maxBufferSize) {
+      return;
+    }
+
     device.pushErrorScope('out-of-memory');
     const storageBuffer = t.trackForCleanup(
     device.createBuffer({
@@ -135,20 +145,16 @@ fn(async (t) => {
       `size: ${size}, offset: ${offset}, testValue: ${testValue}`);
 
     }
-  });
+  },
+  kExtraLimits);
 
 });
 
 g.test('validate,maxBufferSize').
 desc(`Test that ${limit} <= maxBufferSize`).
-params((u) => u.combine('limitTest', kLimitValueTestKeys)).
-fn(async (t) => {
-  const { limitTest } = t.params;
-  const { adapter, defaultLimit, maximumLimit } = await t.getAdapterAndLimits();
-  const requestedLimit = getDeviceLimitToRequest(limitTest, defaultLimit, maximumLimit);
-
-  await t.testDeviceWithSpecificLimits(adapter, requestedLimit, 0, ({ device, actualLimit }) => {
-    t.expect(actualLimit <= device.limits.maxBufferSize);
-  });
+fn((t) => {
+  const { adapter, defaultLimit, adapterLimit } = t;
+  t.expect(defaultLimit <= getDefaultLimit('maxBufferSize'));
+  t.expect(adapterLimit <= adapter.limits.maxBufferSize);
 });
 //# sourceMappingURL=maxStorageBufferBindingSize.spec.js.map

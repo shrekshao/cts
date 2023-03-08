@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { roundDown } from '../../../../util/math.js';
-import { kLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
+import { kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
 
 function getPipelineDescriptor(device, testValue) {
   const code = `
@@ -83,10 +83,10 @@ export const { g, description } = makeLimitTestGroup(limit);
 
 g.test('createRenderPipeline,at_over')
   .desc(`Test using createRenderPipeline at and over ${limit} limit`)
-  .params(kLimitBaseParams)
+  .params(kMaximumLimitBaseParams)
   .fn(async t => {
     const { limitTest, testValueName } = t.params;
-    const { adapter, defaultLimit, maximumLimit } = await t.getAdapterAndLimits();
+    const { defaultLimit, adapterLimit: maximumLimit } = t;
     const { requestedLimit, testValue } = getDeviceLimitToRequestAndValueToTest(
       limitTest,
       testValueName,
@@ -95,7 +95,6 @@ g.test('createRenderPipeline,at_over')
     );
 
     await t.testDeviceWithSpecificLimits(
-      adapter,
       requestedLimit,
       testValue,
       async ({ device, testValue, shouldError }) => {
@@ -110,10 +109,10 @@ g.test('createRenderPipeline,at_over')
 
 g.test('createRenderPipelineAsync,at_over')
   .desc(`Test using createRenderPipelineAsync at and over ${limit} limit`)
-  .params(kLimitBaseParams)
+  .params(kMaximumLimitBaseParams)
   .fn(async t => {
     const { limitTest, testValueName } = t.params;
-    const { adapter, defaultLimit, maximumLimit } = await t.getAdapterAndLimits();
+    const { defaultLimit, adapterLimit: maximumLimit } = t;
     const { requestedLimit, testValue } = getDeviceLimitToRequestAndValueToTest(
       limitTest,
       testValueName,
@@ -122,7 +121,6 @@ g.test('createRenderPipelineAsync,at_over')
     );
 
     await t.testDeviceWithSpecificLimits(
-      adapter,
       requestedLimit,
       testValue,
       async ({ device, testValue, shouldError }) => {

@@ -48,7 +48,7 @@ export const listing = [
       "operation",
       "async_ordering"
     ],
-    "readme": "Test ordering of async resolutions between promises returned by the following calls (and possibly\nbetween multiple of the same call), where there are constraints on the ordering.\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
+    "readme": "Test ordering of async resolutions between promises returned by the following calls (and possibly\nbetween multiple of the same call), where there are constraints on the ordering.\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.getCompilationInfo()"
   },
   {
     "file": [
@@ -656,6 +656,78 @@ export const listing = [
       "validation",
       "capability_checks",
       "limits",
+      "maxColorAttachmentBytesPerSample"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxColorAttachments"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeInvocationsPerWorkgroup"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeWorkgroupSizeX"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeWorkgroupSizeY"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeWorkgroupSizeZ"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeWorkgroupStorageSize"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxComputeWorkgroupsPerDimension"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
       "maxDynamicStorageBuffersPerPipelineLayout"
     ]
   },
@@ -810,6 +882,24 @@ export const listing = [
       "capability_checks",
       "limits",
       "maxVertexBuffers"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "minStorageBufferOffsetAlignment"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "minUniformBufferOffsetAlignment"
     ]
   },
   {
@@ -1121,6 +1211,13 @@ export const listing = [
     "file": [
       "api",
       "validation",
+      "gpu_external_texture_expiration"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
       "image_copy"
     ],
     "readme": "writeTexture + copyBufferToTexture + copyTextureToBuffer validation tests.\n\nTest coverage:\n* resource usages:\n\t- texture_usage_must_be_valid: for GPUTextureUsage::COPY_SRC, GPUTextureUsage::COPY_DST flags.\n\t- buffer_usage_must_be_valid: for GPUBufferUsage::COPY_SRC, GPUBufferUsage::COPY_DST flags.\n\n* textureCopyView:\n\t- texture_must_be_valid: for valid, destroyed, error textures.\n\t- sample_count_must_be_1: for sample count 1 and 4.\n\t- mip_level_must_be_in_range: for various combinations of mipLevel and mipLevelCount.\n\t- format: for all formats with full and non-full copies on width, height, and depth.\n\t- texel_block_alignment_on_origin: for all formats and coordinates.\n\n* bufferCopyView:\n\t- buffer_must_be_valid: for valid, destroyed, error buffers.\n\t- bytes_per_row_alignment: for bytesPerRow to be 256-byte aligned or not, and bytesPerRow is required or not.\n\n* linear texture data:\n\t- bound_on_rows_per_image: for various combinations of copyDepth (1, >1), copyHeight, rowsPerImage.\n\t- offset_plus_required_bytes_in_copy_overflow\n\t- required_bytes_in_copy: testing minimal data size and data size too small for various combinations of bytesPerRow, rowsPerImage, copyExtent and offset. for the copy method, bytesPerRow is computed as bytesInACompleteRow aligned to be a multiple of 256 + bytesPerRowPadding * 256.\n\t- texel_block_alignment_on_rows_per_image: for all formats.\n\t- offset_alignment: for all formats.\n\t- bound_on_offset: for various combinations of offset and dataSize.\n\n* texture copy range:\n\t- 1d_texture: copyExtent.height isn't 1, copyExtent.depthOrArrayLayers isn't 1.\n\t- texel_block_alignment_on_size: for all formats and coordinates.\n\t- texture_range_conditons: for all coordinate and various combinations of origin, copyExtent, textureSize and mipLevel.\n\nTODO: more test coverage for 1D and 3D textures."
@@ -1211,7 +1308,25 @@ export const listing = [
       "validation",
       "queue",
       "destroyed",
+      "buffer"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "queue",
+      "destroyed",
       "query_set"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "queue",
+      "destroyed",
+      "texture"
     ]
   },
   {
@@ -2659,6 +2774,15 @@ export const listing = [
       "execution",
       "expression",
       "unary",
+      "bool_conversion"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
       "bool_logical"
     ]
   },
@@ -2677,7 +2801,34 @@ export const listing = [
       "execution",
       "expression",
       "unary",
+      "f32_conversion"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
       "i32_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "i32_conversion"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "u32_conversion"
     ]
   },
   {
