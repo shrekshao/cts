@@ -17,7 +17,7 @@ import {
   run,
 } from '../expression.js';
 
-import { binary } from './binary.js';
+import { binary, compoundBinary } from './binary.js';
 
 function i32_add(x, y) {
   return x + y;
@@ -332,6 +332,19 @@ Expression: x + y
     await run(t, binary('+'), [TypeI32, TypeI32], TypeI32, t.params, cases);
   });
 
+g.test('addition_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
+  .desc(
+    `
+Expression: x += y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const cases = await d.get('addition');
+    await run(t, compoundBinary('+='), [TypeI32, TypeI32], TypeI32, t.params, cases);
+  });
+
 g.test('subtraction')
   .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
   .desc(
@@ -345,6 +358,19 @@ Expression: x - y
     await run(t, binary('-'), [TypeI32, TypeI32], TypeI32, t.params, cases);
   });
 
+g.test('subtraction_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
+  .desc(
+    `
+Expression: x -= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const cases = await d.get('subtraction');
+    await run(t, compoundBinary('-='), [TypeI32, TypeI32], TypeI32, t.params, cases);
+  });
+
 g.test('multiplication')
   .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
   .desc(
@@ -356,6 +382,19 @@ Expression: x * y
   .fn(async t => {
     const cases = await d.get('multiplication');
     await run(t, binary('*'), [TypeI32, TypeI32], TypeI32, t.params, cases);
+  });
+
+g.test('multiplication_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
+  .desc(
+    `
+Expression: x *= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const cases = await d.get('multiplication');
+    await run(t, compoundBinary('*='), [TypeI32, TypeI32], TypeI32, t.params, cases);
   });
 
 g.test('division')
@@ -374,6 +413,22 @@ Expression: x / y
     await run(t, binary('/'), [TypeI32, TypeI32], TypeI32, t.params, cases);
   });
 
+g.test('division_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
+  .desc(
+    `
+Expression: x /= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const cases = await d.get(
+      t.params.inputSource === 'const' ? 'division_const' : 'division_non_const'
+    );
+
+    await run(t, compoundBinary('/='), [TypeI32, TypeI32], TypeI32, t.params, cases);
+  });
+
 g.test('remainder')
   .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
   .desc(
@@ -388,6 +443,22 @@ Expression: x % y
     );
 
     await run(t, binary('%'), [TypeI32, TypeI32], TypeI32, t.params, cases);
+  });
+
+g.test('remainder_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation')
+  .desc(
+    `
+Expression: x %= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4]))
+  .fn(async t => {
+    const cases = await d.get(
+      t.params.inputSource === 'const' ? 'remainder_const' : 'remainder_non_const'
+    );
+
+    await run(t, compoundBinary('%='), [TypeI32, TypeI32], TypeI32, t.params, cases);
   });
 
 g.test('addition_scalar_vector')
@@ -420,6 +491,21 @@ Expression: x + y
     await run(t, binary('+'), [vec_type, TypeI32], vec_type, t.params, cases);
   });
 
+g.test('addition_vector_scalar_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
+  .desc(
+    `
+Expression: x += y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize_lhs', [2, 3, 4]))
+  .fn(async t => {
+    const vec_size = t.params.vectorize_lhs;
+    const vec_type = TypeVec(vec_size, TypeI32);
+    const cases = await d.get(`addition_vector${vec_size}_scalar`);
+    await run(t, compoundBinary('+='), [vec_type, TypeI32], vec_type, t.params, cases);
+  });
+
 g.test('subtraction_scalar_vector')
   .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
   .desc(
@@ -450,6 +536,21 @@ Expression: x - y
     await run(t, binary('-'), [vec_type, TypeI32], vec_type, t.params, cases);
   });
 
+g.test('subtraction_vector_scalar_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
+  .desc(
+    `
+Expression: x -= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize_lhs', [2, 3, 4]))
+  .fn(async t => {
+    const vec_size = t.params.vectorize_lhs;
+    const vec_type = TypeVec(vec_size, TypeI32);
+    const cases = await d.get(`subtraction_vector${vec_size}_scalar`);
+    await run(t, compoundBinary('-='), [vec_type, TypeI32], vec_type, t.params, cases);
+  });
+
 g.test('multiplication_scalar_vector')
   .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
   .desc(
@@ -478,6 +579,21 @@ Expression: x * y
     const vec_type = TypeVec(vec_size, TypeI32);
     const cases = await d.get(`multiplication_vector${vec_size}_scalar`);
     await run(t, binary('*'), [vec_type, TypeI32], vec_type, t.params, cases);
+  });
+
+g.test('multiplication_vector_scalar_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
+  .desc(
+    `
+Expression: x *= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize_lhs', [2, 3, 4]))
+  .fn(async t => {
+    const vec_size = t.params.vectorize_lhs;
+    const vec_type = TypeVec(vec_size, TypeI32);
+    const cases = await d.get(`multiplication_vector${vec_size}_scalar`);
+    await run(t, compoundBinary('*='), [vec_type, TypeI32], vec_type, t.params, cases);
   });
 
 g.test('division_scalar_vector')
@@ -512,6 +628,22 @@ Expression: x / y
     await run(t, binary('/'), [vec_type, TypeI32], vec_type, t.params, cases);
   });
 
+g.test('division_vector_scalar_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
+  .desc(
+    `
+Expression: x /= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize_lhs', [2, 3, 4]))
+  .fn(async t => {
+    const vec_size = t.params.vectorize_lhs;
+    const vec_type = TypeVec(vec_size, TypeI32);
+    const source = t.params.inputSource === 'const' ? 'const' : 'non_const';
+    const cases = await d.get(`division_vector${vec_size}_scalar_${source}`);
+    await run(t, compoundBinary('/='), [vec_type, TypeI32], vec_type, t.params, cases);
+  });
+
 g.test('remainder_scalar_vector')
   .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
   .desc(
@@ -542,4 +674,20 @@ Expression: x % y
     const source = t.params.inputSource === 'const' ? 'const' : 'non_const';
     const cases = await d.get(`remainder_vector${vec_size}_scalar_${source}`);
     await run(t, binary('%'), [vec_type, TypeI32], vec_type, t.params, cases);
+  });
+
+g.test('remainder_vector_scalar_compound')
+  .specURL('https://www.w3.org/TR/WGSL/#arithmetic-expr')
+  .desc(
+    `
+Expression: x %= y
+`
+  )
+  .params(u => u.combine('inputSource', allInputSources).combine('vectorize_lhs', [2, 3, 4]))
+  .fn(async t => {
+    const vec_size = t.params.vectorize_lhs;
+    const vec_type = TypeVec(vec_size, TypeI32);
+    const source = t.params.inputSource === 'const' ? 'const' : 'non_const';
+    const cases = await d.get(`remainder_vector${vec_size}_scalar_${source}`);
+    await run(t, compoundBinary('%='), [vec_type, TypeI32], vec_type, t.params, cases);
   });

@@ -3,7 +3,6 @@ Tests for external textures from HTMLVideoElement (and other video-type sources?
 
 - videos with various encodings/formats (webm vp8, webm vp9, ogg theora, mp4), color spaces
   (bt.601, bt.709, bt.2020)
-- TODO: enhance with more cases with crop, rotation, etc.
 
 TODO: consider whether external_texture and copyToTexture video tests should be in the same file
 `;
@@ -14,80 +13,13 @@ import {
   startPlayingAndWaitForVideo,
   getVideoFrameFromVideoElement,
   getVideoElement,
+  kVideoExpectations,
+  kVideoRotationExpectations,
 } from '../../web_platform/util.js';
 
 const kHeight = 16;
 const kWidth = 16;
 const kFormat = 'rgba8unorm';
-
-// The process to calculate these expected pixel values can be found:
-// https://github.com/gpuweb/cts/pull/2242#issuecomment-1430382811
-const kBt601Red = new Uint8Array([248, 36, 0, 255]);
-const kBt601Green = new Uint8Array([64, 252, 0, 255]);
-const kBt601Blue = new Uint8Array([26, 35, 255, 255]);
-const kBt601Yellow = new Uint8Array([254, 253, 0, 255]);
-
-const kVideoExpectations = [
-  {
-    videoName: 'four-colors-vp8-bt601.webm',
-    _redExpectation: kBt601Red,
-    _greenExpectation: kBt601Green,
-    _blueExpectation: kBt601Blue,
-    _yellowExpectation: kBt601Yellow,
-  },
-  {
-    videoName: 'four-colors-theora-bt601.ogv',
-    _redExpectation: kBt601Red,
-    _greenExpectation: kBt601Green,
-    _blueExpectation: kBt601Blue,
-    _yellowExpectation: kBt601Yellow,
-  },
-  {
-    videoName: 'four-colors-h264-bt601.mp4',
-    _redExpectation: kBt601Red,
-    _greenExpectation: kBt601Green,
-    _blueExpectation: kBt601Blue,
-    _yellowExpectation: kBt601Yellow,
-  },
-  {
-    videoName: 'four-colors-vp9-bt601.webm',
-    _redExpectation: kBt601Red,
-    _greenExpectation: kBt601Green,
-    _blueExpectation: kBt601Blue,
-    _yellowExpectation: kBt601Yellow,
-  },
-  {
-    videoName: 'four-colors-vp9-bt709.webm',
-    _redExpectation: new Uint8Array([255, 0, 0, 255]),
-    _greenExpectation: new Uint8Array([0, 255, 0, 255]),
-    _blueExpectation: new Uint8Array([0, 0, 255, 255]),
-    _yellowExpectation: new Uint8Array([255, 255, 0, 255]),
-  },
-] as const;
-
-const kVideoRotationExpectations = [
-  {
-    videoName: 'four-colors-h264-bt601-rotate-90.mp4',
-    _topLeftExpectation: kBt601Red,
-    _topRightExpectation: kBt601Green,
-    _bottomLeftExpectation: kBt601Yellow,
-    _bottomRightExpectation: kBt601Blue,
-  },
-  {
-    videoName: 'four-colors-h264-bt601-rotate-180.mp4',
-    _topLeftExpectation: kBt601Green,
-    _topRightExpectation: kBt601Blue,
-    _bottomLeftExpectation: kBt601Red,
-    _bottomRightExpectation: kBt601Yellow,
-  },
-  {
-    videoName: 'four-colors-h264-bt601-rotate-270.mp4',
-    _topLeftExpectation: kBt601Blue,
-    _topRightExpectation: kBt601Yellow,
-    _bottomLeftExpectation: kBt601Green,
-    _bottomRightExpectation: kBt601Red,
-  },
-] as const;
 
 export const g = makeTestGroup(TextureTestMixin(GPUTest));
 
@@ -139,6 +71,7 @@ function createExternalTextureSamplingTestPipeline(t: GPUTest): GPURenderPipelin
 
 function createExternalTextureSamplingTestBindGroup(
   t: GPUTest,
+  checkNonStandardIsZeroCopy: true | undefined,
   source: HTMLVideoElement | VideoFrame,
   pipeline: GPURenderPipeline
 ): GPUBindGroup {
@@ -149,6 +82,9 @@ function createExternalTextureSamplingTestBindGroup(
     source: source as any,
   });
 
+  if (checkNonStandardIsZeroCopy) {
+    expectZeroCopyNonStandard(t, externalTexture);
+  }
   const bindGroup = t.device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries: [
@@ -166,6 +102,33 @@ function createExternalTextureSamplingTestBindGroup(
   return bindGroup;
 }
 
+/**
+ * Expect the non-standard `externalTexture.isZeroCopy` is true.
+ */
+function expectZeroCopyNonStandard(t: GPUTest, externalTexture: GPUExternalTexture): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t.expect((externalTexture as any).isZeroCopy, '0-copy import failed.');
+}
+
+/**
+ * `externalTexture.isZeroCopy` is a non-standard Chrome API for testing only.
+ * It is exposed by enabling chrome://flags/#enable-webgpu-developer-features
+ *
+ * If the API is available, this function adds a parameter `checkNonStandardIsZeroCopy`.
+ * Cases with that parameter set to `true` will fail if `externalTexture.isZeroCopy` is not true.
+ */
+function checkNonStandardIsZeroCopyIfAvailable(): { checkNonStandardIsZeroCopy?: true }[] {
+  if (
+    typeof GPUExternalTexture !== 'undefined' &&
+    // eslint-disable-next-line no-prototype-builtins
+    GPUExternalTexture.prototype.hasOwnProperty('isZeroCopy')
+  ) {
+    return [{}, { checkNonStandardIsZeroCopy: true }];
+  } else {
+    return [{}];
+  }
+}
+
 g.test('importExternalTexture,sample')
   .desc(
     `
@@ -175,6 +138,7 @@ for several combinations of video format and color space.
   )
   .params(u =>
     u //
+      .combineWithParams(checkNonStandardIsZeroCopyIfAvailable())
       .combine('sourceType', ['VideoElement', 'VideoFrame'] as const)
       .combineWithParams(kVideoExpectations)
   )
@@ -199,7 +163,12 @@ for several combinations of video format and color space.
       });
 
       const pipeline = createExternalTextureSamplingTestPipeline(t);
-      const bindGroup = createExternalTextureSamplingTestBindGroup(t, source, pipeline);
+      const bindGroup = createExternalTextureSamplingTestBindGroup(
+        t,
+        t.params.checkNonStandardIsZeroCopy,
+        source,
+        pipeline
+      );
 
       const commandEncoder = t.device.createCommandEncoder();
       const passEncoder = commandEncoder.beginRenderPass({
@@ -244,6 +213,7 @@ it will honor rotation metadata.
   )
   .params(u =>
     u //
+      .combineWithParams(checkNonStandardIsZeroCopyIfAvailable())
       .combine('sourceType', ['VideoElement', 'VideoFrame'] as const)
       .combineWithParams(kVideoRotationExpectations)
   )
@@ -264,7 +234,12 @@ it will honor rotation metadata.
       });
 
       const pipeline = createExternalTextureSamplingTestPipeline(t);
-      const bindGroup = createExternalTextureSamplingTestBindGroup(t, source, pipeline);
+      const bindGroup = createExternalTextureSamplingTestBindGroup(
+        t,
+        t.params.checkNonStandardIsZeroCopy,
+        source,
+        pipeline
+      );
 
       const commandEncoder = t.device.createCommandEncoder();
       const passEncoder = commandEncoder.beginRenderPass({
@@ -296,6 +271,118 @@ it will honor rotation metadata.
     });
   });
 
+g.test('importExternalTexture,sampleWithVideoFrameWithVisibleRectParam')
+  .desc(
+    `
+Tests that we can import VideoFrames and sample the correct sub-rectangle when visibleRect
+parameters are present.
+`
+  )
+  .params(u =>
+    u //
+      .combineWithParams(checkNonStandardIsZeroCopyIfAvailable())
+      .combineWithParams(kVideoExpectations)
+  )
+  .fn(async t => {
+    const videoElement = getVideoElement(t, t.params.videoName);
+
+    await startPlayingAndWaitForVideo(videoElement, async () => {
+      const source = await getVideoFrameFromVideoElement(t, videoElement);
+
+      // All tested videos are derived from an image showing yellow, red, blue or green in each
+      // quadrant. In this test we crop the video to each quadrant and check that desired color
+      // is sampled from each corner of the cropped image.
+      const srcVideoHeight = 240;
+      const srcVideoWidth = 320;
+      const cropParams = [
+        // Top left (yellow)
+        {
+          subRect: { x: 0, y: 0, width: srcVideoWidth / 2, height: srcVideoHeight / 2 },
+          color: t.params._yellowExpectation,
+        },
+        // Top right (red)
+        {
+          subRect: {
+            x: srcVideoWidth / 2,
+            y: 0,
+            width: srcVideoWidth / 2,
+            height: srcVideoHeight / 2,
+          },
+          color: t.params._redExpectation,
+        },
+        // Bottom left (blue)
+        {
+          subRect: {
+            x: 0,
+            y: srcVideoHeight / 2,
+            width: srcVideoWidth / 2,
+            height: srcVideoHeight / 2,
+          },
+          color: t.params._blueExpectation,
+        },
+        // Bottom right (green)
+        {
+          subRect: {
+            x: srcVideoWidth / 2,
+            y: srcVideoHeight / 2,
+            width: srcVideoWidth / 2,
+            height: srcVideoHeight / 2,
+          },
+          color: t.params._greenExpectation,
+        },
+      ];
+
+      for (const cropParam of cropParams) {
+        // MAINTENANCE_TODO: remove cast with TypeScript 4.9.6+.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subRect = new VideoFrame(source as any, { visibleRect: cropParam.subRect });
+
+        const colorAttachment = t.device.createTexture({
+          format: kFormat,
+          size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
+          usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        const pipeline = createExternalTextureSamplingTestPipeline(t);
+        const bindGroup = createExternalTextureSamplingTestBindGroup(
+          t,
+          t.params.checkNonStandardIsZeroCopy,
+          subRect,
+          pipeline
+        );
+
+        const commandEncoder = t.device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginRenderPass({
+          colorAttachments: [
+            {
+              view: colorAttachment.createView(),
+              clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+              loadOp: 'clear',
+              storeOp: 'store',
+            },
+          ],
+        });
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.draw(6);
+        passEncoder.end();
+        t.device.queue.submit([commandEncoder.finish()]);
+
+        // For validation, we sample a few pixels away from the edges to avoid compression
+        // artifacts.
+        t.expectSinglePixelComparisonsAreOkInTexture({ texture: colorAttachment }, [
+          { coord: { x: kWidth * 0.1, y: kHeight * 0.1 }, exp: cropParam.color },
+          { coord: { x: kWidth * 0.9, y: kHeight * 0.1 }, exp: cropParam.color },
+          { coord: { x: kWidth * 0.1, y: kHeight * 0.9 }, exp: cropParam.color },
+          { coord: { x: kWidth * 0.9, y: kHeight * 0.9 }, exp: cropParam.color },
+        ]);
+
+        subRect.close();
+      }
+
+      source.close();
+    });
+  });
 g.test('importExternalTexture,compute')
   .desc(
     `
@@ -305,6 +392,7 @@ compute shader, for several combinations of video format and color space.
   )
   .params(u =>
     u //
+      .combineWithParams(checkNonStandardIsZeroCopyIfAvailable())
       .combine('sourceType', ['VideoElement', 'VideoFrame'] as const)
       .combineWithParams(kVideoExpectations)
   )
@@ -325,7 +413,9 @@ compute shader, for several combinations of video format and color space.
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         source: source as any,
       });
-
+      if (t.params.checkNonStandardIsZeroCopy) {
+        expectZeroCopyNonStandard(t, externalTexture);
+      }
       const outputTexture = t.device.createTexture({
         format: 'rgba8unorm',
         size: [2, 2, 1],

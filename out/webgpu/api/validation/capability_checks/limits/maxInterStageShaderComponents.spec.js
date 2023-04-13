@@ -54,7 +54,7 @@ sampleMaskOut)
       ${varyings}
     }
     struct FSIn {
-      ${pointList ? '@builtin(front_facing) frontFacing: bool,' : ''}
+      ${frontFacing ? '@builtin(front_facing) frontFacing: bool,' : ''}
       ${sampleIndex ? '@builtin(sample_index) sampleIndex: u32,' : ''}
       ${sampleMaskIn ? '@builtin(sample_mask) sampleMask: u32,' : ''}
       ${varyings}
@@ -83,6 +83,15 @@ sampleMaskOut)
     vertex: {
       module,
       entryPoint: 'vs'
+    },
+    fragment: {
+      module,
+      entryPoint: 'fs',
+      targets: [
+      {
+        format: 'rgba8unorm'
+      }]
+
     }
   };
   return { pipelineDescriptor, code };
@@ -92,9 +101,10 @@ const limit = 'maxInterStageShaderComponents';
 export const { g, description } = makeLimitTestGroup(limit);
 
 g.test('createRenderPipeline,at_over').
-desc(`Test using at and over ${limit} limit in createRenderPipeline`).
+desc(`Test using at and over ${limit} limit in createRenderPipeline(Async)`).
 params(
 kMaximumLimitBaseParams.
+combine('async', [false, true]).
 combine('pointList', [false, true]).
 combine('frontFacing', [false, true]).
 combine('sampleIndex', [false, true]).
@@ -105,6 +115,7 @@ fn(async (t) => {
   const {
     limitTest,
     testValueName,
+    async,
     pointList,
     frontFacing,
     sampleIndex,
@@ -125,56 +136,7 @@ fn(async (t) => {
     sampleMaskOut);
 
 
-    await t.expectValidationError(
-    () => {
-      device.createRenderPipeline(pipelineDescriptor);
-    },
-    shouldError,
-    code);
-
-  });
-
-});
-
-g.test('createRenderPipelineAsync,at_over').
-desc(`Test using at and over ${limit} limit in createRenderPipelineAsync`).
-params(
-kMaximumLimitBaseParams.
-combine('pointList', [false, true]).
-combine('frontFacing', [false, true]).
-combine('sampleIndex', [false, true]).
-combine('sampleMaskIn', [false, true]).
-combine('sampleMaskOut', [false, true])).
-
-fn(async (t) => {
-  const {
-    limitTest,
-    testValueName,
-    pointList,
-    frontFacing,
-    sampleIndex,
-    sampleMaskIn,
-    sampleMaskOut
-  } = t.params;
-  await t.testDeviceWithRequestedMaximumLimits(
-  limitTest,
-  testValueName,
-  async ({ device, testValue, shouldError }) => {
-    const { pipelineDescriptor, code } = getPipelineDescriptor(
-    device,
-    testValue,
-    pointList,
-    frontFacing,
-    sampleIndex,
-    sampleMaskIn,
-    sampleMaskOut);
-
-    await t.shouldRejectConditionally(
-    'GPUPipelineError',
-    device.createRenderPipelineAsync(pipelineDescriptor),
-    shouldError,
-    code);
-
+    await t.testCreateRenderPipeline(pipelineDescriptor, async, shouldError, code);
   });
 
 });

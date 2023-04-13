@@ -1,60 +1,37 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { kUnitCaseParamsBuilder } from '../../../../../common/framework/params_builder.js';import { makeTestGroup } from '../../../../../common/framework/test_group.js';import { keysOf } from '../../../../../common/util/data_tables.js';
-import { getGPU } from '../../../../../common/util/navigator_gpu.js';
+**/import { kUnitCaseParamsBuilder } from '../../../../../common/framework/params_builder.js';import { makeTestGroup } from '../../../../../common/framework/test_group.js';import { getGPU } from '../../../../../common/util/navigator_gpu.js';
 import { assert, range, reorder } from '../../../../../common/util/util.js';
-import { kLimitInfo } from '../../../../capability_info.js';
+import { kLimitInfo, kTextureFormatInfo } from '../../../../capability_info.js';
 import { GPUTestBase } from '../../../../gpu_test.js';
+import { align } from '../../../../util/math.js';
 
 
 
-const CreatePipelineTypes = {
-  createRenderPipeline: true,
-  createRenderPipelineWithFragmentStage: true,
-  createComputePipeline: true
-};
+export const kCreatePipelineTypes = [
+'createRenderPipeline',
+'createRenderPipelineWithFragmentStage',
+'createComputePipeline'];
 
-export const kCreatePipelineTypes = keysOf(CreatePipelineTypes);
 
-const CreatePipelineAsyncTypes = {
-  createRenderPipelineAsync: true,
-  createRenderPipelineAsyncWithFragmentStage: true,
-  createComputePipelineAsync: true
-};
 
-export const kCreatePipelineAsyncTypes = keysOf(CreatePipelineAsyncTypes);
+export const kRenderEncoderTypes = ['render', 'renderBundle'];
 
-const RenderEncoderTypes = {
-  render: true,
-  renderBundle: true
-};
 
-export const kRenderEncoderTypes = keysOf(RenderEncoderTypes);
+export const kEncoderTypes = ['compute', 'render', 'renderBundle'];
 
-const EncoderTypes = {
-  compute: true,
-  render: true,
-  renderBundle: true
-};
 
-export const kEncoderTypes = keysOf(EncoderTypes);
+export const kBindGroupTests = ['sameGroup', 'differentGroups'];
 
-const BindGroupTests = {
-  sameGroup: true,
-  differentGroups: true
-};
 
-export const kBindGroupTests = keysOf(BindGroupTests);
+export const kBindingCombinations = [
+'vertex',
+'fragment',
+'vertexAndFragmentWithPossibleVertexStageOverflow',
+'vertexAndFragmentWithPossibleFragmentStageOverflow',
+'compute'];
 
-const BindingCombinations = {
-  vertex: true,
-  fragment: true,
-  vertexAndFragmentWithPossibleVertexStageOverflow: true,
-  vertexAndFragmentWithPossibleFragmentStageOverflow: true,
-  compute: true
-};
 
-export const kBindingCombinations = keysOf(BindingCombinations);
 
 export function getPipelineTypeForBindingCombination(bindingCombination) {
   switch (bindingCombination) {
@@ -66,19 +43,6 @@ export function getPipelineTypeForBindingCombination(bindingCombination) {
       return 'createRenderPipelineWithFragmentStage';
     case 'compute':
       return 'createComputePipeline';}
-
-}
-
-export function getPipelineAsyncTypeForBindingCombination(bindingCombination) {
-  switch (bindingCombination) {
-    case 'vertex':
-      return 'createRenderPipelineAsync';
-    case 'fragment':
-    case 'vertexAndFragmentWithPossibleVertexStageOverflow':
-    case 'vertexAndFragmentWithPossibleFragmentStageOverflow':
-      return 'createRenderPipelineAsyncWithFragmentStage';
-    case 'compute':
-      return 'createComputePipelineAsync';}
 
 }
 
@@ -108,7 +72,22 @@ id)
   i)
   }) @binding(${i}) ${storageDefinitionWGSLSnippetFn(i, id)};`)).
 
-  join('\n');
+  join('\n        ');
+}
+
+/**
+ * Given an array of GPUColorTargetState return the number of bytes per sample
+ */
+export function computeBytesPerSample(targets) {
+  let bytesPerSample = 0;
+  for (const { format } of targets) {
+    const { renderTargetPixelByteCost, renderTargetComponentAlignment } = kTextureFormatInfo[
+    format];
+
+    const alignedBytesPerSample = align(bytesPerSample, renderTargetComponentAlignment);
+    bytesPerSample = alignedBytesPerSample + renderTargetPixelByteCost;
+  }
+  return bytesPerSample;
 }
 
 export function getPerStageWGSLForBindingCombinationImpl(
@@ -124,7 +103,9 @@ extraWGSL = '')
     case 'vertex':
       return `
         ${extraWGSL}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings, 0)}
+
         @vertex fn mainVS() -> @builtin(position) vec4f {
           ${bodyFn(numBindings, 0)}
           return vec4f(0);
@@ -133,42 +114,50 @@ extraWGSL = '')
     case 'fragment':
       return `
         ${extraWGSL}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings, 0)}
+
         @vertex fn mainVS() -> @builtin(position) vec4f {
           return vec4f(0);
         }
-        @fragment fn mainFS() -> @location(0) vec4f {
+
+        @fragment fn mainFS() {
           ${bodyFn(numBindings, 0)}
-          return vec4f(0);
         }
       `;
     case 'vertexAndFragmentWithPossibleVertexStageOverflow':{
         return `
         ${extraWGSL}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings, 0)}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings - 1, 1)}
+
         @vertex fn mainVS() -> @builtin(position) vec4f {
           ${bodyFn(numBindings, 0)}
           return vec4f(0);
         }
-        @fragment fn mainFS() -> @location(0) vec4f {
+
+        @fragment fn mainFS() {
           ${bodyFn(numBindings - 1, 1)}
-          return vec4f(0);
         }
       `;
       }
     case 'vertexAndFragmentWithPossibleFragmentStageOverflow':{
         return `
         ${extraWGSL}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings - 1, 0)}
+
         ${getWGSLBindings(order, bindGroupTest, storageDefinitionWGSLSnippetFn, numBindings, 1)}
+
         @vertex fn mainVS() -> @builtin(position) vec4f {
           ${bodyFn(numBindings - 1, 0)}
           return vec4f(0);
         }
-        @fragment fn mainFS() -> @location(0) vec4f {
+
+        @fragment fn mainFS() {
           ${bodyFn(numBindings, 1)}
-          return vec4f(0);
         }
       `;
       }
@@ -200,7 +189,7 @@ extraWGSL = '')
   bindGroupTest,
   storageDefinitionWGSLSnippetFn,
   (numBindings, set) =>
-  `${range(numBindings, (i) => usageWGSLSnippetFn(i, set)).join('\n')}`,
+  `${range(numBindings, (i) => usageWGSLSnippetFn(i, set)).join('\n          ')}`,
   numBindings,
   extraWGSL);
 
@@ -220,30 +209,19 @@ extraWGSL = '')
   order,
   bindGroupTest,
   storageDefinitionWGSLSnippetFn,
-  (numBindings, set) => {
-    return bindingCombination === 'compute' ?
-    `${range(numBindings, (i) => usageWGSLSnippetFn(i, set)).join('\n')};` :
-    `${range(numBindings, (i) => usageWGSLSnippetFn(i, set)).join('\n')};`;
-  },
+  (numBindings, set) =>
+  `${range(numBindings, (i) => usageWGSLSnippetFn(i, set)).join('\n          ')}`,
   numBindings,
   extraWGSL);
 
 }
 
-const LimitModes = {
-  defaultLimit: true,
-  adapterLimit: true
-};
-
-export const kLimitModes = keysOf(LimitModes);
+export const kLimitModes = ['defaultLimit', 'adapterLimit'];
 
 
-export const MaximumTestValues = {
-  atLimit: true,
-  overLimit: true
-};
 
-export const kMaximumTestValueKeys = keysOf(MaximumTestValues);
+export const kMaximumTestValues = ['atLimit', 'overLimit'];
+
 
 export function getMaximumTestValue(limit, testValue) {
   switch (testValue) {
@@ -254,22 +232,17 @@ export function getMaximumTestValue(limit, testValue) {
 
 }
 
-export const MinimumTestValues = {
-  atLimit: true,
-  underLimit: true
-};
+export const kMinimumTestValues = ['atLimit', 'underLimit'];
 
-export const kMinimumTestValueKeys = keysOf(MinimumTestValues);
 
-export const MaximumLimitValueTests = {
-  atDefault: true,
-  underDefault: true,
-  betweenDefaultAndMaximum: true,
-  atMaximum: true,
-  overMaximum: true
-};
+export const kMaximumLimitValueTests = [
+'atDefault',
+'underDefault',
+'betweenDefaultAndMaximum',
+'atMaximum',
+'overMaximum'];
 
-export const kMaximumLimitValueTestKeys = keysOf(MaximumLimitValueTests);
+
 
 export function getLimitValue(
 defaultLimit,
@@ -290,15 +263,14 @@ limitValueTest)
 
 }
 
-export const MinimumLimitValueTests = {
-  atDefault: true,
-  overDefault: true,
-  betweenDefaultAndMinimum: true,
-  atMinimum: true,
-  underMinimum: true
-};
+export const kMinimumLimitValueTests = [
+'atDefault',
+'overDefault',
+'betweenDefaultAndMinimum',
+'atMinimum',
+'underMinimum'];
 
-export const kMinimumLimitValueTestKeys = keysOf(MinimumLimitValueTests);
+
 
 export function getDefaultLimit(limit) {
   return kLimitInfo[limit].default;
@@ -330,14 +302,12 @@ const kMinimumLimits = new Set([
  * Adds the default parameters to a limit test
  */
 export const kMaximumLimitBaseParams = kUnitCaseParamsBuilder.
-combine('limitTest', kMaximumLimitValueTestKeys).
-beginSubcases().
-combine('testValueName', kMaximumTestValueKeys);
+combine('limitTest', kMaximumLimitValueTests).
+combine('testValueName', kMaximumTestValues);
 
 export const kMinimumLimitBaseParams = kUnitCaseParamsBuilder.
-combine('limitTest', kMinimumLimitValueTestKeys).
-beginSubcases().
-combine('testValueName', kMinimumTestValueKeys);
+combine('limitTest', kMinimumLimitValueTests).
+combine('testValueName', kMinimumTestValues);
 
 export class LimitTestsImpl extends GPUTestBase {
   _adapter = null;
@@ -670,13 +640,9 @@ export class LimitTestsImpl extends GPUTestBase {
     return returnValue;
   }
 
-  getGroupIndexWGSLForPipelineType(
-  pipelineType,
-  groupIndex)
-  {
+  getGroupIndexWGSLForPipelineType(pipelineType, groupIndex) {
     switch (pipelineType) {
       case 'createRenderPipeline':
-      case 'createRenderPipelineAsync':
         return `
           @group(${groupIndex}) @binding(0) var<uniform> v: f32;
           @vertex fn mainVS() -> @builtin(position) vec4f {
@@ -684,7 +650,6 @@ export class LimitTestsImpl extends GPUTestBase {
           }
         `;
       case 'createRenderPipelineWithFragmentStage':
-      case 'createRenderPipelineAsyncWithFragmentStage':
         return `
           @group(${groupIndex}) @binding(0) var<uniform> v: f32;
           @vertex fn mainVS() -> @builtin(position) vec4f {
@@ -695,7 +660,6 @@ export class LimitTestsImpl extends GPUTestBase {
           }
         `;
       case 'createComputePipeline':
-      case 'createComputePipelineAsync':
         return `
           @group(${groupIndex}) @binding(0) var<uniform> v: f32;
           @compute @workgroup_size(1) fn main() {
@@ -706,13 +670,9 @@ export class LimitTestsImpl extends GPUTestBase {
 
   }
 
-  getBindingIndexWGSLForPipelineType(
-  pipelineType,
-  bindingIndex)
-  {
+  getBindingIndexWGSLForPipelineType(pipelineType, bindingIndex) {
     switch (pipelineType) {
       case 'createRenderPipeline':
-      case 'createRenderPipelineAsync':
         return `
           @group(0) @binding(${bindingIndex}) var<uniform> v: f32;
           @vertex fn mainVS() -> @builtin(position) vec4f {
@@ -720,7 +680,6 @@ export class LimitTestsImpl extends GPUTestBase {
           }
         `;
       case 'createRenderPipelineWithFragmentStage':
-      case 'createRenderPipelineAsyncWithFragmentStage':
         return `
           @group(0) @binding(${bindingIndex}) var<uniform> v: f32;
           @vertex fn mainVS() -> @builtin(position) vec4f {
@@ -731,7 +690,6 @@ export class LimitTestsImpl extends GPUTestBase {
           }
         `;
       case 'createComputePipeline':
-      case 'createComputePipelineAsync':
         return `
           @group(0) @binding(${bindingIndex}) var<uniform> v: f32;
           @compute @workgroup_size(1) fn main() {
@@ -740,6 +698,48 @@ export class LimitTestsImpl extends GPUTestBase {
         `;
         break;}
 
+  }
+
+  _createRenderPipelineDescriptor(module) {
+    return {
+      layout: 'auto',
+      vertex: {
+        module,
+        entryPoint: 'mainVS'
+      }
+    };
+  }
+
+  _createRenderPipelineDescriptorWithFragmentShader(
+  module)
+  {
+    return {
+      layout: 'auto',
+      vertex: {
+        module,
+        entryPoint: 'mainVS'
+      },
+      fragment: {
+        module,
+        entryPoint: 'mainFS',
+        targets: []
+      },
+      depthStencil: {
+        format: 'depth24plus-stencil8',
+        depthWriteEnabled: true,
+        depthCompare: 'always'
+      }
+    };
+  }
+
+  _createComputePipelineDescriptor(module) {
+    return {
+      layout: 'auto',
+      compute: {
+        module,
+        entryPoint: 'main'
+      }
+    };
   }
 
   createPipeline(createPipelineType, module) {
@@ -747,73 +747,115 @@ export class LimitTestsImpl extends GPUTestBase {
 
     switch (createPipelineType) {
       case 'createRenderPipeline':
-        return device.createRenderPipeline({
-          layout: 'auto',
-          vertex: {
-            module,
-            entryPoint: 'mainVS'
-          }
-        });
+        return device.createRenderPipeline(this._createRenderPipelineDescriptor(module));
         break;
       case 'createRenderPipelineWithFragmentStage':
-        return device.createRenderPipeline({
-          layout: 'auto',
-          vertex: {
-            module,
-            entryPoint: 'mainVS'
-          },
-          fragment: {
-            module,
-            entryPoint: 'mainFS',
-            targets: [{ format: 'rgba8unorm' }]
-          }
-        });
+        return device.createRenderPipeline(
+        this._createRenderPipelineDescriptorWithFragmentShader(module));
+
         break;
       case 'createComputePipeline':
-        return device.createComputePipeline({
-          layout: 'auto',
-          compute: {
-            module,
-            entryPoint: 'main'
-          }
-        });
+        return device.createComputePipeline(this._createComputePipelineDescriptor(module));
         break;}
 
   }
 
-  createPipelineAsync(createPipelineAsyncType, module) {
+  createPipelineAsync(createPipelineType, module) {
     const { device } = this;
 
-    switch (createPipelineAsyncType) {
-      case 'createRenderPipelineAsync':
-        return device.createRenderPipelineAsync({
-          layout: 'auto',
-          vertex: {
-            module,
-            entryPoint: 'mainVS'
-          }
-        });
-      case 'createRenderPipelineAsyncWithFragmentStage':
-        return device.createRenderPipelineAsync({
-          layout: 'auto',
-          vertex: {
-            module,
-            entryPoint: 'mainVS'
-          },
-          fragment: {
-            module,
-            entryPoint: 'mainFS',
-            targets: [{ format: 'rgba8unorm' }]
-          }
-        });
-      case 'createComputePipelineAsync':
-        return device.createComputePipelineAsync({
-          layout: 'auto',
-          compute: {
-            module,
-            entryPoint: 'main'
-          }
-        });}
+    switch (createPipelineType) {
+      case 'createRenderPipeline':
+        return device.createRenderPipelineAsync(this._createRenderPipelineDescriptor(module));
+      case 'createRenderPipelineWithFragmentStage':
+        return device.createRenderPipelineAsync(
+        this._createRenderPipelineDescriptorWithFragmentShader(module));
+
+      case 'createComputePipeline':
+        return device.createComputePipelineAsync(this._createComputePipelineDescriptor(module));}
+
+  }
+
+  async testCreatePipeline(
+  createPipelineType,
+  async,
+  module,
+  shouldError,
+  msg = '')
+  {
+    if (async) {
+      await this.shouldRejectConditionally(
+      'GPUPipelineError',
+      this.createPipelineAsync(createPipelineType, module),
+      shouldError,
+      msg);
+
+    } else {
+      await this.expectValidationError(
+      () => {
+        this.createPipeline(createPipelineType, module);
+      },
+      shouldError,
+      msg);
+
+    }
+  }
+
+  async testCreateRenderPipeline(
+  pipelineDescriptor,
+  async,
+  shouldError,
+  msg = '')
+  {
+    const { device } = this;
+    if (async) {
+      await this.shouldRejectConditionally(
+      'GPUPipelineError',
+      device.createRenderPipelineAsync(pipelineDescriptor),
+      shouldError,
+      msg);
+
+    } else {
+      await this.expectValidationError(
+      () => {
+        device.createRenderPipeline(pipelineDescriptor);
+      },
+      shouldError,
+      msg);
+
+    }
+  }
+
+  async testMaxComputeWorkgroupSize(
+  limitTest,
+  testValueName,
+  async,
+  axis)
+  {
+    const kExtraLimits = {
+      maxComputeInvocationsPerWorkgroup: 'adapterLimit'
+    };
+
+    await this.testDeviceWithRequestedMaximumLimits(
+    limitTest,
+    testValueName,
+    async ({ device, testValue, actualLimit, shouldError }) => {
+      if (testValue > device.limits.maxComputeInvocationsPerWorkgroup) {
+        return;
+      }
+
+      const size = [1, 1, 1];
+      size[axis.codePointAt(0) - 'X'.codePointAt(0)] = testValue;
+      const { module, code } = this.getModuleForWorkgroupSize(size);
+
+      await this.testCreatePipeline(
+      'createComputePipeline',
+      async,
+      module,
+      shouldError,
+      `size: ${testValue}, limit: ${actualLimit}\n${code}`);
+
+    },
+    kExtraLimits);
 
   }
 
@@ -1021,14 +1063,14 @@ export class LimitTestsImpl extends GPUTestBase {
 
   getModuleForWorkgroupSize(size) {
     const { device } = this;
-    return device.createShaderModule({
-      code: `
-        @group(0) @binding(0) var<storage, read_write> d: f32;
-        @compute @workgroup_size(${size.join(',')}) fn main() {
-          d = 0;
-        }
-      `
-    });
+    const code = `
+      @group(0) @binding(0) var<storage, read_write> d: f32;
+      @compute @workgroup_size(${size.join(',')}) fn main() {
+        d = 0;
+      }
+    `;
+    const module = device.createShaderModule({ code });
+    return { module, code };
   }
 }
 

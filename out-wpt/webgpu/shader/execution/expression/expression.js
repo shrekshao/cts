@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { globalTestConfig } from '../../../../common/framework/test_config.js';
-import { assert, objectEquals, unreachable } from '../../../../common/util/util.js';
+import { objectEquals, unreachable } from '../../../../common/util/util.js';
 import { compare, anyOf } from '../../../util/compare.js';
 import {
   ScalarType,
@@ -16,7 +16,8 @@ import {
   Matrix,
   MatrixType,
 } from '../../../util/conversion.js';
-import { F32Interval } from '../../../util/f32_interval.js';
+
+import { FPInterval } from '../../../util/floating_point.js';
 import {
   cartesianProduct,
   map2DArray,
@@ -28,7 +29,7 @@ import {
 /** Is this expectation actually a Comparator */
 function isComparator(e) {
   return !(
-    e instanceof F32Interval ||
+    e instanceof FPInterval ||
     e instanceof Scalar ||
     e instanceof Vector ||
     e instanceof Matrix ||
@@ -149,7 +150,7 @@ function toStorage(ty, expr) {
   return expr;
 }
 
-// ExpressionBuilder returns the WGSL used to test an expression.
+// A Pipeline is a map of WGSL shader source to a built pipeline
 
 /**
  * Searches for an entry with the given key, adding and returning the result of calling
@@ -168,32 +169,33 @@ function getOrCreate(map, key, create) {
   map.set(key, value);
   return value;
 }
+
 /**
  * Runs the list of expression tests, possibly splitting the tests into multiple
  * dispatches to keep the input data within the buffer binding limits.
  * run() will pack the scalar test cases into smaller set of vectorized tests
  * if `cfg.vectorize` is defined.
  * @param t the GPUTest
- * @param expressionBuilder the expression builder function
+ * @param shaderBuilder the shader builder function
  * @param parameterTypes the list of expression parameter types
- * @param returnType the return type for the expression overload
+ * @param resultType the return type for the expression overload
  * @param cfg test configuration values
  * @param cases list of test cases
  */
 export async function run(
   t,
-  expressionBuilder,
+  shaderBuilder,
   parameterTypes,
-  returnType,
+  resultType,
   cfg = { inputSource: 'storage_r' },
   cases
 ) {
   // If the 'vectorize' config option was provided, pack the cases into vectors.
   if (cfg.vectorize !== undefined) {
-    const packed = packScalarsToVector(parameterTypes, returnType, cases, cfg.vectorize);
+    const packed = packScalarsToVector(parameterTypes, resultType, cases, cfg.vectorize);
     cases = packed.cases;
     parameterTypes = packed.parameterTypes;
-    returnType = packed.returnType;
+    resultType = packed.resultType;
   }
 
   // The size of the input buffer may exceed the maximum buffer binding size,
@@ -234,9 +236,9 @@ export async function run(
 
     const checkBatch = submitBatch(
       t,
-      expressionBuilder,
+      shaderBuilder,
       parameterTypes,
-      returnType,
+      resultType,
       batchCases,
       cfg.inputSource,
       pipelineCache
@@ -262,9 +264,9 @@ export async function run(
  * Submits the list of expression tests. The input data must fit within the
  * buffer binding limits of the given inputSource.
  * @param t the GPUTest
- * @param expressionBuilder the expression builder function
+ * @param shaderBuilder the shader builder function
  * @param parameterTypes the list of expression parameter types
- * @param returnType the return type for the expression overload
+ * @param resultType the return type for the expression overload
  * @param cases list of test cases that fit within the binding limits of the device
  * @param inputSource the source of the input values
  * @param pipelineCache the cache of compute pipelines, shared between batches
@@ -272,15 +274,15 @@ export async function run(
  */
 function submitBatch(
   t,
-  expressionBuilder,
+  shaderBuilder,
   parameterTypes,
-  returnType,
+  resultType,
   cases,
   inputSource,
   pipelineCache
 ) {
   // Construct a buffer to hold the results of the expression tests
-  const outputBufferSize = cases.length * valueStride(returnType);
+  const outputBufferSize = cases.length * valueStride(resultType);
   const outputBuffer = t.device.createBuffer({
     size: outputBufferSize,
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE,
@@ -288,9 +290,9 @@ function submitBatch(
 
   const [pipeline, group] = buildPipeline(
     t,
-    expressionBuilder,
+    shaderBuilder,
     parameterTypes,
-    returnType,
+    resultType,
     cases,
     inputSource,
     outputBuffer,
@@ -315,7 +317,7 @@ function submitBatch(
       // Read the outputs from the output buffer
       const outputs = new Array(cases.length);
       for (let i = 0; i < cases.length; i++) {
-        outputs[i] = returnType.read(outputData, i * valueStride(returnType));
+        outputs[i] = resultType.read(outputData, i * valueStride(resultType));
       }
 
       // The list of expectation failures
@@ -347,17 +349,207 @@ function submitBatch(
 }
 
 /**
- * @param v either an array of T or a single element of type T
- * @param i the value index to
- * @returns the i'th value of v, if v is an array, otherwise v (i must be 0)
+ * map is a helper for returning a new array with each element of @p v
+ * transformed with @p fn.
+ * If @p v is not an array, then @p fn is called with (v, 0).
  */
-function ith(v, i) {
+function map(v, fn) {
   if (v instanceof Array) {
-    assert(i < v.length);
-    return v[i];
+    return v.map(fn);
   }
-  assert(i === 0);
-  return v;
+  return [fn(v, 0)];
+}
+
+/**
+ * ShaderBuilder is a function used to construct the WGSL shader used by an
+ * expression test.
+ * @param parameterTypes the list of expression parameter types
+ * @param resultType the return type for the expression overload
+ * @param cases list of test cases that fit within the binding limits of the device
+ * @param inputSource the source of the input values
+ */
+
+/**
+ * Helper that returns the WGSL to declare the output storage buffer for a shader
+ */
+function wgslOutputs(resultType, count) {
+  return `
+struct Output {
+  @size(${valueStride(resultType)}) value : ${storageType(resultType)}
+};
+@group(0) @binding(0) var<storage, read_write> outputs : array<Output, ${count}>;`;
+}
+
+/**
+ * Helper that returns the WGSL 'var' declaration for the given input source
+ */
+function wgslInputVar(inputSource, count) {
+  switch (inputSource) {
+    case 'storage_r':
+      return `@group(0) @binding(1) var<storage, read> inputs : array<Input, ${count}>;`;
+    case 'storage_rw':
+      return `@group(0) @binding(1) var<storage, read_write> inputs : array<Input, ${count}>;`;
+    case 'uniform':
+      return `@group(0) @binding(1) var<uniform> inputs : array<Input, ${count}>;`;
+  }
+
+  throw new Error(`InputSource ${inputSource} does not use an input var`);
+}
+
+/**
+ * ExpressionBuilder returns the WGSL used to evaluate an expression with the
+ * given input values.
+ */
+
+/**
+ * Returns a ShaderBuilder that builds a basic expression test shader.
+ * @param expressionBuilder the expression builder
+ */
+export function basicExpressionBuilder(expressionBuilder) {
+  return (parameterTypes, resultType, cases, inputSource) => {
+    if (inputSource === 'const') {
+      //////////////////////////////////////////////////////////////////////////
+      // Constant eval
+      //////////////////////////////////////////////////////////////////////////
+      let body = '';
+      if (globalTestConfig.unrollConstEvalLoops) {
+        body = cases.map((_, i) => `  outputs[${i}].value = values[${i}];`).join('\n  ');
+      } else {
+        body = `
+  for (var i = 0u; i < ${cases.length}; i++) {
+    outputs[i].value = values[i];
+  }`;
+      }
+
+      return `
+${wgslOutputs(resultType, cases.length)}
+
+const values = array(
+  ${cases
+    .map(c => toStorage(resultType, expressionBuilder(map(c.input, v => v.wgsl()))))
+    .join(',\n  ')}
+);
+
+@compute @workgroup_size(1)
+fn main() {
+${body}
+}`;
+    } else {
+      //////////////////////////////////////////////////////////////////////////
+      // Runtime eval
+      //////////////////////////////////////////////////////////////////////////
+
+      // returns the WGSL expression to load the ith parameter of the given type from the input buffer
+      const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
+
+      // resolves to the expression that calls the builtin
+      const expr = toStorage(resultType, expressionBuilder(parameterTypes.map(paramExpr)));
+
+      return `
+struct Input {
+${parameterTypes
+  .map((ty, i) => `  @size(${valueStride(ty)}) param${i} : ${storageType(ty)},`)
+  .join('\n')}
+};
+
+${wgslOutputs(resultType, cases.length)}
+
+${wgslInputVar(inputSource, cases.length)}
+
+@compute @workgroup_size(1)
+fn main() {
+  for (var i = 0; i < ${cases.length}; i++) {
+    outputs[i].value = ${expr};
+  }
+}
+`;
+    }
+  };
+}
+
+/**
+ * Returns a ShaderBuilder that builds a compound assignment operator test shader.
+ * @param op the compound operator
+ */
+export function compoundAssignmentBuilder(op) {
+  return (parameterTypes, resultType, cases, inputSource) => {
+    //////////////////////////////////////////////////////////////////////////
+    // Input validation
+    //////////////////////////////////////////////////////////////////////////
+    if (parameterTypes.length !== 2) {
+      throw new Error(`compoundBinaryOp() requires exactly two parameters values per case`);
+    }
+    const lhsType = parameterTypes[0];
+    const rhsType = parameterTypes[1];
+    if (!objectEquals(lhsType, resultType)) {
+      throw new Error(
+        `compoundBinaryOp() requires result type (${resultType}) to be equal to the LHS type (${lhsType})`
+      );
+    }
+    if (inputSource === 'const') {
+      //////////////////////////////////////////////////////////////////////////
+      // Constant eval
+      //////////////////////////////////////////////////////////////////////////
+      let body = '';
+      if (globalTestConfig.unrollConstEvalLoops) {
+        body = cases
+          .map((_, i) => {
+            return `
+  var ret_${i} = lhs[${i}];
+  ret_${i} ${op} rhs[${i}];
+  outputs[${i}].value = ${storageType(resultType)}(ret_${i});`;
+          })
+          .join('\n  ');
+      } else {
+        body = `
+  for (var i = 0u; i < ${cases.length}; i++) {
+    var ret = lhs[i];
+    ret ${op} rhs[i];
+    outputs[i].value = ${storageType(resultType)}(ret);
+  }`;
+      }
+
+      const values = cases.map(c => c.input.map(v => v.wgsl()));
+
+      return `
+${wgslOutputs(resultType, cases.length)}
+
+const lhs = array(
+${values.map(c => `${c[0]}`).join(',\n  ')}
+      );
+const rhs = array(
+${values.map(c => `${c[1]}`).join(',\n  ')}
+);
+
+@compute @workgroup_size(1)
+fn main() {
+${body}
+}`;
+    } else {
+      //////////////////////////////////////////////////////////////////////////
+      // Runtime eval
+      //////////////////////////////////////////////////////////////////////////
+      return `
+${wgslOutputs(resultType, cases.length)}
+
+struct Input {
+  @size(${valueStride(lhsType)}) lhs : ${storageType(lhsType)},
+  @size(${valueStride(rhsType)}) rhs : ${storageType(rhsType)},
+}
+
+${wgslInputVar(inputSource, cases.length)}
+
+@compute @workgroup_size(1)
+fn main() {
+  for (var i = 0; i < ${cases.length}; i++) {
+    var ret = ${lhsType}(inputs[i].lhs);
+    ret ${op} ${rhsType}(inputs[i].rhs);
+    outputs[i].value = ${storageType(resultType)}(ret);
+  }
+}
+`;
+    }
+  };
 }
 
 /**
@@ -366,9 +558,9 @@ function ith(v, i) {
  * @p pipelineCache, then this may be returned instead of creating a new
  * pipeline.
  * @param t the GPUTest
- * @param expressionBuilder the expression builder function
+ * @param shaderBuilder the shader builder
  * @param parameterTypes the list of expression parameter types
- * @param returnType the return type for the expression overload
+ * @param resultType the return type for the expression overload
  * @param cases list of test cases that fit within the binding limits of the device
  * @param inputSource the source of the input values
  * @param outputBuffer the buffer that will hold the output values of the tests
@@ -376,24 +568,14 @@ function ith(v, i) {
  */
 function buildPipeline(
   t,
-  expressionBuilder,
+  shaderBuilder,
   parameterTypes,
-  returnType,
+  resultType,
   cases,
   inputSource,
   outputBuffer,
   pipelineCache
 ) {
-  // wgsl declaration of output buffer and binding
-  const wgslValueStride = valueStride(returnType);
-  const wgslStorageType = storageType(returnType);
-  const wgslOutputs = `
-struct Output {
-  @size(${wgslValueStride}) value : ${wgslStorageType}
-};
-@group(0) @binding(0) var<storage, read_write> outputs : array<Output, ${cases.length}>;
-`;
-
   cases.forEach(c => {
     const inputTypes = c.input instanceof Array ? c.input.map(i => i.type) : [c.input.type];
     if (!objectEquals(inputTypes, parameterTypes)) {
@@ -405,36 +587,10 @@ struct Output {
     }
   });
 
+  const source = shaderBuilder(parameterTypes, resultType, cases, inputSource);
+
   switch (inputSource) {
     case 'const': {
-      //////////////////////////////////////////////////////////////////////////
-      // Input values are constant values in the WGSL shader
-      //////////////////////////////////////////////////////////////////////////
-      const wgslValues = cases.map(c => {
-        const args = parameterTypes.map((_, i) => `(${ith(c.input, i).wgsl()})`);
-        return `${toStorage(returnType, expressionBuilder(args))}`;
-      });
-
-      const wgslBody = globalTestConfig.unrollConstEvalLoops
-        ? wgslValues.map((_, i) => `outputs[${i}].value = values[${i}];`).join('\n  ')
-        : `for (var i = 0u; i < ${cases.length}; i++) {
-    outputs[i].value = values[i];
-  }`;
-
-      // the full WGSL shader source
-      const source = `
-${wgslOutputs}
-
-const values = array<${wgslStorageType}, ${cases.length}>(
-  ${wgslValues.join(',\n  ')}
-);
-
-@compute @workgroup_size(1)
-fn main() {
-  ${wgslBody}
-}
-`;
-
       // build the shader module
       const module = t.device.createShaderModule({ code: source });
 
@@ -456,48 +612,7 @@ fn main() {
     case 'uniform':
     case 'storage_r':
     case 'storage_rw': {
-      //////////////////////////////////////////////////////////////////////////
       // Input values come from a uniform or storage buffer
-      //////////////////////////////////////////////////////////////////////////
-
-      // returns the WGSL expression to load the ith parameter of the given type from the input buffer
-      const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
-
-      // resolves to the expression that calls the builtin
-      const expr = toStorage(returnType, expressionBuilder(parameterTypes.map(paramExpr)));
-
-      // input binding var<...> declaration
-      const wgslInputVar = (function () {
-        switch (inputSource) {
-          case 'storage_r':
-            return 'var<storage, read>';
-          case 'storage_rw':
-            return 'var<storage, read_write>';
-          case 'uniform':
-            return 'var<uniform>';
-        }
-      })();
-
-      // the full WGSL shader source
-      const source = `
-struct Input {
-${parameterTypes
-  .map((ty, i) => `  @size(${valueStride(ty)}) param${i} : ${storageType(ty)},`)
-  .join('\n')}
-};
-
-${wgslOutputs}
-
-@group(0) @binding(1)
-${wgslInputVar} inputs : array<Input, ${cases.length}>;
-
-@compute @workgroup_size(1)
-fn main() {
-  for(var i = 0; i < ${cases.length}; i++) {
-    outputs[i].value = ${expr};
-  }
-}
-`;
 
       // size in bytes of the input buffer
       const inputSize = cases.length * valueStrides(parameterTypes);
@@ -563,7 +678,7 @@ fn main() {
  * If `cases.length` is not a multiple of `vectorWidth`, then the last scalar
  * test case value is repeated to fill the vector value.
  */
-function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
+function packScalarsToVector(parameterTypes, resultType, cases, vectorWidth) {
   // Validate that the parameters and return type are all vectorizable
   for (let i = 0; i < parameterTypes.length; i++) {
     const ty = parameterTypes[i];
@@ -573,15 +688,15 @@ function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
       );
     }
   }
-  if (!(returnType instanceof ScalarType)) {
+  if (!(resultType instanceof ScalarType)) {
     throw new Error(
-      `packScalarsToVector() can only be used with a scalar return type, but the return type is a ${returnType}'`
+      `packScalarsToVector() can only be used with a scalar return type, but the return type is a ${resultType}'`
     );
   }
 
   const packedCases = [];
   const packedParameterTypes = parameterTypes.map(p => TypeVec(vectorWidth, p));
-  const packedReturnType = new VectorType(vectorWidth, returnType);
+  const packedResultType = new VectorType(vectorWidth, resultType);
 
   const clampCaseIdx = idx => Math.min(idx, cases.length - 1);
 
@@ -615,8 +730,8 @@ function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
       }
       return {
         matched,
-        got: `${packedReturnType}(${gElements.join(', ')})`,
-        expected: `${packedReturnType}(${eElements.join(', ')})`,
+        got: `${packedResultType}(${gElements.join(', ')})`,
+        expected: `${packedResultType}(${eElements.join(', ')})`,
       };
     };
 
@@ -628,7 +743,7 @@ function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
   return {
     cases: packedCases,
     parameterTypes: packedParameterTypes,
-    returnType: packedReturnType,
+    resultType: packedResultType,
   };
 }
 
@@ -641,140 +756,24 @@ function packScalarsToVector(parameterTypes, returnType, cases, vectorWidth) {
 // No expectations
 
 /**
- * @returns a Case for the param and unary interval generator provided
- * The Case will use use an interval comparator for matching results.
+ * @returns a Case for the param and an array of interval generators provided
  * @param param the param to pass in
  * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for an
- *            unary operation
+ * @param ops callbacks that implement generating an acceptance  interval for a
+ *            matrix.
  */
-function makeUnaryToF32IntervalCase(param, filter, ...ops) {
-  param = quantizeToF32(param);
+function makeMatrixToScalarCase(param, filter, ...ops) {
+  param = map2DArray(param, quantizeToF32);
+  const param_f32 = map2DArray(param, f32);
 
-  const intervals = ops.map(o => o(param));
-  if (filter === 'f32-only' && intervals.some(i => !i.isFinite())) {
+  const results = ops.map(o => o(param));
+  if (filter === 'finite' && results.some(e => !e.isFinite())) {
     return undefined;
   }
-  return { input: [f32(param)], expected: anyOf(...intervals) };
-}
 
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param params array of inputs to try
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for an
- *            unary operation
- */
-export function generateUnaryToF32IntervalCases(params, filter, ...ops) {
-  return params.reduce((cases, e) => {
-    const c = makeUnaryToF32IntervalCase(e, filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the params and binary interval generator provided
- * The Case will use use an interval comparator for matching results.
- * @param param0 the first param or left hand side to pass in
- * @param param1 the second param or rhs hand side to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            binary operation
- */
-function makeBinaryToF32IntervalCase(param0, param1, filter, ...ops) {
-  param0 = quantizeToF32(param0);
-  param1 = quantizeToF32(param1);
-
-  const intervals = ops.map(o => o(param0, param1));
-  if (filter === 'f32-only' && intervals.some(i => !i.isFinite())) {
-    return undefined;
-  }
-  return { input: [f32(param0), f32(param1)], expected: anyOf(...intervals) };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param param0s array of inputs to try for the first param
- * @param param1s array of inputs to try for the second param
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            binary operation
- */
-export function generateBinaryToF32IntervalCases(param0s, param1s, filter, ...ops) {
-  return cartesianProduct(param0s, param1s).reduce((cases, e) => {
-    const c = makeBinaryToF32IntervalCase(e[0], e[1], filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the params and ternary interval generator provided
- * The Case will use use an interval comparator for matching results.
- * @param param0 the first param to pass in
- * @param param1 the second param to pass in
- * @param param2 the third param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            ternary operation.
- */
-function makeTernaryToF32IntervalCase(param0, param1, param2, filter, ...ops) {
-  param0 = quantizeToF32(param0);
-  param1 = quantizeToF32(param1);
-  param2 = quantizeToF32(param2);
-
-  const intervals = ops.map(o => o(param0, param1, param2));
-  if (filter === 'f32-only' && intervals.some(i => !i.isFinite())) {
-    return undefined;
-  }
   return {
-    input: [f32(param0), f32(param1), f32(param2)],
-    expected: anyOf(...intervals),
-  };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param param0s array of inputs to try for the first param
- * @param param1s array of inputs to try for the second param
- * @param param2s array of inputs to try for the third param
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            ternary operation.
- */
-export function generateTernaryToF32IntervalCases(param0s, param1s, param2s, filter, ...ops) {
-  return cartesianProduct(param0s, param1s, param2s).reduce((cases, e) => {
-    const c = makeTernaryToF32IntervalCase(e[0], e[1], e[2], filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the param and vector interval generator provided
- * @param param the param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            vector.
- */
-function makeVectorToF32IntervalCase(param, filter, ...ops) {
-  param = param.map(quantizeToF32);
-  const param_f32 = param.map(f32);
-
-  const intervals = ops.map(o => o(param));
-  if (filter === 'f32-only' && intervals.some(i => !i.isFinite())) {
-    return undefined;
-  }
-  return {
-    input: [new Vector(param_f32)],
-    expected: anyOf(...intervals),
+    input: [new Matrix(param_f32)],
+    expected: anyOf(...results),
   };
 }
 
@@ -783,133 +782,11 @@ function makeVectorToF32IntervalCase(param, filter, ...ops) {
  * @param params array of inputs to try
  * @param filter what interval filtering to apply
  * @param ops callbacks that implement generating an acceptance interval for a
- *            vector.
+ *            matrix.
  */
-export function generateVectorToF32IntervalCases(params, filter, ...ops) {
+export function generateMatrixToScalarCases(params, filter, ...ops) {
   return params.reduce((cases, e) => {
-    const c = makeVectorToF32IntervalCase(e, filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the params and vector pair interval generator provided
- * @param param0 the first param to pass in
- * @param param1 the second param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            pair of vectors.
- */
-function makeVectorPairToF32IntervalCase(param0, param1, filter, ...ops) {
-  param0 = param0.map(quantizeToF32);
-  param1 = param1.map(quantizeToF32);
-  const param0_f32 = param0.map(f32);
-  const param1_f32 = param1.map(f32);
-
-  const intervals = ops.map(o => o(param0, param1));
-  if (filter === 'f32-only' && intervals.some(i => !i.isFinite())) {
-    return undefined;
-  }
-  return {
-    input: [new Vector(param0_f32), new Vector(param1_f32)],
-    expected: anyOf(...intervals),
-  };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param param0s array of inputs to try for the first input
- * @param param1s array of inputs to try for the second input
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance interval for a
- *            pair of vectors.
- */
-export function generateVectorPairToF32IntervalCases(param0s, param1s, filter, ...ops) {
-  return cartesianProduct(param0s, param1s).reduce((cases, e) => {
-    const c = makeVectorPairToF32IntervalCase(e[0], e[1], filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the param and vector of intervals generator provided
- * @param param the param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an vector of acceptance
- *            intervals for a vector.
- */
-function makeVectorToVectorCase(param, filter, ...ops) {
-  param = param.map(quantizeToF32);
-  const param_f32 = param.map(f32);
-
-  const vectors = ops.map(o => o(param));
-  if (filter === 'f32-only' && vectors.some(v => v.some(e => !e.isFinite()))) {
-    return undefined;
-  }
-  return {
-    input: [new Vector(param_f32)],
-    expected: anyOf(...vectors),
-  };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param params array of inputs to try
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an vector of acceptance
- *            intervals for a vector.
- */
-export function generateVectorToVectorCases(params, filter, ...ops) {
-  return params.reduce((cases, e) => {
-    const c = makeVectorToVectorCase(e, filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
-}
-
-/**
- * @returns a Case for the params and vector of intervals generator provided
- * @param param0 the first param to pass in
- * @param param1 the second param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an vector of acceptance
- *            intervals for a pair of vectors.
- */
-function makeVectorPairToVectorCase(param0, param1, filter, ...ops) {
-  param0 = param0.map(quantizeToF32);
-  param1 = param1.map(quantizeToF32);
-  const param0_f32 = param0.map(f32);
-  const param1_f32 = param1.map(f32);
-
-  const vectors = ops.map(o => o(param0, param1));
-  if (filter === 'f32-only' && vectors.some(v => v.some(e => !e.isFinite()))) {
-    return undefined;
-  }
-  return {
-    input: [new Vector(param0_f32), new Vector(param1_f32)],
-    expected: anyOf(...vectors),
-  };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * @param param0s array of inputs to try for the first input
- * @param param1s array of inputs to try for the second input
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an vector of acceptance
- *            intervals for a pair of vectors.
- */
-export function generateVectorPairToVectorCases(param0s, param1s, filter, ...ops) {
-  return cartesianProduct(param0s, param1s).reduce((cases, e) => {
-    const c = makeVectorPairToVectorCase(e[0], e[1], filter, ...ops);
+    const c = makeMatrixToScalarCase(e, filter, ...ops);
     if (c !== undefined) {
       cases.push(c);
     }
@@ -929,7 +806,7 @@ function makeMatrixToMatrixCase(param, filter, ...ops) {
   const param_f32 = map2DArray(param, f32);
 
   const results = ops.map(o => o(param));
-  if (filter === 'f32-only' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
+  if (filter === 'finite' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
     return undefined;
   }
 
@@ -971,7 +848,7 @@ function makeMatrixPairToMatrixCase(param0, param1, filter, ...ops) {
   const param1_f32 = map2DArray(param1, f32);
 
   const results = ops.map(o => o(param0, param1));
-  if (filter === 'f32-only' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
+  if (filter === 'finite' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
     return undefined;
   }
   return {
@@ -1013,7 +890,7 @@ function makeMatrixScalarToMatrixCase(mat, scalar, filter, ...ops) {
   const scalar_f32 = f32(scalar);
 
   const results = ops.map(o => o(mat, scalar));
-  if (filter === 'f32-only' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
+  if (filter === 'finite' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
     return undefined;
   }
   return {
@@ -1059,7 +936,7 @@ function makeScalarMatrixToMatrixCase(scalar, mat, filter, ...ops) {
   const scalar_f32 = f32(scalar);
 
   const results = ops.map(o => o(scalar, mat));
-  if (filter === 'f32-only' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
+  if (filter === 'finite' && results.some(m => m.some(c => c.some(r => !r.isFinite())))) {
     return undefined;
   }
   return {
@@ -1105,7 +982,7 @@ function makeMatrixVectorToVectorCase(mat, vec, filter, ...ops) {
   const vec_f32 = vec.map(f32);
 
   const results = ops.map(o => o(mat, vec));
-  if (filter === 'f32-only' && results.some(v => v.some(e => !e.isFinite()))) {
+  if (filter === 'finite' && results.some(v => v.some(e => !e.isFinite()))) {
     return undefined;
   }
   return {
@@ -1151,7 +1028,7 @@ function makeVectorMatrixToVectorCase(vec, mat, filter, ...ops) {
   const mat_f32 = map2DArray(mat, f32);
 
   const results = ops.map(o => o(vec, mat));
-  if (filter === 'f32-only' && results.some(v => v.some(e => !e.isFinite()))) {
+  if (filter === 'finite' && results.some(v => v.some(e => !e.isFinite()))) {
     return undefined;
   }
   return {
@@ -1180,46 +1057,6 @@ export function generateVectorMatrixToVectorCases(vecs, mats, filter, ...ops) {
     });
   });
   return cases;
-}
-
-/**
- * @returns a Case for the param and vector of intervals generator provided
- * The input is treated as an unsigned int.
- * @param param the param to pass in
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance
- *            interval for an unsigned int.
- */
-function makeU32ToVectorCase(param, filter, ...ops) {
-  param = Math.trunc(param);
-  const param_u32 = u32(param);
-
-  const vectors = ops.map(o => o(param));
-  if (filter === 'f32-only' && vectors.some(v => !v.every(e => e.isFinite()))) {
-    return undefined;
-  }
-  return {
-    input: param_u32,
-    expected: anyOf(...vectors),
-  };
-}
-
-/**
- * @returns an array of Cases for operations over a range of inputs
- * The input is treated as an unsigned int.
- * @param params array of inputs to try
- * @param filter what interval filtering to apply
- * @param ops callbacks that implement generating an acceptance
- *            interval for an unsigned int.
- */
-export function generateU32ToVectorCases(params, filter, ...ops) {
-  return params.reduce((cases, e) => {
-    const c = makeU32ToVectorCase(e, filter, ...ops);
-    if (c !== undefined) {
-      cases.push(c);
-    }
-    return cases;
-  }, new Array());
 }
 
 /**

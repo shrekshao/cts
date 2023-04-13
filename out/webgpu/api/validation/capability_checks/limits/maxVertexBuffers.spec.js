@@ -1,14 +1,9 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { keysOf } from '../../../../../common/util/data_tables.js';import { range } from '../../../../../common/util/util.js';
-import { kRenderEncoderTypes, kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
+**/import { range } from '../../../../../common/util/util.js';import { kRenderEncoderTypes, kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
 
-const PipelineTypes = {
-  withoutLocations: true,
-  withLocations: true
-};
+const kPipelineTypes = ['withoutLocations', 'withLocations'];
 
-const kPipelineTypes = keysOf(PipelineTypes);
 
 function getPipelineDescriptor(
 device,
@@ -49,38 +44,19 @@ const limit = 'maxVertexBuffers';
 export const { g, description } = makeLimitTestGroup(limit);
 
 g.test('createRenderPipeline,at_over').
-desc(`Test using at and over ${limit} limit in createRenderPipeline`).
-params(kMaximumLimitBaseParams.combine('pipelineType', kPipelineTypes)).
+desc(`Test using at and over ${limit} limit in createRenderPipeline(Async)`).
+params(
+kMaximumLimitBaseParams.combine('async', [false, true]).combine('pipelineType', kPipelineTypes)).
+
 fn(async (t) => {
-  const { limitTest, testValueName, pipelineType } = t.params;
+  const { limitTest, testValueName, async, pipelineType } = t.params;
   await t.testDeviceWithRequestedMaximumLimits(
   limitTest,
   testValueName,
   async ({ device, testValue, shouldError }) => {
     const pipelineDescriptor = getPipelineDescriptor(device, pipelineType, testValue);
 
-    await t.expectValidationError(() => {
-      device.createRenderPipeline(pipelineDescriptor);
-    }, shouldError);
-  });
-
-});
-
-g.test('createRenderPipelineAsync,at_over').
-desc(`Test using at and over ${limit} limit in createRenderPipelineAsync`).
-params(kMaximumLimitBaseParams.combine('pipelineType', kPipelineTypes)).
-fn(async (t) => {
-  const { limitTest, testValueName, pipelineType } = t.params;
-  await t.testDeviceWithRequestedMaximumLimits(
-  limitTest,
-  testValueName,
-  async ({ device, testValue, shouldError }) => {
-    const pipelineDescriptor = getPipelineDescriptor(device, pipelineType, testValue);
-    await t.shouldRejectConditionally(
-    'GPUPipelineError',
-    device.createRenderPipelineAsync(pipelineDescriptor),
-    shouldError);
-
+    await t.testCreateRenderPipeline(pipelineDescriptor, async, shouldError);
   });
 
 });
