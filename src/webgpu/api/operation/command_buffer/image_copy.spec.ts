@@ -39,23 +39,35 @@ TODO: Fix this test for the various skipped formats [2]:
 `;
 
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { assert, memcpy, TypedArrayBufferView, unreachable } from '../../../../common/util/util.js';
 import {
-  kTextureFormatInfo,
-  SizedTextureFormat,
-  kDepthStencilFormats,
+  assert,
+  ErrorWithExtra,
+  memcpy,
+  TypedArrayBufferView,
+  unreachable,
+} from '../../../../common/util/util.js';
+import {
   kMinDynamicBufferOffsetAlignment,
   kBufferSizeAlignment,
-  DepthStencilFormat,
-  depthStencilBufferTextureCopySupported,
-  depthStencilFormatAspectSize,
   kTextureDimensions,
-  textureDimensionAndFormatCompatible,
-  kColorTextureFormats,
 } from '../../../capability_info.js';
-import { GPUTest } from '../../../gpu_test.js';
+import {
+  kTextureFormatInfo,
+  kDepthStencilFormats,
+  kColorTextureFormats,
+  depthStencilBufferTextureCopySupported,
+  textureDimensionAndFormatCompatible,
+  depthStencilFormatAspectSize,
+  DepthStencilFormat,
+  ColorTextureFormat,
+  RegularTextureFormat,
+  isCompressedTextureFormat,
+} from '../../../format_info.js';
+import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
+import { checkElementsEqual } from '../../../util/check_contents.js';
 import { align } from '../../../util/math.js';
+import { physicalMipSizeFromTexture } from '../../../util/texture/base.js';
 import { DataArrayGenerator } from '../../../util/texture/data_generation.js';
 import {
   bytesInACompleteRow,
@@ -64,6 +76,8 @@ import {
   kBytesPerRowAlignment,
   TextureCopyLayout,
 } from '../../../util/texture/layout.js';
+import { TexelView } from '../../../util/texture/texel_view.js';
+import { findFailedPixels } from '../../../util/texture/texture_ok.js';
 
 interface TextureCopyViewWithRequiredOrigin {
   texture: GPUTexture;
@@ -80,6 +94,10 @@ type InitMethod = 'WriteTexture' | 'CopyB2T';
  * - FullCopyT2B: do CopyT2B on the whole texture and check wether the part we copied to matches
  *   the data we were copying and that the nothing else was modified - that's primarily for testing
  *   WriteTexture and CopyB2T.
+ *
+ *   Note: in compatibility mode, copyTextureToBuffer is not supported for compressed textures.
+ *   In this case, we render the texture as well as a texture with the contents we except in the
+ *   copy and then expect the rendered results to match.
  */
 type CheckMethod = 'PartialCopyT2B' | 'FullCopyT2B';
 
@@ -109,7 +127,7 @@ const kMethodsToTest = [
 ] as const;
 
 // [2]: Fix things so this list can be reduced to zero (see file description)
-const kExcludedFormats: Set<SizedTextureFormat> = new Set([
+const kExcludedFormats: Set<ColorTextureFormat> = new Set([
   'r8snorm',
   'rg8snorm',
   'rgba8snorm',
@@ -125,55 +143,7 @@ const kWorkingColorTextureFormats = kColorTextureFormats.filter(x => !kExcludedF
 const dataGenerator = new DataArrayGenerator();
 const altDataGenerator = new DataArrayGenerator();
 
-class ImageCopyTest extends GPUTest {
-  /** Offset for a particular texel in the linear texture data */
-  getTexelOffsetInBytes(
-    textureDataLayout: Required<GPUImageDataLayout>,
-    format: SizedTextureFormat,
-    texel: Required<GPUOrigin3DDict>,
-    origin: Required<GPUOrigin3DDict> = { x: 0, y: 0, z: 0 }
-  ): number {
-    const { offset, bytesPerRow, rowsPerImage } = textureDataLayout;
-    const info = kTextureFormatInfo[format];
-
-    assert(texel.x >= origin.x && texel.y >= origin.y && texel.z >= origin.z);
-    assert(texel.x % info.blockWidth === 0);
-    assert(texel.y % info.blockHeight === 0);
-    assert(origin.x % info.blockWidth === 0);
-    assert(origin.y % info.blockHeight === 0);
-
-    const bytesPerImage = rowsPerImage * bytesPerRow;
-
-    return (
-      offset +
-      (texel.z - origin.z) * bytesPerImage +
-      ((texel.y - origin.y) / info.blockHeight) * bytesPerRow +
-      ((texel.x - origin.x) / info.blockWidth) * info.bytesPerBlock
-    );
-  }
-
-  *iterateBlockRows(
-    size: Required<GPUExtent3DDict>,
-    origin: Required<GPUOrigin3DDict>,
-    format: SizedTextureFormat
-  ): Generator<Required<GPUOrigin3DDict>> {
-    if (size.width === 0 || size.height === 0 || size.depthOrArrayLayers === 0) {
-      // do not iterate anything for an empty region
-      return;
-    }
-    const info = kTextureFormatInfo[format];
-    assert(size.height % info.blockHeight === 0);
-    for (let y = 0; y < size.height; y += info.blockHeight) {
-      for (let z = 0; z < size.depthOrArrayLayers; ++z) {
-        yield {
-          x: origin.x,
-          y: origin.y + y,
-          z: origin.z + z,
-        };
-      }
-    }
-  }
-
+class ImageCopyTest extends TextureTestMixin(GPUTest) {
   /**
    * This is used for testing passing undefined members of `GPUImageDataLayout` instead of actual
    * values where possible. Passing arguments as values and not as objects so that they are passed
@@ -259,6 +229,114 @@ class ImageCopyTest extends GPUTest {
     } else {
       return { width, height, depthOrArrayLayers };
     }
+  }
+
+  /**
+   * Compares data in `expected` to data in `buffer.
+   * Areas defined by size and dataLayout are compared by interpreting the data as appropriate
+   * for the texture format. As an example, with 'rgb9e5ufloat' multiple values can
+   * represent the same number. For example, double the exponent and halving the
+   * mantissa. Areas outside the area defined by size and dataLayout are expected to match
+   * by binary comparison.
+   */
+  expectGPUBufferValuesEqualWhenInterpretedAsTextureFormat(
+    expected: Uint8Array,
+    buffer: GPUBuffer,
+    format: ColorTextureFormat,
+    size: Required<GPUExtent3DDict>,
+    dataLayout: Required<GPUImageDataLayout>
+  ) {
+    if (isCompressedTextureFormat(format)) {
+      this.expectGPUBufferValuesEqual(buffer, expected);
+      return;
+    }
+    const regularFormat = format as RegularTextureFormat;
+    // data is in a format like this
+    //
+    //     ....
+    //     ttttt..
+    //     ttttt..
+    //     ttttt..
+    //     .......
+    //     ttttt..
+    //     ttttt..
+    //     ttttt...
+    //
+    // where the first `....` represents the portion of the buffer before
+    // `dataLayout.offset`. `ttttt` represents width (size[0]) and `..`
+    // represents the portion when `dataLayout.bytesPerRow` is greater than the
+    // data needed for width texels. `......` represents when height (size[1])
+    // is less than `dataLayout.rowsPerImage`. `...` represents any data past
+    // ((height - 1) * depth * bytePerRow + bytesPerRow) and the end of the
+    // buffer
+    const checkByTextureFormat = (actual: Uint8Array) => {
+      const zero = { x: 0, y: 0, z: 0 };
+
+      // compare texel areas
+      {
+        const actTexelView = TexelView.fromTextureDataByReference(regularFormat, actual, {
+          bytesPerRow: dataLayout.bytesPerRow,
+          rowsPerImage: dataLayout.rowsPerImage,
+          subrectOrigin: [0, 0, 0],
+          subrectSize: size,
+        });
+        const expTexelView = TexelView.fromTextureDataByReference(regularFormat, expected, {
+          bytesPerRow: dataLayout.bytesPerRow,
+          rowsPerImage: dataLayout.rowsPerImage,
+          subrectOrigin: [0, 0, 0],
+          subrectSize: size,
+        });
+
+        const failedPixelsMessage = findFailedPixels(
+          regularFormat,
+          zero,
+          size,
+          { actTexelView, expTexelView },
+          {
+            maxFractionalDiff: 0,
+          }
+        );
+
+        if (failedPixelsMessage !== undefined) {
+          const msg = 'Texture level had unexpected contents:\n' + failedPixelsMessage;
+          return new ErrorWithExtra(msg, () => ({
+            expTexelView,
+            actTexelView,
+          }));
+        }
+      }
+
+      // compare non texel areas
+      {
+        const rowLength = bytesInACompleteRow(size.width, format);
+        let lastOffset = 0;
+        for (const texel of this.iterateBlockRows(size, format)) {
+          const offset = this.getTexelOffsetInBytes(dataLayout, format, texel, zero);
+          const actualPart = actual.subarray(lastOffset, offset);
+          const expectedPart = expected.subarray(lastOffset, offset);
+          const error = checkElementsEqual(actualPart, expectedPart);
+          if (error) {
+            return error;
+          }
+          assert(offset >= lastOffset); // make sure iterateBlockRows always goes forward
+          lastOffset = offset + rowLength;
+        }
+        // compare end of buffers
+        {
+          const actualPart = actual.subarray(lastOffset, actual.length);
+          const expectedPart = expected.subarray(lastOffset, expected.length);
+          return checkElementsEqual(actualPart, expectedPart);
+        }
+      }
+    };
+
+    this.expectGPUBufferValuesPassCheck(buffer, checkByTextureFormat, {
+      srcByteOffset: 0,
+      type: Uint8Array,
+      typedLength: expected.length,
+      method: 'copy',
+      mode: 'fail',
+    });
   }
 
   /** Run a CopyT2B command with appropriate arguments corresponding to `ChangeBeforePass` */
@@ -364,17 +442,90 @@ class ImageCopyTest extends GPUTest {
     }
   }
 
+  generateMatchingTextureInJSRenderAndCompareContents(
+    {
+      texture: actualTexture,
+      mipLevel: mipLevelOrUndefined,
+      origin,
+    }: TextureCopyViewWithRequiredOrigin,
+    copySize: Required<GPUExtent3DDict>,
+    format: ColorTextureFormat,
+    expected: Uint8Array,
+    expectedDataLayout: Required<GPUImageDataLayout>
+  ): void {
+    const size = [
+      actualTexture.width,
+      actualTexture.height,
+      actualTexture.depthOrArrayLayers,
+    ] as const;
+    const expectedTexture = this.device.createTexture({
+      label: 'expectedTexture',
+      size,
+      dimension: actualTexture.dimension,
+      format,
+      mipLevelCount: actualTexture.mipLevelCount,
+      usage: actualTexture.usage,
+    });
+    this.trackForCleanup(expectedTexture);
+
+    const mipLevel = mipLevelOrUndefined || 0;
+    const fullMipLevelTextureCopyLayout = getTextureCopyLayout(
+      format,
+      actualTexture.dimension,
+      size,
+      {
+        mipLevel,
+      }
+    );
+
+    // allocate data for entire mip level.
+    const expectedTextureMipLevelData = new Uint8Array(
+      align(fullMipLevelTextureCopyLayout.byteLength, 4)
+    );
+    const mipSize = physicalMipSizeFromTexture(expectedTexture, mipLevel);
+
+    // update the data for the entire mip level with the data
+    // that would be copied to the "actual" texture
+    this.updateLinearTextureDataSubBox(format, copySize, {
+      src: {
+        dataLayout: expectedDataLayout,
+        origin: { x: 0, y: 0, z: 0 },
+        data: expected,
+      },
+      dest: {
+        dataLayout: { offset: 0, ...fullMipLevelTextureCopyLayout },
+        origin,
+        data: expectedTextureMipLevelData,
+      },
+    });
+
+    // MAINTENANCE_TODO: If we're testing writeTexture should this use copyBufferToTexture instead?
+    this.queue.writeTexture(
+      { texture: expectedTexture, mipLevel },
+      expectedTextureMipLevelData,
+      { ...fullMipLevelTextureCopyLayout, offset: 0 },
+      mipSize
+    );
+
+    this.expectTexturesToMatchByRendering(
+      actualTexture,
+      expectedTexture,
+      mipLevel,
+      origin,
+      copySize
+    );
+  }
+
   /**
    * We check an appropriate part of the texture against the given data.
    * Used directly with PartialCopyT2B check method (for a subpart of the texture)
    * and by `copyWholeTextureToBufferAndCheckContentsWithUpdatedData` with FullCopyT2B check method
-   * (for the whole texture). We also ensure that CopyT2B doesn't overwrite bytes it's not supposed
-   * to if validateOtherBytesInBuffer is set to true.
+   * (for the whole texture).
    */
   copyPartialTextureToBufferAndCheckContents(
     { texture, mipLevel, origin }: TextureCopyViewWithRequiredOrigin,
     checkSize: Required<GPUExtent3DDict>,
-    format: SizedTextureFormat,
+    format: ColorTextureFormat,
     expected: Uint8Array,
     expectedDataLayout: Required<GPUImageDataLayout>,
     changeBeforePass: ChangeBeforePass = 'none'
@@ -388,7 +539,14 @@ class ImageCopyTest extends GPUTest {
       bufferData,
       GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
     );
+    // At this point both buffer and bufferData have the same random data in
+    // them. We'll use copyTextureToBuffer to update buffer with data from the
+    // texture and updateLinearTextureDataSubBox to update bufferData with the
+    // data we originally uploaded to the texture.
 
+    // buffer has ...... in it.
+    // Copy to buffer the portion of texture that was previously uploaded.
+    // After execution buffer has t.t.t. because the rows are padded.
     this.copyTextureToBufferWithAppliedArguments(
       buffer,
       expectedDataLayout,
@@ -397,80 +555,32 @@ class ImageCopyTest extends GPUTest {
       changeBeforePass
     );
 
-    this.updateLinearTextureDataSubBox(
-      expectedDataLayout,
-      expectedDataLayout,
-      checkSize,
-      origin,
-      origin,
-      format,
-      bufferData,
-      expected
-    );
+    // We originally copied expected to texture using expectedDataLayout.
+    // We're copying back out of texture above.
 
-    this.expectGPUBufferValuesEqual(buffer, bufferData);
-  }
-
-  /**
-   * Copies the whole texture into linear data stored in a buffer for further checks.
-   *
-   * Used for `copyWholeTextureToBufferAndCheckContentsWithUpdatedData`.
-   */
-  copyWholeTextureToNewBuffer(
-    { texture, mipLevel }: { texture: GPUTexture; mipLevel: number | undefined },
-    resultDataLayout: TextureCopyLayout
-  ): GPUBuffer {
-    const { mipSize, byteLength, bytesPerRow, rowsPerImage } = resultDataLayout;
-    const buffer = this.device.createBuffer({
-      size: align(byteLength, 4), // this is necessary because we need to copy and map data from this buffer
-      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    // bufferData has ...... in it.
+    // Update bufferData to have the same contents as buffer.
+    // When done, bufferData now has t.t.t. because the rows are padded.
+    this.updateLinearTextureDataSubBox(format, checkSize, {
+      src: {
+        dataLayout: expectedDataLayout,
+        origin: { x: 0, y: 0, z: 0 },
+        data: expected,
+      },
+      dest: {
+        dataLayout: expectedDataLayout,
+        origin: { x: 0, y: 0, z: 0 },
+        data: bufferData,
+      },
     });
-    this.trackForCleanup(buffer);
 
-    const encoder = this.device.createCommandEncoder();
-    encoder.copyTextureToBuffer(
-      { texture, mipLevel },
-      { buffer, bytesPerRow, rowsPerImage },
-      mipSize
+    this.expectGPUBufferValuesEqualWhenInterpretedAsTextureFormat(
+      bufferData,
+      buffer,
+      format,
+      checkSize,
+      expectedDataLayout
     );
-    this.device.queue.submit([encoder.finish()]);
-
-    return buffer;
-  }
-
-  /**
-   * Takes the data returned by `copyWholeTextureToNewBuffer` and updates it after a copy operation
-   * on the texture by emulating the copy behaviour here directly.
-   */
-  updateLinearTextureDataSubBox(
-    destinationDataLayout: Required<GPUImageDataLayout>,
-    sourceDataLayout: Required<GPUImageDataLayout>,
-    copySize: Required<GPUExtent3DDict>,
-    destinationOrigin: Required<GPUOrigin3DDict>,
-    sourceOrigin: Required<GPUOrigin3DDict>,
-    format: SizedTextureFormat,
-    destination: Uint8Array,
-    source: Uint8Array
-  ): void {
-    for (const texel of this.iterateBlockRows(copySize, sourceOrigin, format)) {
-      const srcOffsetElements = this.getTexelOffsetInBytes(
-        sourceDataLayout,
-        format,
-        texel,
-        sourceOrigin
-      );
-      const dstOffsetElements = this.getTexelOffsetInBytes(
-        destinationDataLayout,
-        format,
-        texel,
-        destinationOrigin
-      );
-      const rowLength = bytesInACompleteRow(copySize.width, format);
-      memcpy(
-        { src: source, start: srcOffsetElements, length: rowLength },
-        { dst: destination, start: dstOffsetElements }
-      );
-    }
   }
 
   /**
@@ -485,7 +595,7 @@ class ImageCopyTest extends GPUTest {
     fullTextureCopyLayout: TextureCopyLayout,
     texturePartialDataLayout: Required<GPUImageDataLayout>,
     copySize: Required<GPUExtent3DDict>,
-    format: SizedTextureFormat,
+    format: ColorTextureFormat,
     fullData: GPUBuffer,
     partialData: Uint8Array
   ): void {
@@ -501,16 +611,18 @@ class ImageCopyTest extends GPUTest {
     // other eventual async expectations to ensure it will be correct.
     this.eventualAsyncExpectation(async () => {
       const readback = await readbackPromise;
-      this.updateLinearTextureDataSubBox(
-        { offset: 0, ...fullTextureCopyLayout },
-        texturePartialDataLayout,
-        copySize,
-        destinationOrigin,
-        origin,
-        format,
-        readback.data,
-        partialData
-      );
+      this.updateLinearTextureDataSubBox(format, copySize, {
+        dest: {
+          dataLayout: { offset: 0, ...fullTextureCopyLayout },
+          origin,
+          data: readback.data,
+        },
+        src: {
+          dataLayout: texturePartialDataLayout,
+          origin: { x: 0, y: 0, z: 0 },
+          data: partialData,
+        },
+      });
       this.copyPartialTextureToBufferAndCheckContents(
         { texture, mipLevel, origin: destinationOrigin },
         { width: mipSize[0], height: mipSize[1], depthOrArrayLayers: mipSize[2] },
@@ -546,7 +658,7 @@ class ImageCopyTest extends GPUTest {
     mipLevel?: number;
     origin?: Required<GPUOrigin3DDict>;
     textureSize: readonly [number, number, number];
-    format: SizedTextureFormat;
+    format: ColorTextureFormat;
     dimension: GPUTextureDimension;
     initMethod: InitMethod;
     checkMethod: CheckMethod;
@@ -557,7 +669,7 @@ class ImageCopyTest extends GPUTest {
       format,
       dimension,
       mipLevelCount: mipLevel + 1,
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
+      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
     });
     this.trackForCleanup(texture);
 
@@ -574,27 +686,27 @@ class ImageCopyTest extends GPUTest {
           changeBeforePass
         );
 
-        this.copyPartialTextureToBufferAndCheckContents(
-          { texture, mipLevel, origin },
-          copySize,
-          format,
-          data,
-          textureDataLayout,
-          changeBeforePass
-        );
-
+        if (this.canCallCopyTextureToBufferWithTextureFormat(texture.format)) {
+          this.copyPartialTextureToBufferAndCheckContents(
+            { texture, mipLevel, origin },
+            copySize,
+            format,
+            data,
+            textureDataLayout,
+            changeBeforePass
+          );
+        } else {
+          this.generateMatchingTextureInJSRenderAndCompareContents(
+            { texture, mipLevel, origin },
+            copySize,
+            format,
+            data,
+            textureDataLayout
+          );
+        }
         break;
       }
       case 'FullCopyT2B': {
-        const fullTextureCopyLayout = getTextureCopyLayout(format, dimension, textureSize, {
-          mipLevel,
-        });
-
-        const fullData = this.copyWholeTextureToNewBuffer(
-          { texture, mipLevel },
-          fullTextureCopyLayout
-        );
-
         this.uploadLinearTextureDataToTextureSubBox(
           { texture, mipLevel, origin },
           textureDataLayout,
@@ -604,16 +716,36 @@ class ImageCopyTest extends GPUTest {
           changeBeforePass
         );
 
-        this.copyWholeTextureToBufferAndCheckContentsWithUpdatedData(
-          { texture, mipLevel, origin },
-          fullTextureCopyLayout,
-          textureDataLayout,
-          copySize,
-          format,
-          fullData,
-          data
-        );
+        if (this.canCallCopyTextureToBufferWithTextureFormat(texture.format)) {
+          const fullTextureCopyLayout = getTextureCopyLayout(format, dimension, textureSize, {
+            mipLevel,
+          });
 
+          const fullData = this.copyWholeTextureToNewBuffer(
+            { texture, mipLevel },
+            fullTextureCopyLayout
+          );
+
+          this.copyWholeTextureToBufferAndCheckContentsWithUpdatedData(
+            { texture, mipLevel, origin },
+            fullTextureCopyLayout,
+            textureDataLayout,
+            copySize,
+            format,
+            fullData,
+            data
+          );
+        } else {
+          this.generateMatchingTextureInJSRenderAndCompareContents(
+            { texture, mipLevel, origin },
+            copySize,
+            format,
+            data,
+            textureDataLayout
+            //fullTextureCopyLayout,
+            //fullData,
+          );
+        }
         break;
       }
       default:
@@ -998,7 +1130,7 @@ class ImageCopyTest extends GPUTest {
     copyMipLevel: number,
     initialData: Float32Array
   ): void {
-    assert(kTextureFormatInfo[depthFormat].depth);
+    assert(!!kTextureFormatInfo[depthFormat].depth);
 
     const inputTexture = this.device.createTexture({
       size: copySize,
@@ -1215,8 +1347,8 @@ class ImageCopyTest extends GPUTest {
  *
  * [3]: Modify this after introducing tests with rendering.
  */
-function formatCanBeTested({ format }: { format: SizedTextureFormat }): boolean {
-  return kTextureFormatInfo[format].copyDst && kTextureFormatInfo[format].copySrc;
+function formatCanBeTested({ format }: { format: ColorTextureFormat }): boolean {
+  return kTextureFormatInfo[format].color.copyDst && kTextureFormatInfo[format].color.copySrc;
 }
 
 export const g = makeTestGroup(ImageCopyTest);
@@ -1296,6 +1428,7 @@ bytes in copy works for every format.
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -1392,6 +1525,7 @@ works for every format with 2d and 2d-array textures.
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -1406,7 +1540,7 @@ works for every format with 2d and 2d-array textures.
     } = t.params;
     const info = kTextureFormatInfo[format];
 
-    const offset = offsetInBlocks * info.bytesPerBlock;
+    const offset = offsetInBlocks * info.color.bytes;
     const copySize = {
       width: 3 * info.blockWidth,
       height: 3 * info.blockHeight,
@@ -1471,6 +1605,7 @@ for all formats. We pass origin and copyExtent as [number, number, number].`
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -1519,7 +1654,7 @@ for all formats. We pass origin and copyExtent as [number, number, number].`
     ] as const;
 
     const rowsPerImage = copySizeBlocks[1];
-    const bytesPerRow = align(copySizeBlocks[0] * info.bytesPerBlock, 256);
+    const bytesPerRow = align(copySizeBlocks[0] * info.color.bytes, 256);
 
     const dataSize = dataBytesForCopyOrFail({
       layout: { offset: 0, bytesPerRow, rowsPerImage },
@@ -1555,7 +1690,7 @@ function* generateTestTextureSizes({
   mipLevel,
   _mipSizeInBlocks,
 }: {
-  format: SizedTextureFormat;
+  format: ColorTextureFormat;
   dimension: GPUTextureDimension;
   mipLevel: number;
   _mipSizeInBlocks: Required<GPUExtent3DDict>;
@@ -1670,6 +1805,7 @@ TODO: Make a variant for depth-stencil formats.
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -1798,9 +1934,9 @@ function CopyMethodSupportedWithDepthStencilFormat(
 ): boolean {
   {
     return (
-      (aspect === 'stencil-only' && kTextureFormatInfo[format].stencil) ||
+      (aspect === 'stencil-only' && !!kTextureFormatInfo[format].stencil) ||
       (aspect === 'depth-only' &&
-        kTextureFormatInfo[format].depth &&
+        !!kTextureFormatInfo[format].depth &&
         copyMethod === 'CopyT2B' &&
         depthStencilBufferTextureCopySupported('CopyT2B', format, aspect))
     );

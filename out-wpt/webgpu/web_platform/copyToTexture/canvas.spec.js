@@ -5,11 +5,8 @@ copyToTexture with HTMLCanvasElement and OffscreenCanvas sources.
 `;
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { skipTestCase } from '../../../common/util/util.js';
-import {
-  kCanvasAlphaModes,
-  kTextureFormatInfo,
-  kValidTextureFormatsForCopyE2T,
-} from '../../capability_info.js';
+import { kCanvasAlphaModes } from '../../capability_info.js';
+import { kTextureFormatInfo, kValidTextureFormatsForCopyE2T } from '../../format_info.js';
 import { CopyToTextureUtils } from '../../util/copy_to_texture.js';
 import { kAllCanvasTypes, createCanvas } from '../../util/create_elements.js';
 
@@ -410,6 +407,9 @@ g.test('copy_contents_from_2d_context_canvas')
       .combine('width', [1, 2, 4, 15])
       .combine('height', [1, 2, 4, 15])
   )
+  .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+  })
   .fn(t => {
     const { width, height, canvasType, dstAlphaMode } = t.params;
 
@@ -471,6 +471,9 @@ g.test('copy_contents_from_gl_context_canvas')
       .combine('width', [1, 2, 4, 15])
       .combine('height', [1, 2, 4, 15])
   )
+  .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+  })
   .fn(t => {
     const { width, height, canvasType, contextName, srcPremultiplied, dstAlphaMode } = t.params;
 
@@ -538,6 +541,7 @@ g.test('copy_contents_from_gpu_context_canvas')
       .combine('height', [1, 2, 4, 15])
   )
   .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
   .fn(t => {
@@ -608,6 +612,9 @@ g.test('copy_contents_from_bitmaprenderer_context_canvas')
       .combine('width', [1, 2, 4, 15])
       .combine('height', [1, 2, 4, 15])
   )
+  .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+  })
   .fn(async t => {
     const { width, height, canvasType, dstAlphaMode } = t.params;
 
@@ -681,6 +688,9 @@ g.test('color_space_conversion')
       .combine('width', [1, 2, 4, 15, 255, 256])
       .combine('height', [1, 2, 4, 15, 255, 256])
   )
+  .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+  })
   .fn(t => {
     const {
       width,

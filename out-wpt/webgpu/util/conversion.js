@@ -125,6 +125,8 @@ export function float16BitsToFloat32(float16Bits) {
 export const kFloat32Format = { signed: 1, exponentBits: 8, mantissaBits: 23, bias: 127 };
 /** FloatFormat defining IEEE754 16-bit float. */
 export const kFloat16Format = { signed: 1, exponentBits: 5, mantissaBits: 10, bias: 15 };
+/** FloatFormat for 9 bit mantissa, 5 bit exponent unsigned float */
+export const kUFloat9e5Format = { signed: 0, exponentBits: 5, mantissaBits: 9, bias: 15 };
 
 /**
  * Once-allocated ArrayBuffer/views to avoid overhead of allocation when converting between numeric formats
@@ -174,6 +176,23 @@ export function floatBitsToNumber(bits, fmt) {
 }
 
 /**
+ * Convert ufloat9e5 bits from rgb9e5ufloat to a JS number
+ *
+ * The difference between `floatBitsToNumber` and `ufloatBitsToNumber`
+ * is that the latter doesn't use an implicit leading bit:
+ *
+ * floatBitsToNumber      = 2^(exponent - bias) * (1 + mantissa / 2 ^ numMantissaBits)
+ * ufloatM9E5BitsToNumber = 2^(exponent - bias) * (mantissa / 2 ^ numMantissaBits)
+ *                        = 2^(exponent - bias - numMantissaBits) * mantissa
+ */
+export function ufloatM9E5BitsToNumber(bits, fmt) {
+  const exponent = bits >> fmt.mantissaBits;
+  const mantissaMask = (1 << fmt.mantissaBits) - 1;
+  const mantissa = bits & mantissaMask;
+  return mantissa * 2 ** (exponent - fmt.bias - fmt.mantissaBits);
+}
+
+/**
  * Encodes a JS `number` into an IEEE754 floating point number with the specified format.
  * Returns the result as an integer-valued JS `number`.
  *
@@ -219,47 +238,49 @@ export function floatBitsToNormalULPFromZero(bits, fmt) {
  * There is no sign bit, and there is a shared 5-bit biased (15) exponent and a 9-bit
  * mantissa for each channel. The mantissa does NOT have an implicit leading "1.",
  * and instead has an implicit leading "0.".
+ *
+ * @see https://registry.khronos.org/OpenGL/extensions/EXT/EXT_texture_shared_exponent.txt
  */
 export function packRGB9E5UFloat(r, g, b) {
-  for (const v of [r, g, b]) {
-    assert(v >= 0 && v < Math.pow(2, 16));
-  }
+  const N = 9; // number of mantissa bits
+  const Emax = 31; // max exponent
+  const B = 15; // exponent bias
+  const sharedexp_max = (((1 << N) - 1) / (1 << N)) * 2 ** (Emax - B);
+  const red_c = clamp(r, { min: 0, max: sharedexp_max });
+  const green_c = clamp(g, { min: 0, max: sharedexp_max });
+  const blue_c = clamp(b, { min: 0, max: sharedexp_max });
+  const max_c = Math.max(red_c, green_c, blue_c);
+  const exp_shared_p = Math.max(-B - 1, Math.floor(Math.log2(max_c))) + 1 + B;
+  const max_s = Math.floor(max_c / 2 ** (exp_shared_p - B - N) + 0.5);
+  const exp_shared = max_s === 1 << N ? exp_shared_p + 1 : exp_shared_p;
+  const scalar = 1 / 2 ** (exp_shared - B - N);
+  const red_s = Math.floor(red_c * scalar + 0.5);
+  const green_s = Math.floor(green_c * scalar + 0.5);
+  const blue_s = Math.floor(blue_c * scalar + 0.5);
+  assert(red_s >= 0 && red_s <= 0b111111111);
+  assert(green_s >= 0 && green_s <= 0b111111111);
+  assert(blue_s >= 0 && blue_s <= 0b111111111);
+  assert(exp_shared >= 0 && exp_shared <= 0b11111);
+  return ((exp_shared << 27) | (blue_s << 18) | (green_s << 9) | red_s) >>> 0;
+}
 
-  const buf = new DataView(new ArrayBuffer(Float32Array.BYTES_PER_ELEMENT));
-  const extractMantissaAndExponent = n => {
-    const mantissaBits = 9;
-    buf.setFloat32(0, n, true);
-    const bits = buf.getUint32(0, true);
-    // >> to remove mantissa, & to remove sign
-    let biasedExponent = (bits >> 23) & 0xff;
-    const mantissaBitsToDiscard = 23 - mantissaBits;
-    let mantissa = (bits & 0x7fffff) >> mantissaBitsToDiscard;
-
-    // RGB9E5UFloat has an implicit leading 0. instead of a leading 1.,
-    // so we need to move the 1. into the mantissa and bump the exponent.
-    // For float32 encoding, the leading 1 is only present if the biased
-    // exponent is non-zero.
-    if (biasedExponent !== 0) {
-      mantissa = (mantissa >> 1) | 0b100000000;
-      biasedExponent += 1;
-    }
-    return { biasedExponent, mantissa };
+/**
+ * Decodes a RGB9E5 encoded color.
+ * @see packRGB9E5UFloat
+ */
+export function unpackRGB9E5UFloat(encoded) {
+  const N = 9; // number of mantissa bits
+  const B = 15; // exponent bias
+  const red_s = (encoded >>> 0) & 0b111111111;
+  const green_s = (encoded >>> 9) & 0b111111111;
+  const blue_s = (encoded >>> 18) & 0b111111111;
+  const exp_shared = (encoded >>> 27) & 0b11111;
+  const exp = Math.pow(2, exp_shared - B - N);
+  return {
+    R: exp * red_s,
+    G: exp * green_s,
+    B: exp * blue_s,
   };
-
-  const { biasedExponent: rExp, mantissa: rOrigMantissa } = extractMantissaAndExponent(r);
-  const { biasedExponent: gExp, mantissa: gOrigMantissa } = extractMantissaAndExponent(g);
-  const { biasedExponent: bExp, mantissa: bOrigMantissa } = extractMantissaAndExponent(b);
-
-  // Use the largest exponent, and shift the mantissa accordingly
-  const exp = Math.max(rExp, gExp, bExp);
-  const rMantissa = rOrigMantissa >> (exp - rExp);
-  const gMantissa = gOrigMantissa >> (exp - gExp);
-  const bMantissa = bOrigMantissa >> (exp - bExp);
-
-  const bias = 15;
-  const biasedExp = exp === 0 ? 0 : exp - 127 + bias;
-  assert(biasedExp >= 0 && biasedExp <= 31);
-  return rMantissa | (gMantissa << 9) | (bMantissa << 18) | (biasedExp << 27);
 }
 
 /**
@@ -535,6 +556,34 @@ export class ScalarType {
   get size() {
     return this._size;
   }
+
+  /** Constructs a Scalar of this type with @p value */
+  create(value) {
+    switch (this.kind) {
+      case 'abstract-float':
+        return abstractFloat(value);
+      case 'f64':
+        return f64(value);
+      case 'f32':
+        return f32(value);
+      case 'f16':
+        return f16(value);
+      case 'u32':
+        return u32(value);
+      case 'u16':
+        return u16(value);
+      case 'u8':
+        return u8(value);
+      case 'i32':
+        return i32(value);
+      case 'i16':
+        return i16(value);
+      case 'i8':
+        return i8(value);
+      case 'bool':
+        return bool(value !== 0);
+    }
+  }
 }
 
 /** VectorType describes the type of WGSL Vector. */
@@ -566,6 +615,16 @@ export class VectorType {
 
   get size() {
     return this.elementType.size * this.width;
+  }
+
+  /** Constructs a Vector of this type with the given values */
+  create(value) {
+    if (value instanceof Array) {
+      assert(value.length === this.width);
+    } else {
+      value = Array(this.width).fill(value);
+    }
+    return new Vector(value.map(v => this.elementType.create(v)));
   }
 }
 
@@ -649,8 +708,12 @@ export const TypeU32 = new ScalarType('u32', 4, (buf, offset) =>
   u32(new Uint32Array(buf.buffer, offset)[0])
 );
 
+export const TypeAbstractFloat = new ScalarType('abstract-float', 8, (buf, offset) =>
+  abstractFloat(new Float64Array(buf.buffer, offset)[0])
+);
+
 export const TypeF64 = new ScalarType('f64', 8, (buf, offset) =>
-  f32(new Float64Array(buf.buffer, offset)[0])
+  f64(new Float64Array(buf.buffer, offset)[0])
 );
 
 export const TypeF32 = new ScalarType('f32', 4, (buf, offset) =>
@@ -684,6 +747,8 @@ export const TypeBool = new ScalarType('bool', 4, (buf, offset) =>
 /** @returns the ScalarType from the ScalarKind */
 export function scalarType(kind) {
   switch (kind) {
+    case 'abstract-float':
+      return TypeAbstractFloat;
     case 'f64':
       return TypeF64;
     case 'f32':
@@ -719,6 +784,20 @@ export function numElementsOf(ty) {
     return ty.cols * ty.rows;
   }
   throw new Error(`unhandled type ${ty}`);
+}
+
+/** @returns the scalar elements of the given Value */
+export function elementsOf(value) {
+  if (value instanceof Scalar) {
+    return [value];
+  }
+  if (value instanceof Vector) {
+    return value.elements;
+  }
+  if (value instanceof Matrix) {
+    return value.elements.flat();
+  }
+  throw new Error(`unhandled value ${value}`);
 }
 
 /** @returns the scalar (element) type of the given Type */
@@ -770,6 +849,10 @@ export class Scalar {
     };
     if (isFinite(this.value)) {
       switch (this.type.kind) {
+        case 'abstract-float':
+          return `${withPoint(this.value)}`;
+        case 'f64':
+          return `${withPoint(this.value)}`;
         case 'f32':
           return `${withPoint(this.value)}f`;
         case 'f16':
@@ -815,6 +898,11 @@ export class Scalar {
   }
 }
 
+/** Create an AbstractFloat from a numeric value, a JS `number`. */
+export function abstractFloat(value) {
+  const arr = new Float64Array([value]);
+  return new Scalar(TypeAbstractFloat, arr[0], arr);
+}
 /** Create an f64 from a numeric value, a JS `number`. */
 export function f64(value) {
   const arr = new Float64Array([value]);
@@ -920,28 +1008,100 @@ export const True = bool(true);
 /** A 'false' literal value */
 export const False = bool(false);
 
+// Encoding to u32s, instead of BigInt, for serialization
+export function reinterpretF64AsU32s(f64) {
+  const array = new Float64Array(1);
+  array[0] = f64;
+  const u32s = new Uint32Array(array.buffer);
+  return [u32s[0], u32s[1]];
+}
+
+// De-encoding from u32s, instead of BigInt, for serialization
+export function reinterpretU32sAsF64(u32s) {
+  const array = new Uint32Array(2);
+  array[0] = u32s[0];
+  array[1] = u32s[1];
+  return new Float64Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the u32 interpretation
+ * of the bits of a number assumed to be an f32 value.
+ */
 export function reinterpretF32AsU32(f32) {
   const array = new Float32Array(1);
   array[0] = f32;
   return new Uint32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the i32 interpretation
+ * of the bits of a number assumed to be an f32 value.
+ */
+export function reinterpretF32AsI32(f32) {
+  const array = new Float32Array(1);
+  array[0] = f32;
+  return new Int32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f32 interpretation
+ * of the bits of a number assumed to be an u32 value.
+ */
 export function reinterpretU32AsF32(u32) {
   const array = new Uint32Array(1);
   array[0] = u32;
   return new Float32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the i32 interpretation
+ * of the bits of a number assumed to be an u32 value.
+ */
 export function reinterpretU32AsI32(u32) {
   const array = new Uint32Array(1);
   array[0] = u32;
   return new Int32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the u32 interpretation
+ * of the bits of a number assumed to be an i32 value.
+ */
 export function reinterpretI32AsU32(i32) {
   const array = new Int32Array(1);
   array[0] = i32;
   return new Uint32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f32 interpretation
+ * of the bits of a number assumed to be an i32 value.
+ */
+export function reinterpretI32AsF32(i32) {
+  const array = new Int32Array(1);
+  array[0] = i32;
+  return new Float32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the u16 interpretation
+ * of the bits of a number assumed to be an f16 value.
+ */
+export function reinterpretF16AsU16(f16) {
+  const array = new Float16Array(1);
+  array[0] = f16;
+  return new Uint16Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f16 interpretation
+ * of the bits of a number assumed to be an u16 value.
+ */
+export function reinterpretU16AsF16(u16) {
+  const array = new Uint16Array(1);
+  array[0] = u16;
+  return new Float16Array(array.buffer)[0];
 }
 
 /**
@@ -1168,6 +1328,8 @@ export function serializeValue(v) {
 export function deserializeValue(data) {
   const buildScalar = v => {
     switch (data.type) {
+      case 'abstract-float':
+        return abstractFloat(v);
       case 'f64':
         return f64(v);
       case 'i32':
@@ -1207,9 +1369,109 @@ export function deserializeValue(data) {
 
 /** @returns if the Value is a float scalar type */
 export function isFloatValue(v) {
-  if (v instanceof Scalar) {
-    const s = v;
-    return s.type.kind === 'f64' || s.type.kind === 'f32' || s.type.kind === 'f16';
+  return isFloatType(v.type);
+}
+
+/**
+ * @returns if @p ty is an abstract numeric type.
+ * @note this does not consider composite types.
+ * Use elementType() if you want to test the element type.
+ */
+export function isAbstractType(ty) {
+  if (ty instanceof ScalarType) {
+    return ty.kind === 'abstract-float';
   }
   return false;
+}
+
+/**
+ * @returns if @p ty is a floating point type.
+ * @note this does not consider composite types.
+ * Use elementType() if you want to test the element type.
+ */
+export function isFloatType(ty) {
+  if (ty instanceof ScalarType) {
+    return (
+      ty.kind === 'abstract-float' || ty.kind === 'f64' || ty.kind === 'f32' || ty.kind === 'f16'
+    );
+  }
+  return false;
+}
+
+/// All floating-point scalar types
+export const kAllFloatScalars = [TypeAbstractFloat, TypeF32, TypeF16];
+
+/// All floating-point vec2 types
+export const kAllFloatVector2 = [
+  TypeVec(2, TypeAbstractFloat),
+  TypeVec(2, TypeF32),
+  TypeVec(2, TypeF16),
+];
+
+/// All floating-point vec3 types
+export const kAllFloatVector3 = [
+  TypeVec(3, TypeAbstractFloat),
+  TypeVec(3, TypeF32),
+  TypeVec(3, TypeF16),
+];
+
+/// All floating-point vec4 types
+export const kAllFloatVector4 = [
+  TypeVec(4, TypeAbstractFloat),
+  TypeVec(4, TypeF32),
+  TypeVec(4, TypeF16),
+];
+
+/// All floating-point vector types
+export const kAllFloatVectors = [...kAllFloatVector2, ...kAllFloatVector3, ...kAllFloatVector4];
+
+/// All floating-point scalar and vector types
+export const kAllFloatScalarsAndVectors = [...kAllFloatScalars, ...kAllFloatVectors];
+
+/// All integer scalar and vector types
+export const kAllIntegerScalarsAndVectors = [
+  TypeI32,
+  TypeVec(2, TypeI32),
+  TypeVec(3, TypeI32),
+  TypeVec(4, TypeI32),
+  TypeU32,
+  TypeVec(2, TypeU32),
+  TypeVec(3, TypeU32),
+  TypeVec(4, TypeU32),
+];
+
+/// All signed integer scalar and vector types
+export const kAllSignedIntegerScalarsAndVectors = [
+  TypeI32,
+  TypeVec(2, TypeI32),
+  TypeVec(3, TypeI32),
+  TypeVec(4, TypeI32),
+];
+
+/// All unsigned integer scalar and vector types
+export const kAllUnsignedIntegerScalarsAndVectors = [
+  TypeU32,
+  TypeVec(2, TypeU32),
+  TypeVec(3, TypeU32),
+  TypeVec(4, TypeU32),
+];
+
+/// All floating-point and integer scalar and vector types
+export const kAllFloatAndIntegerScalarsAndVectors = [
+  ...kAllFloatScalarsAndVectors,
+  ...kAllIntegerScalarsAndVectors,
+];
+
+/// All floating-point and signed integer scalar and vector types
+export const kAllFloatAndSignedIntegerScalarsAndVectors = [
+  ...kAllFloatScalarsAndVectors,
+  ...kAllSignedIntegerScalarsAndVectors,
+];
+
+/** @returns the inner element type of the given type */
+export function elementType(t) {
+  if (t instanceof ScalarType) {
+    return t;
+  }
+  return t.elementType;
 }

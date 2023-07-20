@@ -12,12 +12,12 @@ import {
 } from '../../../../../common/framework/resources.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { raceWithRejectOnTimeout, unreachable, assert } from '../../../../../common/util/util.js';
+import { kTextureUsages } from '../../../../capability_info.js';
 import {
   kTextureFormatInfo,
   kTextureFormats,
-  kTextureUsages,
   kValidTextureFormatsForCopyE2T,
-} from '../../../../capability_info.js';
+} from '../../../../format_info.js';
 import { kResourceStates } from '../../../../gpu_test.js';
 import {
   createCanvas,
@@ -660,6 +660,7 @@ g.test('destination_texture,format')
   )
   .beforeAllSubcases(t => {
     const { format } = t.params;
+    t.skipIfTextureFormatNotSupported(format);
     t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
   })
   .fn(async t => {

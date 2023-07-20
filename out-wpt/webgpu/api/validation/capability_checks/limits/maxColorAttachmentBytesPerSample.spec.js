@@ -1,7 +1,8 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { assert } from '../../../../../common/util/util.js';
-import { kTextureSampleCounts, kTextureFormatInfo } from '../../../../capability_info.js';
+import { kTextureSampleCounts } from '../../../../capability_info.js';
+import { kTextureFormatInfo } from '../../../../format_info.js';
 import { align } from '../../../../util/math.js';
 
 import { kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
@@ -15,12 +16,9 @@ function getAttachments(interleaveFormat, testValue) {
   const targets = [];
 
   const addTexture = format => {
-    const { renderTargetPixelByteCost, renderTargetComponentAlignment } = kTextureFormatInfo[
-      format
-    ];
-
+    const info = kTextureFormatInfo[format];
     const newBytesPerSample =
-      align(bytesPerSample, renderTargetComponentAlignment) + renderTargetPixelByteCost;
+      align(bytesPerSample, info.colorRender.alignment) + info.colorRender.byteCost;
     if (newBytesPerSample > testValue) {
       return false;
     }
@@ -52,17 +50,12 @@ function getDescription(testValue, actualLimit, sampleCount, targets) {
       let offset = 0;
       return targets
         .map(({ format }) => {
-          const { renderTargetPixelByteCost, renderTargetComponentAlignment } = kTextureFormatInfo[
-            format
-          ];
-
-          offset = align(offset, renderTargetComponentAlignment);
-          const s = `//   ${format.padEnd(11)} (offset: ${offset
-            .toString()
-            .padStart(
-              2
-            )}, align: ${renderTargetComponentAlignment}, size: ${renderTargetPixelByteCost})`;
-          offset += renderTargetPixelByteCost;
+          const info = kTextureFormatInfo[format];
+          offset = align(offset, info.colorRender.alignment);
+          const s = `//   ${format.padEnd(11)} (offset: ${offset.toString().padStart(2)}, align: ${
+            info.colorRender.alignment
+          }, size: ${info.colorRender.byteCost})`;
+          offset += info.colorRender.byteCost;
           return s;
         })
         .join('\n    ');
@@ -125,7 +118,6 @@ function createTextures(t, targets) {
 
 const kExtraLimits = {
   maxColorAttachments: 'adapterLimit',
-  maxFragmentCombinedOutputResources: 'adapterLimit',
 };
 
 const limit = 'maxColorAttachmentBytesPerSample';
@@ -158,10 +150,7 @@ g.test('createRenderPipeline,at_over')
         }
         const { pipelineDescriptor, code } = result;
         const numTargets = pipelineDescriptor.fragment.targets.length;
-        if (
-          numTargets > device.limits.maxColorAttachments ||
-          numTargets > device.limits.maxFragmentCombinedOutputResources
-        ) {
+        if (numTargets > device.limits.maxColorAttachments) {
           return;
         }
 
@@ -185,10 +174,7 @@ g.test('beginRenderPass,at_over')
       testValueName,
       async ({ device, testValue, actualLimit, shouldError }) => {
         const targets = getAttachments(interleaveFormat, testValue);
-        if (
-          targets.length > device.limits.maxColorAttachments ||
-          targets.length > device.limits.maxFragmentCombinedOutputResources
-        ) {
+        if (targets.length > device.limits.maxColorAttachments) {
           return;
         }
 
@@ -230,10 +216,7 @@ g.test('createRenderBundle,at_over')
       testValueName,
       async ({ device, testValue, actualLimit, shouldError }) => {
         const targets = getAttachments(interleaveFormat, testValue);
-        if (
-          targets.length > device.limits.maxColorAttachments ||
-          targets.length > device.limits.maxFragmentCombinedOutputResources
-        ) {
+        if (targets.length > device.limits.maxColorAttachments) {
           return;
         }
 

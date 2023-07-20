@@ -4,16 +4,15 @@ Validation for attachment compatibility between render passes, bundles, and pipe
 
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { range } from '../../../../common/util/util.js';
+import { kTextureSampleCounts, kMaxColorAttachments } from '../../../capability_info.js';
 import {
   kRegularTextureFormats,
   kSizedDepthStencilFormats,
   kUnsizedDepthStencilFormats,
-  kTextureSampleCounts,
-  kMaxColorAttachments,
   kTextureFormatInfo,
-  getFeaturesForFormats,
   filterFormatsByFeature,
-} from '../../../capability_info.js';
+  getFeaturesForFormats,
+} from '../../../format_info.js';
 import { ValidationTest } from '../validation_test.js';
 
 const kColorAttachmentCounts = range(kMaxColorAttachments, i => i + 1);
@@ -164,10 +163,9 @@ class F extends ValidationTest {
 
 export const g = makeTestGroup(F);
 
-const kColorAttachmentFormats = kRegularTextureFormats.filter(format => {
-  const info = kTextureFormatInfo[format];
-  return info.color && info.renderable;
-});
+const kColorAttachmentFormats = kRegularTextureFormats.filter(
+  format => !!kTextureFormatInfo[format].colorRender
+);
 
 g.test('render_pass_and_bundle,color_format')
   .desc('Test that color attachment formats in render passes and bundles must match.')
@@ -178,6 +176,9 @@ g.test('render_pass_and_bundle,color_format')
   )
   .fn(t => {
     const { passFormat, bundleFormat } = t.params;
+
+    t.skipIfTextureFormatNotSupported(passFormat, bundleFormat);
+
     const bundleEncoder = t.device.createRenderBundleEncoder({
       colorFormats: [bundleFormat],
     });
@@ -362,6 +363,9 @@ Test that color attachment formats in render passes or bundles match the pipelin
   )
   .fn(t => {
     const { encoderType, encoderFormat, pipelineFormat } = t.params;
+
+    t.skipIfTextureFormatNotSupported(encoderFormat, pipelineFormat);
+
     const pipeline = t.createRenderPipeline([{ format: pipelineFormat, writeMask: 0 }]);
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {

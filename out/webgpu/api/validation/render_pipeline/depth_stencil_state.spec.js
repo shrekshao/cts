@@ -4,13 +4,8 @@
 This test dedicatedly tests validation of GPUDepthStencilState of createRenderPipeline.
 `;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { unreachable } from '../../../../common/util/util.js';
-import {
-kTextureFormats,
-kTextureFormatInfo,
-kDepthStencilFormats,
-kCompareFunctions,
-kStencilOperations } from
-'../../../capability_info.js';
+import { kCompareFunctions, kStencilOperations } from '../../../capability_info.js';
+import { kTextureFormats, kTextureFormatInfo, kDepthStencilFormats } from '../../../format_info.js';
 import { getFragmentShaderCodeWithOutput } from '../../../util/shader.js';
 
 import { CreateRenderPipelineValidationTest } from './common.js';
@@ -23,6 +18,7 @@ params((u) => u.combine('isAsync', [false, true]).combine('format', kTextureForm
 beforeAllSubcases((t) => {
   const { format } = t.params;
   const info = kTextureFormatInfo[format];
+  t.skipIfTextureFormatNotSupported(format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -33,7 +29,7 @@ fn((t) => {
     depthStencil: { format, depthWriteEnabled: false, depthCompare: 'always' }
   });
 
-  t.doCreateRenderPipelineTest(isAsync, info.depth || info.stencil, descriptor);
+  t.doCreateRenderPipelineTest(isAsync, !!info.depth || !!info.stencil, descriptor);
 });
 
 g.test('depth_test').
@@ -60,7 +56,7 @@ fn((t) => {
   });
 
   const depthTestEnabled = depthCompare !== undefined && depthCompare !== 'always';
-  t.doCreateRenderPipelineTest(isAsync, !depthTestEnabled || info.depth, descriptor);
+  t.doCreateRenderPipelineTest(isAsync, !depthTestEnabled || !!info.depth, descriptor);
 });
 
 g.test('depth_write').
@@ -85,7 +81,7 @@ fn((t) => {
   const descriptor = t.getDescriptor({
     depthStencil: { format, depthWriteEnabled, depthCompare: 'always' }
   });
-  t.doCreateRenderPipelineTest(isAsync, !depthWriteEnabled || info.depth, descriptor);
+  t.doCreateRenderPipelineTest(isAsync, !depthWriteEnabled || !!info.depth, descriptor);
 });
 
 g.test('depth_write,frag_depth').
@@ -115,7 +111,7 @@ fn((t) => {
 
   });
 
-  const hasDepth = format ? kTextureFormatInfo[format].depth : false;
+  const hasDepth = format ? !!kTextureFormatInfo[format].depth : false;
   t.doCreateRenderPipelineTest(isAsync, hasDepth, descriptor);
 });
 
@@ -161,7 +157,7 @@ fn((t) => {
   }
 
   const stencilTestEnabled = compare !== undefined && compare !== 'always';
-  t.doCreateRenderPipelineTest(isAsync, !stencilTestEnabled || info.stencil, descriptor);
+  t.doCreateRenderPipelineTest(isAsync, !stencilTestEnabled || !!info.stencil, descriptor);
 });
 
 g.test('stencil_write').
@@ -222,6 +218,6 @@ fn((t) => {
   const descriptor = t.getDescriptor({ depthStencil });
 
   const stencilWriteEnabled = op !== undefined && op !== 'keep';
-  t.doCreateRenderPipelineTest(isAsync, !stencilWriteEnabled || info.stencil, descriptor);
+  t.doCreateRenderPipelineTest(isAsync, !stencilWriteEnabled || !!info.stencil, descriptor);
 });
 //# sourceMappingURL=depth_stencil_state.spec.js.map

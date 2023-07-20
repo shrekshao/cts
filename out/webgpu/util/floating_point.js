@@ -5,28 +5,44 @@
 import { anyOf } from './compare.js';
 import { kValue } from './constants.js';
 import {
+f16,
 f32,
+f64,
+isFloatType,
+reinterpretF16AsU16,
 reinterpretF32AsU32,
+reinterpretF64AsU32s,
+reinterpretU16AsF16,
 reinterpretU32AsF32,
+reinterpretU32sAsF64,
 
-u32,
-Vector } from
+
+toMatrix,
+toVector,
+u32 } from
 './conversion.js';
 import {
 calculatePermutations,
 cartesianProduct,
 correctlyRoundedF16,
 correctlyRoundedF32,
+correctlyRoundedF64,
 flatten2DArray,
 
+flushSubnormalNumberF16,
 flushSubnormalNumberF32,
+flushSubnormalNumberF64,
 isFiniteF16,
 isFiniteF32,
 isSubnormalNumberF16,
 isSubnormalNumberF32,
+isSubnormalNumberF64,
 map2DArray,
+oneULPF16,
 oneULPF32,
+oneULPF64,
 quantizeToF32,
+quantizeToF16,
 unflatten2DArray } from
 './math.js';
 
@@ -108,7 +124,7 @@ export class FPInterval {
     return this.begin === this.end;
   }
 
-  /** @returns if this interval only contains f32 finite values */
+  /** @returns if this interval only contains finite values */
   isFinite() {
     return this.traits().isFinite(this.begin) && this.traits().isFinite(this.end);
   }
@@ -123,39 +139,83 @@ export class FPInterval {
  * SerializedFPInterval holds the serialized form of a FPInterval.
  * This form can be safely encoded to JSON.
  */
-// When non-f32 traits are defined this will need to be extended to include a
-// kind entry to differentiate.
+
+
+
+
+
+
 
 
 /** serializeFPInterval() converts a FPInterval to a SerializedFPInterval */
 export function serializeFPInterval(i) {
-  // When non-f32 traits are defined this will need to be re-written to pull
-  // the kind from i to get the traits, and embed the kind in the serialized
-  // form
-  return i === FP['f32'].constants().anyInterval ?
-  'any' :
-  { begin: reinterpretF32AsU32(i.begin), end: reinterpretF32AsU32(i.end) };
+  const traits = FP[i.kind];
+  switch (i.kind) {
+    case 'abstract':{
+        if (i === traits.constants().anyInterval) {
+          return { kind: 'abstract', any: true };
+        } else {
+          return {
+            kind: 'abstract',
+            any: false,
+            begin: reinterpretF64AsU32s(i.begin),
+            end: reinterpretF64AsU32s(i.end)
+          };
+        }
+      }
+    case 'f32':{
+        if (i === traits.constants().anyInterval) {
+          return { kind: 'f32', any: true };
+        } else {
+          return {
+            kind: 'f32',
+            any: false,
+            begin: reinterpretF32AsU32(i.begin),
+            end: reinterpretF32AsU32(i.end)
+          };
+        }
+      }
+    case 'f16':{
+        if (i === traits.constants().anyInterval) {
+          return { kind: 'f16', any: true };
+        } else {
+          return {
+            kind: 'f16',
+            any: false,
+            begin: reinterpretF16AsU16(i.begin),
+            end: reinterpretF16AsU16(i.end)
+          };
+        }
+      }}
+
+  unreachable(`Unable to serialize FPInterval ${i}`);
 }
 
 /** serializeFPInterval() converts a SerializedFPInterval to a FPInterval */
 export function deserializeFPInterval(data) {
-  // When non-f32 traits are defined this will need to be re-written to pull
-  // the kind from serialized data to get the traits and perform unpacking
-  const traits = FP['f32'];
-  return data === 'any' ?
-  traits.constants().anyInterval :
-  traits.toInterval([reinterpretU32AsF32(data.begin), reinterpretU32AsF32(data.end)]);
+  const kind = data.kind;
+  const traits = FP[kind];
+  if (data.any) {
+    return traits.constants().anyInterval;
+  }
+  switch (kind) {
+    case 'abstract':{
+        return traits.toInterval([reinterpretU32sAsF64(data.begin), reinterpretU32sAsF64(data.end)]);
+      }
+    case 'f32':{
+        return traits.toInterval([reinterpretU32AsF32(data.begin), reinterpretU32AsF32(data.end)]);
+      }
+    case 'f16':{
+        return traits.toInterval([reinterpretU16AsF16(data.begin), reinterpretU16AsF16(data.end)]);
+      }}
+
+  unreachable(`Unable to deserialize data ${data}`);
 }
 
 /**
  * Representation of a vec2/3/4 of floating point intervals as an array of
  * FPIntervals.
  */
-
-
-
-
-
 
 
 
@@ -561,8 +621,8 @@ function addFlushedIfNeededF16(values) {
 
 
 
-
-class FPTraits {
+/** Abstract base class for all floating-point traits */
+export class FPTraits {
 
   constructor(k) {
     this.kind = k;
@@ -585,6 +645,30 @@ class FPTraits {
     }
 
     return new FPInterval(this.kind, n, n);
+  }
+
+  /**
+   * Makes a param that can be turned into an interval
+   */
+  toParam(n) {
+    return {
+      kind: this.kind,
+      interval: n
+    };
+  }
+
+  /**
+   * Converts p into an FPInterval if it is an FPIntervalPAram
+   */
+  fromParam(
+  p)
+  {
+    const param = p;
+    if (param.interval && param.kind) {
+      assert(param.kind === this.kind);
+      return this.toInterval(param.interval);
+    }
+    return p;
   }
 
   /**
@@ -767,6 +851,151 @@ class FPTraits {
 
       return impl(x, y);
     };
+  }
+
+  /** Stub for scalar to interval generator */
+  unimplementedScalarToInterval(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for scalar pair to interval generator */
+  unimplementedScalarPairToInterval(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for scalar triple to interval generator */
+  unimplementedScalarTripleToInterval(
+  _x,
+  _y,
+  _z)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for scalar to vector generator */
+  unimplementedScalarToVector(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector to interval generator */
+  unimplementedVectorToInterval(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector pair to interval generator */
+  unimplementedVectorPairToInterval(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector to vector generator */
+  unimplementedVectorToVector(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector pair to vector generator */
+  unimplementedVectorPairToVector(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector-scalar to vector generator */
+  unimplementedVectorScalarToVector(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for scalar-vector to vector generator */
+  unimplementedScalarVectorToVector(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for matrix to interval generator */
+  unimplementedMatrixToInterval(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for matrix to matix generator */
+  unimplementedMatrixToMatrix(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for matrix pair to matrix generator */
+  unimplementedMatrixPairToMatrix(_x, _y) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for matrix-scalar to matrix generator  */
+  unimplementedMatrixScalarToMatrix(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for scalar-matrix to matrix generator  */
+  unimplementedScalarMatrixToMatrix(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for matrix-vector to vector generator  */
+  unimplementedMatrixVectorToVector(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for vector-matrix to vector generator  */
+  unimplementedVectorMatrixToVector(
+  _x,
+  _y)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for distance generator */
+  unimplementedDistance(_x, _y) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for faceForward */
+  unimplementedFaceForward(
+  _x,
+  _y,
+  _z)
+  {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for length generator */
+  unimplementedLength(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for modf generator */
+  unimplementedModf(_x) {
+    unreachable(`Not yet implemented for ${this.kind}`);
+  }
+
+  /** Stub for refract generator */
+  unimplementedRefract(_i, _s, _r) {
+    unreachable(`Not yet implemented for ${this.kind}`);
   }
 
   // Utilities - Defined by subclass
@@ -953,7 +1182,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [new Vector(param.map(this.scalarBuilder))],
+      input: [toVector(param, this.scalarBuilder)],
       expected: anyOf(...intervals)
     };
   }
@@ -1000,10 +1229,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [
-      new Vector(param0.map(this.scalarBuilder)),
-      new Vector(param1.map(this.scalarBuilder))],
-
+      input: [toVector(param0, this.scalarBuilder), toVector(param1, this.scalarBuilder)],
       expected: anyOf(...intervals)
     };
   }
@@ -1049,7 +1275,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [new Vector(param.map(this.scalarBuilder))],
+      input: [toVector(param, this.scalarBuilder)],
       expected: anyOf(...vectors)
     };
   }
@@ -1097,7 +1323,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [this.scalarBuilder(scalar), new Vector(vector.map(this.scalarBuilder))],
+      input: [this.scalarBuilder(scalar), toVector(vector, this.scalarBuilder)],
       expected: anyOf(...results)
     };
   }
@@ -1150,7 +1376,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [new Vector(vector.map(this.scalarBuilder)), this.scalarBuilder(scalar)],
+      input: [toVector(vector, this.scalarBuilder), this.scalarBuilder(scalar)],
       expected: anyOf(...results)
     };
   }
@@ -1202,10 +1428,7 @@ class FPTraits {
       return undefined;
     }
     return {
-      input: [
-      new Vector(param0.map(this.scalarBuilder)),
-      new Vector(param1.map(this.scalarBuilder))],
-
+      input: [toVector(param0, this.scalarBuilder), toVector(param1, this.scalarBuilder)],
       expected: anyOf(...vectors)
     };
   }
@@ -1231,6 +1454,362 @@ class FPTraits {
       }
       return cases;
     }, new Array());
+  }
+
+  /**
+   * @returns a Case for the param and an array of interval generators provided
+   * @param param the param to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating an acceptance interval
+   */
+  makeMatrixToScalarCase(
+  param,
+  filter,
+  ...ops)
+  {
+    param = map2DArray(param, this.quantize);
+
+    const results = ops.map((o) => o(param));
+    if (filter === 'finite' && results.some((e) => !e.isFinite())) {
+      return undefined;
+    }
+
+    return {
+      input: [toMatrix(param, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param params array of inputs to try
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating an acceptance interval
+   */
+  generateMatrixToScalarCases(
+  params,
+  filter,
+  ...ops)
+  {
+    return params.reduce((cases, e) => {
+      const c = this.makeMatrixToScalarCase(e, filter, ...ops);
+      if (c !== undefined) {
+        cases.push(c);
+      }
+      return cases;
+    }, new Array());
+  }
+
+  /**
+   * @returns a Case for the param and an array of interval generators provided
+   * @param param the param to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  makeMatrixToMatrixCase(
+  param,
+  filter,
+  ...ops)
+  {
+    param = map2DArray(param, this.quantize);
+
+    const results = ops.map((o) => o(param));
+    if (filter === 'finite' && results.some((m) => m.some((c) => c.some((r) => !r.isFinite())))) {
+      return undefined;
+    }
+
+    return {
+      input: [toMatrix(param, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param params array of inputs to try
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  generateMatrixToMatrixCases(
+  params,
+  filter,
+  ...ops)
+  {
+    return params.reduce((cases, e) => {
+      const c = this.makeMatrixToMatrixCase(e, filter, ...ops);
+      if (c !== undefined) {
+        cases.push(c);
+      }
+      return cases;
+    }, new Array());
+  }
+
+  /**
+   * @returns a Case for the params and matrix of intervals generator provided
+   * @param param0 the first param to pass in
+   * @param param1 the second param to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  makeMatrixPairToMatrixCase(
+  param0,
+  param1,
+  filter,
+  ...ops)
+  {
+    param0 = map2DArray(param0, this.quantize);
+    param1 = map2DArray(param1, this.quantize);
+
+    const results = ops.map((o) => o(param0, param1));
+    if (filter === 'finite' && results.some((m) => m.some((c) => c.some((r) => !r.isFinite())))) {
+      return undefined;
+    }
+    return {
+      input: [toMatrix(param0, this.scalarBuilder), toMatrix(param1, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param param0s array of inputs to try for the first input
+   * @param param1s array of inputs to try for the second input
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  generateMatrixPairToMatrixCases(
+  param0s,
+  param1s,
+  filter,
+  ...ops)
+  {
+    return cartesianProduct(param0s, param1s).reduce((cases, e) => {
+      const c = this.makeMatrixPairToMatrixCase(e[0], e[1], filter, ...ops);
+      if (c !== undefined) {
+        cases.push(c);
+      }
+      return cases;
+    }, new Array());
+  }
+
+  /**
+   * @returns a Case for the params and matrix of intervals generator provided
+   * @param mat the matrix param to pass in
+   * @param scalar the scalar to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  makeMatrixScalarToMatrixCase(
+  mat,
+  scalar,
+  filter,
+  ...ops)
+  {
+    mat = map2DArray(mat, this.quantize);
+    scalar = this.quantize(scalar);
+
+    const results = ops.map((o) => o(mat, scalar));
+    if (filter === 'finite' && results.some((m) => m.some((c) => c.some((r) => !r.isFinite())))) {
+      return undefined;
+    }
+    return {
+      input: [toMatrix(mat, this.scalarBuilder), this.scalarBuilder(scalar)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param mats array of inputs to try for the matrix input
+   * @param scalars array of inputs to try for the scalar input
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  generateMatrixScalarToMatrixCases(
+  mats,
+  scalars,
+  filter,
+  ...ops)
+  {
+    // Cannot use cartesianProduct here, due to heterogeneous types
+    const cases = [];
+    mats.forEach((mat) => {
+      scalars.forEach((scalar) => {
+        const c = this.makeMatrixScalarToMatrixCase(mat, scalar, filter, ...ops);
+        if (c !== undefined) {
+          cases.push(c);
+        }
+      });
+    });
+    return cases;
+  }
+
+  /**
+   * @returns a Case for the params and matrix of intervals generator provided
+   * @param scalar the scalar to pass in
+   * @param mat the matrix param to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  makeScalarMatrixToMatrixCase(
+  scalar,
+  mat,
+  filter,
+  ...ops)
+  {
+    scalar = this.quantize(scalar);
+    mat = map2DArray(mat, this.quantize);
+
+    const results = ops.map((o) => o(scalar, mat));
+    if (filter === 'finite' && results.some((m) => m.some((c) => c.some((r) => !r.isFinite())))) {
+      return undefined;
+    }
+    return {
+      input: [this.scalarBuilder(scalar), toMatrix(mat, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param scalars array of inputs to try for the scalar input
+   * @param mats array of inputs to try for the matrix input
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a matrix of acceptance
+   *            intervals
+   */
+  generateScalarMatrixToMatrixCases(
+  scalars,
+  mats,
+  filter,
+  ...ops)
+  {
+    // Cannot use cartesianProduct here, due to heterogeneous types
+    const cases = [];
+    mats.forEach((mat) => {
+      scalars.forEach((scalar) => {
+        const c = this.makeScalarMatrixToMatrixCase(scalar, mat, filter, ...ops);
+        if (c !== undefined) {
+          cases.push(c);
+        }
+      });
+    });
+    return cases;
+  }
+
+  /**
+   * @returns a Case for the params and the vector of intervals generator provided
+   * @param mat the matrix param to pass in
+   * @param vec the vector to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a vector of acceptance
+   *            intervals
+   */
+  makeMatrixVectorToVectorCase(
+  mat,
+  vec,
+  filter,
+  ...ops)
+  {
+    mat = map2DArray(mat, this.quantize);
+    vec = vec.map(this.quantize);
+
+    const results = ops.map((o) => o(mat, vec));
+    if (filter === 'finite' && results.some((v) => v.some((e) => !e.isFinite()))) {
+      return undefined;
+    }
+    return {
+      input: [toMatrix(mat, this.scalarBuilder), toVector(vec, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param mats array of inputs to try for the matrix input
+   * @param vecs array of inputs to try for the vector input
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a vector of acceptance
+   *            intervals
+   */
+  generateMatrixVectorToVectorCases(
+  mats,
+  vecs,
+  filter,
+  ...ops)
+  {
+    // Cannot use cartesianProduct here, due to heterogeneous types
+    const cases = [];
+    mats.forEach((mat) => {
+      vecs.forEach((vec) => {
+        const c = this.makeMatrixVectorToVectorCase(mat, vec, filter, ...ops);
+        if (c !== undefined) {
+          cases.push(c);
+        }
+      });
+    });
+    return cases;
+  }
+
+  /**
+   * @returns a Case for the params and the vector of intervals generator provided
+   * @param vec the vector to pass in
+   * @param mat the matrix param to pass in
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a vector of acceptance
+   *            intervals
+   */
+  makeVectorMatrixToVectorCase(
+  vec,
+  mat,
+  filter,
+  ...ops)
+  {
+    vec = vec.map(this.quantize);
+    mat = map2DArray(mat, this.quantize);
+
+    const results = ops.map((o) => o(vec, mat));
+    if (filter === 'finite' && results.some((v) => v.some((e) => !e.isFinite()))) {
+      return undefined;
+    }
+    return {
+      input: [toVector(vec, this.scalarBuilder), toMatrix(mat, this.scalarBuilder)],
+      expected: anyOf(...results)
+    };
+  }
+
+  /**
+   * @returns an array of Cases for operations over a range of inputs
+   * @param vecs array of inputs to try for the vector input
+   * @param mats array of inputs to try for the matrix input
+   * @param filter what interval filtering to apply
+   * @param ops callbacks that implement generating a vector of acceptance
+   *            intervals
+   */
+  generateVectorMatrixToVectorCases(
+  vecs,
+  mats,
+  filter,
+  ...ops)
+  {
+    // Cannot use cartesianProduct here, due to heterogeneous types
+    const cases = [];
+    vecs.forEach((vec) => {
+      mats.forEach((mat) => {
+        const c = this.makeVectorMatrixToVectorCase(vec, mat, filter, ...ops);
+        if (c !== undefined) {
+          cases.push(c);
+        }
+      });
+    });
+    return cases;
   }
 
   // Framework - Intervals
@@ -1831,6 +2410,44 @@ class FPTraits {
 
   // API - Fundamental Error Intervals
 
+  /** @returns a ScalarToIntervalOp for [n - error_range, n + error_range] */
+  AbsoluteErrorIntervalOp(error_range) {
+    const op = {
+      impl: (_) => {
+        return this.constants().anyInterval;
+      }
+    };
+
+    assert(
+    error_range >= 0,
+    `absoluteErrorInterval must have non-negative error range, get ${error_range}`);
+
+
+    if (this.isFinite(error_range)) {
+      op.impl = (n) => {
+        assert(!Number.isNaN(n), `absolute error not defined for NaN`);
+        // Return anyInterval if given center n is infinity.
+        if (!this.isFinite(n)) {
+          return this.constants().anyInterval;
+        }
+        return this.toInterval([n - error_range, n + error_range]);
+      };
+    }
+
+    return op;
+  }
+
+  absoluteErrorIntervalImpl(n, error_range) {
+    error_range = Math.abs(error_range);
+    return this.runScalarToIntervalOp(
+    this.toInterval(n),
+    this.AbsoluteErrorIntervalOp(error_range));
+
+  }
+
+  /** @returns an interval of the absolute error around the point */
+
+
   /**
    * Defines a ScalarToIntervalOp for an interval of the correctly rounded values
    * around the point
@@ -1842,42 +2459,19 @@ class FPTraits {
     }
   };
 
-  /** @returns an interval of the correctly rounded values around the point */
-  correctlyRoundedInterval(n) {
+  correctlyRoundedIntervalImpl(n) {
     return this.runScalarToIntervalOp(this.toInterval(n), this.CorrectlyRoundedIntervalOp);
   }
 
+  /** @returns an interval of the correctly rounded values around the point */
+
+
+  correctlyRoundedMatrixImpl(m) {
+    return this.toMatrix(map2DArray(m, this.correctlyRoundedInterval));
+  }
+
   /** @returns a matrix of correctly rounded intervals for the provided matrix */
-  correctlyRoundedMatrix(m) {
-    return this.toMatrix(map2DArray(m, this.correctlyRoundedInterval.bind(this)));
-  }
 
-  /** @returns a ScalarToIntervalOp for [n - error_range, n + error_range] */
-  AbsoluteErrorIntervalOp(error_range) {
-    const op = {
-      impl: (_) => {
-        return this.constants().anyInterval;
-      }
-    };
-
-    if (isFiniteF32(error_range)) {
-      op.impl = (n) => {
-        assert(!Number.isNaN(n), `absolute error not defined for NaN`);
-        return this.toInterval([n - error_range, n + error_range]);
-      };
-    }
-
-    return op;
-  }
-
-  /** @returns an interval of the absolute error around the point */
-  absoluteErrorInterval(n, error_range) {
-    error_range = Math.abs(error_range);
-    return this.runScalarToIntervalOp(
-    this.toInterval(n),
-    this.AbsoluteErrorIntervalOp(error_range));
-
-  }
 
   /** @returns a ScalarToIntervalOp for [n - numULP * ULP(n), n + numULP * ULP(n)] */
   ULPIntervalOp(numULP) {
@@ -1905,11 +2499,13 @@ class FPTraits {
     return op;
   }
 
-  /** @returns an interval of N * ULP around the point */
-  ulpInterval(n, numULP) {
+  ulpIntervalImpl(n, numULP) {
     numULP = Math.abs(numULP);
     return this.runScalarToIntervalOp(this.toInterval(n), this.ULPIntervalOp(numULP));
   }
+
+  /** @returns an interval of N * ULP around the point */
+
 
   // API - Acceptance Intervals
 
@@ -1926,6 +2522,7 @@ class FPTraits {
   /** Calculate an acceptance interval for abs(n) */
 
 
+  // This op should be implemented diffferently for f32 and f16.
   AcosIntervalOp = {
     impl: this.limitScalarToIntervalDomain(this.toInterval([-1.0, 1.0]), (n) => {
       // acos(n) = atan2(sqrt(1.0 - n * n), n) or a polynomial approximation with absolute error
@@ -1996,13 +2593,13 @@ class FPTraits {
 
   }
 
+  /** Calculate an acceptance interval of x + y, when x and y are both scalars */
 
 
 
 
 
-  /** Calculate an acceptance interval of x + y, when x and y are matrices */
-  additionMatrixInterval(x, y) {
+  additionMatrixMatrixIntervalImpl(x, y) {
     return this.runScalarPairToIntervalOpMatrixComponentWise(
     this.toMatrix(x),
     this.toMatrix(y),
@@ -2010,6 +2607,13 @@ class FPTraits {
 
   }
 
+  /** Calculate an acceptance interval of x + y, when x and y are matrices */
+
+
+
+
+
+  // This op should be implemented diffferently for f32 and f16.
   AsinIntervalOp = {
     impl: this.limitScalarToIntervalDomain(this.toInterval([-1.0, 1.0]), (n) => {
       // asin(n) = atan2(n, sqrt(1.0 - n * n)) or a polynomial approximation with absolute error
@@ -2059,6 +2663,7 @@ class FPTraits {
   /** Calculate an acceptance interval of atan(x) */
 
 
+  // This op should be implemented diffferently for f32 and f16.
   Atan2IntervalOp = {
     impl: this.limitScalarPairToIntervalDomain(
     {
@@ -2213,7 +2818,9 @@ class FPTraits {
     impl: this.limitScalarToIntervalDomain(
     this.constants().negPiToPiInterval,
     (n) => {
-      return this.absoluteErrorInterval(Math.cos(n), 2 ** -11);
+      assert(this.kind === 'f32' || this.kind === 'f16');
+      const abs_error = this.kind === 'f32' ? 2 ** -11 : 2 ** -7;
+      return this.absoluteErrorInterval(Math.cos(n), abs_error);
     })
 
   };
@@ -2407,8 +3014,6 @@ class FPTraits {
   }
 
   /**
-   * Calculate an acceptance interval for determinant(x)
-   *
    * This code calculates 3x3 and 4x4 determinants using the textbook co-factor
    * method, using the first column for the co-factor selection.
    *
@@ -2426,7 +3031,7 @@ class FPTraits {
    * Thus, CTS testing and the spec definition of accuracy is restricted to the
    * space that the simple implementation is valid.
    */
-  determinantInterval(x) {
+  determinantIntervalImpl(x) {
     const dim = x.length;
     assert(
     x[0].length === dim && (dim === 2 || dim === 3 || dim === 4),
@@ -2444,6 +3049,9 @@ class FPTraits {
     "determinantInterval called on x, where which has an unexpected dimension of '${dim}'");
 
   }
+
+  /** Calculate an acceptance interval for determinant(x) */
+
 
   DistanceIntervalScalarOp = {
     impl: (x, y) => {
@@ -2492,33 +3100,44 @@ class FPTraits {
 
 
 
-  DivisionIntervalOp = {
-    impl: this.limitScalarPairToIntervalDomain(
-    {
-      x: [this.toInterval([kValue.f32.negative.min, kValue.f32.positive.max])],
-      y: [this.toInterval([-(2 ** 126), -(2 ** -126)]), this.toInterval([2 ** -126, 2 ** 126])]
-    },
-    (x, y) => {
-      if (y === 0) {
-        return this.constants().anyInterval;
-      }
-      return this.ulpInterval(x / y, 2.5);
-    }),
+  // This op is implemented diffferently for f32 and f16.
+  DivisionIntervalOpBuilder() {
+    assert(this.kind === 'f32' || this.kind === 'f16');
+    const constants = this.constants();
+    const domain_x = [this.toInterval([constants.negative.min, constants.positive.max])];
+    const domain_y =
+    this.kind === 'f32' ?
+    [this.toInterval([-(2 ** 126), -(2 ** -126)]), this.toInterval([2 ** -126, 2 ** 126])] :
+    [this.toInterval([-(2 ** 14), -(2 ** -14)]), this.toInterval([2 ** -14, 2 ** 14])];
+    return {
+      impl: this.limitScalarPairToIntervalDomain(
+      {
+        x: domain_x,
+        y: domain_y
+      },
+      (x, y) => {
+        if (y === 0) {
+          return constants.anyInterval;
+        }
+        return this.ulpInterval(x / y, 2.5);
+      }),
 
-    extrema: (x, y) => {
-      // division has a discontinuity at y = 0.
-      if (y.contains(0)) {
-        y = this.toInterval(0);
+      extrema: (x, y) => {
+        // division has a discontinuity at y = 0.
+        if (y.contains(0)) {
+          y = this.toInterval(0);
+        }
+        return [x, y];
       }
-      return [x, y];
-    }
-  };
+    };
+  }
 
   divisionIntervalImpl(x, y) {
+    assert(this.kind === 'f32' || this.kind === 'f16');
     return this.runScalarPairToIntervalOp(
     this.toInterval(x),
     this.toInterval(y),
-    this.DivisionIntervalOp);
+    this.DivisionIntervalOpBuilder());
 
   }
 
@@ -2591,8 +3210,6 @@ class FPTraits {
 
 
   /**
-   * Calculate the acceptance intervals for faceForward(x, y, z)
-   *
    * faceForward(x, y, z) = select(-x, x, dot(z, y) < 0.0)
    *
    * This builtin selects from two discrete results (delta rounding/flushing),
@@ -2602,7 +3219,11 @@ class FPTraits {
    * Thus, a bespoke implementation is used instead of
    * defining an Op and running that through the framework.
    */
-  faceForwardIntervals(x, y, z) {
+  faceForwardIntervalsImpl(
+  x,
+  y,
+  z)
+  {
     const x_vec = this.toVector(x);
     // Running vector through this.runScalarToIntervalOpComponentWise to make
     // sure that flushing/rounding is handled, since toVector does not perform
@@ -2647,6 +3268,13 @@ class FPTraits {
     return results;
   }
 
+  /** Calculate the acceptance intervals for faceForward(x, y, z) */
+
+
+
+
+
+
   FloorIntervalOp = {
     impl: (n) => {
       return this.correctlyRoundedInterval(Math.floor(n));
@@ -2687,12 +3315,18 @@ class FPTraits {
       // This is how other shading languages operate and allows for a desirable
       // wrap around in graphics programming.
       const result = this.subtractionInterval(n, this.floorInterval(n));
+      assert(
+      // negative.subnormal.min instead of 0, because FTZ can occur
+      // selectively during the calculation
+      this.toInterval([this.constants().negative.subnormal.min, 1.0]).contains(result),
+      `fract(${n}) interval [${result}] unexpectedly extends beyond [~0.0, 1.0]`);
+
       if (result.contains(1)) {
         // Very small negative numbers can lead to catastrophic cancellation,
         // thus calculating a fract of 1.0, which is technically not a
         // fractional part, so some implementations clamp the result to next
         // nearest number.
-        return this.spanIntervals(result, this.toInterval(kValue.f32.positive.less_than_one));
+        return this.spanIntervals(result, this.toInterval(this.constants().positive.less_than_one));
       }
       return result;
     }
@@ -2721,6 +3355,7 @@ class FPTraits {
   /** Calculate an acceptance interval of inverseSqrt(x) */
 
 
+  // This op should be implemented diffferently for f32 and f16.
   LdexpIntervalOp = {
     impl: this.limitScalarPairToIntervalDomain(
     // Implementing SPIR-V's more restrictive domain until
@@ -2818,8 +3453,8 @@ class FPTraits {
 
   MaxIntervalOp = {
     impl: (x, y) => {
-      // If both of he inputs are subnormal, then either of the inputs can be returned
-      if (isSubnormalNumberF32(x) && isSubnormalNumberF32(y)) {
+      // If both of the inputs are subnormal, then either of the inputs can be returned
+      if (this.isSubnormal(x) && this.isSubnormal(y)) {
         return this.correctlyRoundedInterval(
         this.spanIntervals(this.toInterval(x), this.toInterval(y)));
 
@@ -2845,8 +3480,8 @@ class FPTraits {
 
   MinIntervalOp = {
     impl: (x, y) => {
-      // If both of he inputs are subnormal, then either of the inputs can be returned
-      if (isSubnormalNumberF32(x) && isSubnormalNumberF32(y)) {
+      // If both of the inputs are subnormal, then either of the inputs can be returned
+      if (this.isSubnormal(x) && this.isSubnormal(y)) {
         return this.correctlyRoundedInterval(
         this.spanIntervals(this.toInterval(x), this.toInterval(y)));
 
@@ -2916,12 +3551,14 @@ class FPTraits {
 
 
 
-  /** Calculate an acceptance interval of modf(x) */
-  modfInterval(n) {
+  modfIntervalImpl(n) {
     const fract = this.correctlyRoundedInterval(n % 1.0);
     const whole = this.correctlyRoundedInterval(n - n % 1.0);
     return { fract, whole };
   }
+
+  /** Calculate an acceptance interval of modf(x) */
+
 
   MultiplicationInnerOp = {
     impl: (x, y) => {
@@ -2957,8 +3594,7 @@ class FPTraits {
     return this.toVector(v.map((x) => this.multiplicationInterval(x, c)));
   }
 
-  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a scalar */
-  multiplicationMatrixScalarInterval(mat, scalar) {
+  multiplicationMatrixScalarIntervalImpl(mat, scalar) {
     const cols = mat.length;
     const rows = mat[0].length;
     return this.toMatrix(
@@ -2970,13 +3606,23 @@ class FPTraits {
 
   }
 
-  /** Calculate an acceptance interval of x * y, when x is a scalar and y is a matrix */
-  multiplicationScalarMatrixInterval(scalar, mat) {
-    return this.multiplicationMatrixScalarInterval(mat, scalar);
+  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a scalar */
+
+
+
+
+
+  multiplicationScalarMatrixIntervalImpl(scalar, mat) {
+    return this.multiplicationMatrixScalarIntervalImpl(mat, scalar);
   }
 
-  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a matrix */
-  multiplicationMatrixMatrixInterval(
+  /** Calculate an acceptance interval of x * y, when x is a scalar and y is a matrix */
+
+
+
+
+
+  multiplicationMatrixMatrixIntervalImpl(
   mat_x,
   mat_y)
   {
@@ -2998,8 +3644,13 @@ class FPTraits {
     return result;
   }
 
-  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a vector */
-  multiplicationMatrixVectorInterval(x, y) {
+  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a matrix */
+
+
+
+
+
+  multiplicationMatrixVectorIntervalImpl(x, y) {
     const cols = x.length;
     const rows = x[0].length;
     assert(y.length === cols, `'mat${cols}x${rows} * vec${y.length}' is not defined`);
@@ -3007,14 +3658,25 @@ class FPTraits {
     return this.transposeInterval(x).map((e) => this.dotInterval(e, y));
   }
 
-  /** Calculate an acceptance interval of x * y, when x is a vector and y is a matrix */
-  multiplicationVectorMatrixInterval(x, y) {
+  /** Calculate an acceptance interval of x * y, when x is a matrix and y is a vector */
+
+
+
+
+
+  multiplicationVectorMatrixIntervalImpl(x, y) {
     const cols = y.length;
     const rows = y[0].length;
     assert(x.length === rows, `'vec${x.length} * mat${cols}x${rows}' is not defined`);
 
     return y.map((e) => this.dotInterval(x, e));
   }
+
+  /** Calculate an acceptance interval of x * y, when x is a vector and y is a matrix */
+
+
+
+
 
   NegationIntervalOp = {
     impl: (n) => {
@@ -3065,24 +3727,6 @@ class FPTraits {
 
 
 
-  // Once a full implementation of F16Interval exists, the correctlyRounded for
-  // that can potentially be used instead of having a bespoke operation
-  // implementation.
-  QuantizeToF16IntervalOp = {
-    impl: (n) => {
-      const rounded = correctlyRoundedF16(n);
-      const flushed = addFlushedIfNeededF16(rounded);
-      return this.spanIntervals(...flushed.map((f) => this.toInterval(f)));
-    }
-  };
-
-  quantizeToF16IntervalImpl(n) {
-    return this.runScalarToIntervalOp(this.toInterval(n), this.QuantizeToF16IntervalOp);
-  }
-
-  /** Calculate an acceptance interval of quantizeToF16(x) */
-
-
   RadiansIntervalOp = {
     impl: (n) => {
       return this.multiplicationInterval(n, 0.017453292519943295474);
@@ -3129,8 +3773,6 @@ class FPTraits {
 
 
   /**
-   * Calculate acceptance interval vectors of reflect(i, s, r)
-   *
    * refract is a singular function in the sense that it is the only builtin that
    * takes in (FPVector, FPVector, F32) and returns FPVector and is basically
    * defined in terms of other functions.
@@ -3139,7 +3781,7 @@ class FPTraits {
    * own operation type, etc, it instead has a bespoke implementation that is a
    * composition of other builtin functions that use the framework.
    */
-  refractInterval(i, s, r) {
+  refractIntervalImpl(i, s, r) {
     assert(
     i.length === s.length,
     `refract is only defined for vectors with the same number of elements`);
@@ -3174,6 +3816,9 @@ class FPTraits {
     this.SubtractionIntervalOp);
     // (i * r) - (s * t)
   }
+
+  /** Calculate acceptance interval vectors of reflect(i, s, r) */
+
 
   RemainderIntervalOp = {
     impl: (x, y) => {
@@ -3265,7 +3910,9 @@ class FPTraits {
     impl: this.limitScalarToIntervalDomain(
     this.constants().negPiToPiInterval,
     (n) => {
-      return this.absoluteErrorInterval(Math.sin(n), 2 ** -11);
+      assert(this.kind === 'f32' || this.kind === 'f16');
+      const abs_error = this.kind === 'f32' ? 2 ** -11 : 2 ** -7;
+      return this.absoluteErrorInterval(Math.sin(n), abs_error);
     })
 
   };
@@ -3393,14 +4040,19 @@ class FPTraits {
 
 
 
-  /** Calculate an acceptance interval of x - y, when x and y are matrices */
-  subtractionMatrixInterval(x, y) {
+  subtractionMatrixMatrixIntervalImpl(x, y) {
     return this.runScalarPairToIntervalOpMatrixComponentWise(
     this.toMatrix(x),
     this.toMatrix(y),
     this.SubtractionIntervalOp);
 
   }
+
+  /** Calculate an acceptance interval of x - y, when x and y are matrices */
+
+
+
+
 
   TanIntervalOp = {
     impl: (n) => {
@@ -3443,10 +4095,12 @@ class FPTraits {
     }
   };
 
-  /** Calculate an acceptance interval of transpose(m) */
-  transposeInterval(m) {
+  transposeIntervalImpl(m) {
     return this.runMatrixToMatrixOp(this.toMatrix(m), this.TransposeIntervalOp);
   }
+
+  /** Calculate an acceptance interval of transpose(m) */
+
 
   TruncIntervalOp = {
     impl: (n) => {
@@ -3604,6 +4258,12 @@ class F32Traits extends FPTraits {
   oneULP = oneULPF32;
   scalarBuilder = f32;
 
+  // Framework - Fundamental Error Intervals - Overrides
+  absoluteErrorInterval = this.absoluteErrorIntervalImpl.bind(this);
+  correctlyRoundedInterval = this.correctlyRoundedIntervalImpl.bind(this);
+  correctlyRoundedMatrix = this.correctlyRoundedMatrixImpl.bind(this);
+  ulpInterval = this.ulpIntervalImpl.bind(this);
+
   // Framework - API - Overrides
   absInterval = this.absIntervalImpl.bind(this);
   acosInterval = this.acosIntervalImpl.bind(this);
@@ -3611,6 +4271,7 @@ class F32Traits extends FPTraits {
   acoshPrimaryInterval = this.acoshPrimaryIntervalImpl.bind(this);
   acoshIntervals = [this.acoshAlternativeInterval, this.acoshPrimaryInterval];
   additionInterval = this.additionIntervalImpl.bind(this);
+  additionMatrixMatrixInterval = this.additionMatrixMatrixIntervalImpl.bind(this);
   asinInterval = this.asinIntervalImpl.bind(this);
   asinhInterval = this.asinhIntervalImpl.bind(this);
   atanInterval = this.atanIntervalImpl.bind(this);
@@ -3624,11 +4285,13 @@ class F32Traits extends FPTraits {
   coshInterval = this.coshIntervalImpl.bind(this);
   crossInterval = this.crossIntervalImpl.bind(this);
   degreesInterval = this.degreesIntervalImpl.bind(this);
+  determinantInterval = this.determinantIntervalImpl.bind(this);
   distanceInterval = this.distanceIntervalImpl.bind(this);
   divisionInterval = this.divisionIntervalImpl.bind(this);
   dotInterval = this.dotIntervalImpl.bind(this);
   expInterval = this.expIntervalImpl.bind(this);
   exp2Interval = this.exp2IntervalImpl.bind(this);
+  faceForwardIntervals = this.faceForwardIntervalsImpl.bind(this);
   floorInterval = this.floorIntervalImpl.bind(this);
   fmaInterval = this.fmaIntervalImpl.bind(this);
   fractInterval = this.fractIntervalImpl.bind(this);
@@ -3642,13 +4305,29 @@ class F32Traits extends FPTraits {
   mixImpreciseInterval = this.mixImpreciseIntervalImpl.bind(this);
   mixPreciseInterval = this.mixPreciseIntervalImpl.bind(this);
   mixIntervals = [this.mixImpreciseInterval, this.mixPreciseInterval];
+  modfInterval = this.modfIntervalImpl.bind(this);
   multiplicationInterval = this.multiplicationIntervalImpl.bind(this);
+  multiplicationMatrixMatrixInterval = this.multiplicationMatrixMatrixIntervalImpl.bind(
+  this);
+
+  multiplicationMatrixScalarInterval = this.multiplicationMatrixScalarIntervalImpl.bind(
+  this);
+
+  multiplicationScalarMatrixInterval = this.multiplicationScalarMatrixIntervalImpl.bind(
+  this);
+
+  multiplicationMatrixVectorInterval = this.multiplicationMatrixVectorIntervalImpl.bind(
+  this);
+
+  multiplicationVectorMatrixInterval = this.multiplicationVectorMatrixIntervalImpl.bind(
+  this);
+
   negationInterval = this.negationIntervalImpl.bind(this);
   normalizeInterval = this.normalizeIntervalImpl.bind(this);
   powInterval = this.powIntervalImpl.bind(this);
-  quantizeToF16Interval = this.quantizeToF16IntervalImpl.bind(this);
   radiansInterval = this.radiansIntervalImpl.bind(this);
   reflectInterval = this.reflectIntervalImpl.bind(this);
+  refractInterval = this.refractIntervalImpl.bind(this);
   remainderInterval = this.remainderIntervalImpl.bind(this);
   roundInterval = this.roundIntervalImpl.bind(this);
   saturateInterval = this.saturateIntervalImpl.bind(this);
@@ -3659,8 +4338,12 @@ class F32Traits extends FPTraits {
   sqrtInterval = this.sqrtIntervalImpl.bind(this);
   stepInterval = this.stepIntervalImpl.bind(this);
   subtractionInterval = this.subtractionIntervalImpl.bind(this);
+  subtractionMatrixMatrixInterval = this.subtractionMatrixMatrixIntervalImpl.bind(
+  this);
+
   tanInterval = this.tanIntervalImpl.bind(this);
   tanhInterval = this.tanhIntervalImpl.bind(this);
+  transposeInterval = this.transposeIntervalImpl.bind(this);
   truncInterval = this.truncIntervalImpl.bind(this);
 
   // Framework - Cases
@@ -3758,7 +4441,7 @@ class F32Traits extends FPTraits {
     'unpack2x16snormInterval only accepts values on the bounds of u32');
 
     const op = (n) => {
-      return this.maxInterval(this.divisionInterval(n, 32767), -1);
+      return this.ulpInterval(Math.max(n / 32767, -1), 3);
     };
 
     this.unpackDataU32[0] = n;
@@ -3774,7 +4457,7 @@ class F32Traits extends FPTraits {
     'unpack2x16unormInterval only accepts values on the bounds of u32');
 
     const op = (n) => {
-      return this.divisionInterval(n, 65535);
+      return this.ulpInterval(n / 65535, 3);
     };
 
     this.unpackDataU32[0] = n;
@@ -3790,7 +4473,7 @@ class F32Traits extends FPTraits {
     'unpack4x8snormInterval only accepts values on the bounds of u32');
 
     const op = (n) => {
-      return this.maxInterval(this.divisionInterval(n, 127), -1);
+      return this.ulpInterval(Math.max(n / 127, -1), 3);
     };
     this.unpackDataU32[0] = n;
     return [
@@ -3810,7 +4493,7 @@ class F32Traits extends FPTraits {
     'unpack4x8unormInterval only accepts values on the bounds of u32');
 
     const op = (n) => {
-      return this.divisionInterval(n, 255);
+      return this.ulpInterval(n / 255, 3);
     };
 
     this.unpackDataU32[0] = n;
@@ -3824,9 +4507,532 @@ class F32Traits extends FPTraits {
 
   /** Calculate an acceptance interval vector for unpack4x8unorm(x) */
   unpack4x8unormInterval = this.unpack4x8unormIntervalImpl.bind(this);
+
+  QuantizeToF16IntervalOp = {
+    impl: (n) => {
+      const rounded = correctlyRoundedF16(n);
+      const flushed = addFlushedIfNeededF16(rounded);
+      return this.spanIntervals(...flushed.map((f) => this.toInterval(f)));
+    }
+  };
+
+  quantizeToF16IntervalImpl(n) {
+    return this.runScalarToIntervalOp(this.toInterval(n), this.QuantizeToF16IntervalOp);
+  }
+
+  /** Calculate an acceptance interval of quantizeToF16(x) */
+  quantizeToF16Interval = this.quantizeToF16IntervalImpl.bind(this);
+}
+
+// Pre-defined values that get used multiple times in _constants' initializers. Cannot use FPTraits members, since this
+// executes before they are defined.
+const kAbstractAnyInterval = new FPInterval(
+'abstract',
+Number.NEGATIVE_INFINITY,
+Number.POSITIVE_INFINITY);
+
+const kAbstractZeroInterval = new FPInterval('abstract', 0);
+
+// This is implementation is incomplete
+class FPAbstractTraits extends FPTraits {
+  static _constants = {
+    positive: {
+      min: kValue.f64.positive.min,
+      max: kValue.f64.positive.max,
+      infinity: kValue.f64.infinity.positive,
+      nearest_max: kValue.f64.positive.nearest_max,
+      less_than_one: kValue.f64.positive.less_than_one,
+      subnormal: {
+        min: kValue.f64.subnormal.positive.min,
+        max: kValue.f64.subnormal.positive.max
+      },
+      pi: {
+        whole: kValue.f64.positive.pi.whole,
+        three_quarters: kValue.f64.positive.pi.three_quarters,
+        half: kValue.f64.positive.pi.half,
+        third: kValue.f64.positive.pi.third,
+        quarter: kValue.f64.positive.pi.quarter,
+        sixth: kValue.f64.positive.pi.sixth
+      },
+      e: kValue.f64.positive.e
+    },
+    negative: {
+      min: kValue.f64.negative.min,
+      max: kValue.f64.negative.max,
+      infinity: kValue.f64.infinity.negative,
+      nearest_min: kValue.f64.negative.nearest_min,
+      less_than_one: kValue.f64.negative.less_than_one,
+      subnormal: {
+        min: kValue.f64.subnormal.negative.min,
+        max: kValue.f64.subnormal.negative.max
+      },
+      pi: {
+        whole: kValue.f64.negative.pi.whole,
+        three_quarters: kValue.f64.negative.pi.three_quarters,
+        half: kValue.f64.negative.pi.half,
+        third: kValue.f64.negative.pi.third,
+        quarter: kValue.f64.negative.pi.quarter,
+        sixth: kValue.f64.negative.pi.sixth
+      }
+    },
+    anyInterval: kAbstractAnyInterval,
+    zeroInterval: kAbstractZeroInterval,
+    // Have to use the constants.ts values here, because values defined in the
+    // initializer cannot be referenced in the initializer
+    negPiToPiInterval: new FPInterval(
+    'abstract',
+    kValue.f64.negative.pi.whole,
+    kValue.f64.positive.pi.whole),
+
+    greaterThanZeroInterval: new FPInterval(
+    'abstract',
+    kValue.f64.subnormal.positive.min,
+    kValue.f64.positive.max),
+
+    zeroVector: {
+      2: [kAbstractZeroInterval, kAbstractZeroInterval],
+      3: [kAbstractZeroInterval, kAbstractZeroInterval, kAbstractZeroInterval],
+      4: [
+      kAbstractZeroInterval,
+      kAbstractZeroInterval,
+      kAbstractZeroInterval,
+      kAbstractZeroInterval]
+
+    },
+    anyVector: {
+      2: [kAbstractAnyInterval, kAbstractAnyInterval],
+      3: [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+      4: [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]
+    },
+    anyMatrix: {
+      2: {
+        2: [
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        3: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        4: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]]
+
+      },
+      3: {
+        2: [
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        3: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        4: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]]
+
+      },
+      4: {
+        2: [
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        3: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]],
+
+        4: [
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval],
+        [kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval, kAbstractAnyInterval]]
+
+      }
+    }
+  };
+
+  constructor() {
+    super('abstract');
+  }
+
+  constants() {
+    return FPAbstractTraits._constants;
+  }
+
+  // Utilities - Overrides
+  // number is represented as a f64, so any number value is already quantized to f64
+  quantize = (n) => {
+    return n;
+  };
+  correctlyRounded = correctlyRoundedF64;
+  isFinite = Number.isFinite;
+  isSubnormal = isSubnormalNumberF64;
+  flushSubnormal = flushSubnormalNumberF64;
+  oneULP = oneULPF64;
+  scalarBuilder = f64;
+
+  // Framework - Fundamental Error Intervals - Overrides
+  absoluteErrorInterval = this.absoluteErrorIntervalImpl.bind(this);
+  correctlyRoundedInterval = this.correctlyRoundedIntervalImpl.bind(this);
+  correctlyRoundedMatrix = this.correctlyRoundedMatrixImpl.bind(this);
+  ulpInterval = this.ulpIntervalImpl.bind(this);
+
+  // Framework - API - Overrides
+  absInterval = this.unimplementedScalarToInterval.bind(this);
+  acosInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshAlternativeInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshPrimaryInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshIntervals = [this.acoshAlternativeInterval, this.acoshPrimaryInterval];
+  additionInterval = this.unimplementedScalarPairToInterval.bind(this);
+  additionMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(this);
+  asinInterval = this.unimplementedScalarToInterval.bind(this);
+  asinhInterval = this.unimplementedScalarToInterval.bind(this);
+  atanInterval = this.unimplementedScalarToInterval.bind(this);
+  atan2Interval = this.unimplementedScalarPairToInterval.bind(this);
+  atanhInterval = this.unimplementedScalarToInterval.bind(this);
+  ceilInterval = this.unimplementedScalarToInterval.bind(this);
+  clampMedianInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  clampMinMaxInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  clampIntervals = [this.clampMedianInterval, this.clampMinMaxInterval];
+  cosInterval = this.unimplementedScalarToInterval.bind(this);
+  coshInterval = this.unimplementedScalarToInterval.bind(this);
+  crossInterval = this.unimplementedVectorPairToVector.bind(this);
+  degreesInterval = this.unimplementedScalarToInterval.bind(this);
+  determinantInterval = this.unimplementedMatrixToInterval.bind(this);
+  distanceInterval = this.unimplementedDistance.bind(this);
+  divisionInterval = this.unimplementedScalarPairToInterval.bind(this);
+  dotInterval = this.unimplementedVectorPairToInterval.bind(this);
+  expInterval = this.unimplementedScalarToInterval.bind(this);
+  exp2Interval = this.unimplementedScalarToInterval.bind(this);
+  faceForwardIntervals = this.unimplementedFaceForward.bind(this);
+  floorInterval = this.unimplementedScalarToInterval.bind(this);
+  fmaInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  fractInterval = this.unimplementedScalarToInterval.bind(this);
+  inverseSqrtInterval = this.unimplementedScalarToInterval.bind(this);
+  ldexpInterval = this.unimplementedScalarPairToInterval.bind(this);
+  lengthInterval = this.unimplementedLength.bind(this);
+  logInterval = this.unimplementedScalarToInterval.bind(this);
+  log2Interval = this.unimplementedScalarToInterval.bind(this);
+  maxInterval = this.unimplementedScalarPairToInterval.bind(this);
+  minInterval = this.unimplementedScalarPairToInterval.bind(this);
+  mixImpreciseInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  mixPreciseInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  mixIntervals = [this.mixImpreciseInterval, this.mixPreciseInterval];
+  modfInterval = this.unimplementedModf.bind(this);
+  multiplicationInterval = this.unimplementedScalarPairToInterval.bind(this);
+  multiplicationMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(
+  this);
+
+  multiplicationMatrixScalarInterval = this.unimplementedMatrixScalarToMatrix.bind(
+  this);
+
+  multiplicationScalarMatrixInterval = this.unimplementedScalarMatrixToMatrix.bind(
+  this);
+
+  multiplicationMatrixVectorInterval = this.unimplementedMatrixVectorToVector.bind(
+  this);
+
+  multiplicationVectorMatrixInterval = this.unimplementedVectorMatrixToVector.bind(
+  this);
+
+  negationInterval = this.unimplementedScalarToInterval.bind(this);
+  normalizeInterval = this.unimplementedVectorToVector.bind(this);
+  powInterval = this.unimplementedScalarPairToInterval.bind(this);
+  quantizeToF16Interval = this.unimplementedScalarToInterval.bind(this);
+  radiansInterval = this.unimplementedScalarToInterval.bind(this);
+  reflectInterval = this.unimplementedVectorPairToVector.bind(this);
+  refractInterval = this.unimplementedRefract.bind(this);
+  remainderInterval = this.unimplementedScalarPairToInterval.bind(this);
+  roundInterval = this.unimplementedScalarToInterval.bind(this);
+  saturateInterval = this.unimplementedScalarToInterval.bind(this);
+  signInterval = this.unimplementedScalarToInterval.bind(this);
+  sinInterval = this.unimplementedScalarToInterval.bind(this);
+  sinhInterval = this.unimplementedScalarToInterval.bind(this);
+  smoothStepInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  sqrtInterval = this.unimplementedScalarToInterval.bind(this);
+  stepInterval = this.unimplementedScalarPairToInterval.bind(this);
+  subtractionInterval = this.unimplementedScalarPairToInterval.bind(this);
+  subtractionMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(this);
+  tanInterval = this.unimplementedScalarToInterval.bind(this);
+  tanhInterval = this.unimplementedScalarToInterval.bind(this);
+  transposeInterval = this.unimplementedMatrixToMatrix.bind(this);
+  truncInterval = this.unimplementedScalarToInterval.bind(this);
+}
+
+// Pre-defined values that get used multiple times in _constants' initializers. Cannot use FPTraits members, since this
+// executes before they are defined.
+const kF16AnyInterval = new FPInterval('f16', Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY);
+const kF16ZeroInterval = new FPInterval('f16', 0);
+
+// This is implementation is incomplete
+class F16Traits extends FPTraits {
+  static _constants = {
+    positive: {
+      min: kValue.f16.positive.min,
+      max: kValue.f16.positive.max,
+      infinity: kValue.f16.infinity.positive,
+      nearest_max: kValue.f16.positive.nearest_max,
+      less_than_one: kValue.f16.positive.less_than_one,
+      subnormal: {
+        min: kValue.f16.subnormal.positive.min,
+        max: kValue.f16.subnormal.positive.max
+      },
+      pi: {
+        whole: kValue.f16.positive.pi.whole,
+        three_quarters: kValue.f16.positive.pi.three_quarters,
+        half: kValue.f16.positive.pi.half,
+        third: kValue.f16.positive.pi.third,
+        quarter: kValue.f16.positive.pi.quarter,
+        sixth: kValue.f16.positive.pi.sixth
+      },
+      e: kValue.f16.positive.e
+    },
+    negative: {
+      min: kValue.f16.negative.min,
+      max: kValue.f16.negative.max,
+      infinity: kValue.f16.infinity.negative,
+      nearest_min: kValue.f16.negative.nearest_min,
+      less_than_one: kValue.f16.negative.less_than_one,
+      subnormal: {
+        min: kValue.f16.subnormal.negative.min,
+        max: kValue.f16.subnormal.negative.max
+      },
+      pi: {
+        whole: kValue.f16.negative.pi.whole,
+        three_quarters: kValue.f16.negative.pi.three_quarters,
+        half: kValue.f16.negative.pi.half,
+        third: kValue.f16.negative.pi.third,
+        quarter: kValue.f16.negative.pi.quarter,
+        sixth: kValue.f16.negative.pi.sixth
+      }
+    },
+    anyInterval: kF16AnyInterval,
+    zeroInterval: kF16ZeroInterval,
+    // Have to use the constants.ts values here, because values defined in the
+    // initializer cannot be referenced in the initializer
+    negPiToPiInterval: new FPInterval(
+    'f16',
+    kValue.f16.negative.pi.whole,
+    kValue.f16.positive.pi.whole),
+
+    greaterThanZeroInterval: new FPInterval(
+    'f16',
+    kValue.f16.subnormal.positive.min,
+    kValue.f16.positive.max),
+
+    zeroVector: {
+      2: [kF16ZeroInterval, kF16ZeroInterval],
+      3: [kF16ZeroInterval, kF16ZeroInterval, kF16ZeroInterval],
+      4: [kF16ZeroInterval, kF16ZeroInterval, kF16ZeroInterval, kF16ZeroInterval]
+    },
+    anyVector: {
+      2: [kF16AnyInterval, kF16AnyInterval],
+      3: [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+      4: [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]
+    },
+    anyMatrix: {
+      2: {
+        2: [
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval]],
+
+        3: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]],
+
+        4: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]]
+
+      },
+      3: {
+        2: [
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval]],
+
+        3: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]],
+
+        4: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]]
+
+      },
+      4: {
+        2: [
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval]],
+
+        3: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]],
+
+        4: [
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval],
+        [kF16AnyInterval, kF16AnyInterval, kF16AnyInterval, kF16AnyInterval]]
+
+      }
+    }
+  };
+
+  constructor() {
+    super('f16');
+  }
+
+  constants() {
+    return F16Traits._constants;
+  }
+
+  // Utilities - Overrides
+  quantize = quantizeToF16;
+  correctlyRounded = correctlyRoundedF16;
+  isFinite = isFiniteF16;
+  isSubnormal = isSubnormalNumberF16;
+  flushSubnormal = flushSubnormalNumberF16;
+  oneULP = oneULPF16;
+  scalarBuilder = f16;
+
+  // Framework - Fundamental Error Intervals - Overrides
+  absoluteErrorInterval = this.absoluteErrorIntervalImpl.bind(this);
+  correctlyRoundedInterval = this.correctlyRoundedIntervalImpl.bind(this);
+  correctlyRoundedMatrix = this.correctlyRoundedMatrixImpl.bind(this);
+  ulpInterval = this.ulpIntervalImpl.bind(this);
+
+  // Framework - API - Overrides
+  absInterval = this.absIntervalImpl.bind(this);
+  acosInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshAlternativeInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshPrimaryInterval = this.unimplementedScalarToInterval.bind(this);
+  acoshIntervals = [this.acoshAlternativeInterval, this.acoshPrimaryInterval];
+  additionInterval = this.additionIntervalImpl.bind(this);
+  additionMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(this);
+  asinInterval = this.unimplementedScalarToInterval.bind(this);
+  asinhInterval = this.unimplementedScalarToInterval.bind(this);
+  atanInterval = this.unimplementedScalarToInterval.bind(this);
+  atan2Interval = this.unimplementedScalarPairToInterval.bind(this);
+  atanhInterval = this.unimplementedScalarToInterval.bind(this);
+  ceilInterval = this.ceilIntervalImpl.bind(this);
+  clampMedianInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  clampMinMaxInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  clampIntervals = [this.clampMedianInterval, this.clampMinMaxInterval];
+  cosInterval = this.cosIntervalImpl.bind(this);
+  coshInterval = this.unimplementedScalarToInterval.bind(this);
+  crossInterval = this.unimplementedVectorPairToVector.bind(this);
+  degreesInterval = this.unimplementedScalarToInterval.bind(this);
+  determinantInterval = this.unimplementedMatrixToInterval.bind(this);
+  distanceInterval = this.unimplementedDistance.bind(this);
+  divisionInterval = this.divisionIntervalImpl.bind(this);
+  dotInterval = this.unimplementedVectorPairToInterval.bind(this);
+  expInterval = this.unimplementedScalarToInterval.bind(this);
+  exp2Interval = this.unimplementedScalarToInterval.bind(this);
+  faceForwardIntervals = this.unimplementedFaceForward.bind(this);
+  floorInterval = this.floorIntervalImpl.bind(this);
+  fmaInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  fractInterval = this.unimplementedScalarToInterval.bind(this);
+  inverseSqrtInterval = this.inverseSqrtIntervalImpl.bind(this);
+  ldexpInterval = this.unimplementedScalarPairToInterval.bind(this);
+  lengthInterval = this.unimplementedLength.bind(this);
+  logInterval = this.unimplementedScalarToInterval.bind(this);
+  log2Interval = this.unimplementedScalarToInterval.bind(this);
+  maxInterval = this.unimplementedScalarPairToInterval.bind(this);
+  minInterval = this.unimplementedScalarPairToInterval.bind(this);
+  mixImpreciseInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  mixPreciseInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  mixIntervals = [this.mixImpreciseInterval, this.mixPreciseInterval];
+  modfInterval = this.unimplementedModf.bind(this);
+  multiplicationInterval = this.multiplicationIntervalImpl.bind(this);
+  multiplicationMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(
+  this);
+
+  multiplicationMatrixScalarInterval = this.unimplementedMatrixScalarToMatrix.bind(
+  this);
+
+  multiplicationScalarMatrixInterval = this.unimplementedScalarMatrixToMatrix.bind(
+  this);
+
+  multiplicationMatrixVectorInterval = this.unimplementedMatrixVectorToVector.bind(
+  this);
+
+  multiplicationVectorMatrixInterval = this.unimplementedVectorMatrixToVector.bind(
+  this);
+
+  negationInterval = this.unimplementedScalarToInterval.bind(this);
+  normalizeInterval = this.unimplementedVectorToVector.bind(this);
+  powInterval = this.unimplementedScalarPairToInterval.bind(this);
+  quantizeToF16Interval = this.quantizeToF16IntervalNotAvailable.bind(this);
+  radiansInterval = this.unimplementedScalarToInterval.bind(this);
+  reflectInterval = this.unimplementedVectorPairToVector.bind(this);
+  refractInterval = this.unimplementedRefract.bind(this);
+  remainderInterval = this.unimplementedScalarPairToInterval.bind(this);
+  roundInterval = this.roundIntervalImpl.bind(this);
+  saturateInterval = this.unimplementedScalarToInterval.bind(this);
+  signInterval = this.unimplementedScalarToInterval.bind(this);
+  sinInterval = this.sinIntervalImpl.bind(this);
+  sinhInterval = this.unimplementedScalarToInterval.bind(this);
+  smoothStepInterval = this.unimplementedScalarTripleToInterval.bind(this);
+  sqrtInterval = this.sqrtIntervalImpl.bind(this);
+  stepInterval = this.unimplementedScalarPairToInterval.bind(this);
+  subtractionInterval = this.subtractionIntervalImpl.bind(this);
+  subtractionMatrixMatrixInterval = this.unimplementedMatrixPairToMatrix.bind(this);
+  tanInterval = this.unimplementedScalarToInterval.bind(this);
+  tanhInterval = this.unimplementedScalarToInterval.bind(this);
+  transposeInterval = this.unimplementedMatrixToMatrix.bind(this);
+  truncInterval = this.unimplementedScalarToInterval.bind(this);
+
+  /** quantizeToF16 has no f16 overload. */
+  quantizeToF16IntervalNotAvailable(n) {
+    unreachable("quantizeToF16 don't have f16 overload.");
+    return kF16AnyInterval;
+  }
 }
 
 export const FP = {
-  f32: new F32Traits()
+  f32: new F32Traits(),
+  f16: new F16Traits(),
+  abstract: new FPAbstractTraits()
 };
+
+/** @returns the floating-point traits for @p type */
+export function fpTraitsFor(type) {
+  switch (type.kind) {
+    case 'abstract-float':
+      return FP.abstract;
+    case 'f32':
+      return FP.f32;
+    case 'f16':
+      return FP.f16;
+    default:
+      unreachable(`unsupported type: ${type}`);}
+
+}
+
+/** @returns true if the value @p value is representable with @p type */
+export function isRepresentable(value, type) {
+  if (!Number.isFinite(value)) {
+    return false;
+  }
+  if (isFloatType(type)) {
+    const constants = fpTraitsFor(type).constants();
+    return value >= constants.negative.min && value <= constants.positive.max;
+  }
+  assert(false, `isRepresentable() is not yet implemented for type ${type}`);
+}
 //# sourceMappingURL=floating_point.js.map

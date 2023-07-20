@@ -10,7 +10,7 @@ import {
 import {
   anyOf,
   deserializeComparator,
-  SerializedComparator,
+  serializeComparator,
   skipUndefined,
 } from '../webgpu/util/compare.js';
 import { kValue } from '../webgpu/util/constants.js';
@@ -31,8 +31,7 @@ import {
   vec3,
   vec4,
 } from '../webgpu/util/conversion.js';
-import { toF32Interval } from '../webgpu/util/f32_interval.js';
-import { deserializeFPInterval, serializeFPInterval } from '../webgpu/util/floating_point.js';
+import { deserializeFPInterval, FP, serializeFPInterval } from '../webgpu/util/floating_point.js';
 
 import { UnitTest } from './unit_test.js';
 
@@ -216,30 +215,64 @@ g.test('value').fn(t => {
   }
 });
 
-g.test('f32_interval').fn(t => {
+g.test('fpinterval_f32').fn(t => {
   for (const interval of [
-    toF32Interval(0),
-    toF32Interval(-0),
-    toF32Interval(1),
-    toF32Interval(-1),
-    toF32Interval(0.5),
-    toF32Interval(-0.5),
-    toF32Interval(kValue.f32.positive.max),
-    toF32Interval(kValue.f32.positive.min),
-    toF32Interval(kValue.f32.subnormal.positive.max),
-    toF32Interval(kValue.f32.subnormal.positive.min),
-    toF32Interval(kValue.f32.subnormal.negative.max),
-    toF32Interval(kValue.f32.subnormal.negative.min),
-    toF32Interval(kValue.f32.infinity.positive),
-    toF32Interval(kValue.f32.infinity.negative),
+    FP.f32.toInterval(0),
+    FP.f32.toInterval(-0),
+    FP.f32.toInterval(1),
+    FP.f32.toInterval(-1),
+    FP.f32.toInterval(0.5),
+    FP.f32.toInterval(-0.5),
+    FP.f32.toInterval(kValue.f32.positive.max),
+    FP.f32.toInterval(kValue.f32.positive.min),
+    FP.f32.toInterval(kValue.f32.subnormal.positive.max),
+    FP.f32.toInterval(kValue.f32.subnormal.positive.min),
+    FP.f32.toInterval(kValue.f32.subnormal.negative.max),
+    FP.f32.toInterval(kValue.f32.subnormal.negative.min),
+    FP.f32.toInterval(kValue.f32.infinity.positive),
+    FP.f32.toInterval(kValue.f32.infinity.negative),
 
-    toF32Interval([-0, 0]),
-    toF32Interval([-1, 1]),
-    toF32Interval([-0.5, 0.5]),
-    toF32Interval([kValue.f32.positive.min, kValue.f32.positive.max]),
-    toF32Interval([kValue.f32.subnormal.positive.min, kValue.f32.subnormal.positive.max]),
-    toF32Interval([kValue.f32.subnormal.negative.min, kValue.f32.subnormal.negative.max]),
-    toF32Interval([kValue.f32.infinity.negative, kValue.f32.infinity.positive]),
+    FP.f32.toInterval([-0, 0]),
+    FP.f32.toInterval([-1, 1]),
+    FP.f32.toInterval([-0.5, 0.5]),
+    FP.f32.toInterval([kValue.f32.positive.min, kValue.f32.positive.max]),
+    FP.f32.toInterval([kValue.f32.subnormal.positive.min, kValue.f32.subnormal.positive.max]),
+    FP.f32.toInterval([kValue.f32.subnormal.negative.min, kValue.f32.subnormal.negative.max]),
+    FP.f32.toInterval([kValue.f32.infinity.negative, kValue.f32.infinity.positive]),
+  ]) {
+    const serialized = serializeFPInterval(interval);
+    const deserialized = deserializeFPInterval(serialized);
+    t.expect(
+      objectEquals(interval, deserialized),
+      `interval ${interval} -> serialize -> deserialize -> ${deserialized}`
+    );
+  }
+});
+
+g.test('fpinterval_abstract').fn(t => {
+  for (const interval of [
+    FP.abstract.toInterval(0),
+    FP.abstract.toInterval(-0),
+    FP.abstract.toInterval(1),
+    FP.abstract.toInterval(-1),
+    FP.abstract.toInterval(0.5),
+    FP.abstract.toInterval(-0.5),
+    FP.abstract.toInterval(kValue.f64.positive.max),
+    FP.abstract.toInterval(kValue.f64.positive.min),
+    FP.abstract.toInterval(kValue.f64.subnormal.positive.max),
+    FP.abstract.toInterval(kValue.f64.subnormal.positive.min),
+    FP.abstract.toInterval(kValue.f64.subnormal.negative.max),
+    FP.abstract.toInterval(kValue.f64.subnormal.negative.min),
+    FP.abstract.toInterval(kValue.f64.infinity.positive),
+    FP.abstract.toInterval(kValue.f64.infinity.negative),
+
+    FP.abstract.toInterval([-0, 0]),
+    FP.abstract.toInterval([-1, 1]),
+    FP.abstract.toInterval([-0.5, 0.5]),
+    FP.abstract.toInterval([kValue.f64.positive.min, kValue.f64.positive.max]),
+    FP.abstract.toInterval([kValue.f64.subnormal.positive.min, kValue.f64.subnormal.positive.max]),
+    FP.abstract.toInterval([kValue.f64.subnormal.negative.min, kValue.f64.subnormal.negative.max]),
+    FP.abstract.toInterval([kValue.f64.infinity.negative, kValue.f64.infinity.positive]),
   ]) {
     const serialized = serializeFPInterval(interval);
     const deserialized = deserializeFPInterval(serialized);
@@ -256,10 +289,10 @@ g.test('expression_expectation').fn(t => {
     f32(123),
     vec2(f32(1), f32(2)),
     // Interval
-    toF32Interval([-0.5, 0.5]),
-    toF32Interval([kValue.f32.positive.min, kValue.f32.positive.max]),
+    FP.f32.toInterval([-0.5, 0.5]),
+    FP.f32.toInterval([kValue.f32.positive.min, kValue.f32.positive.max]),
     // Intervals
-    [toF32Interval([-8.0, 0.5]), toF32Interval([2.0, 4.0])],
+    [FP.f32.toInterval([-8.0, 0.5]), FP.f32.toInterval([2.0, 4.0])],
   ]) {
     const serialized = serializeExpectation(expectation);
     const deserialized = deserializeExpectation(serialized);
@@ -289,11 +322,11 @@ g.test('anyOf').fn(t => {
         testCases: [f32(0), f32(10), f32(122), f32(123), f32(124), f32(200)],
       },
     ]) {
-      const serialized = c.comparator as SerializedComparator;
+      const serialized = serializeComparator(c.comparator);
       const deserialized = deserializeComparator(serialized);
       for (const val of c.testCases) {
-        const got = deserialized(val);
-        const expect = c.comparator(val);
+        const got = deserialized.compare(val);
+        const expect = c.comparator.compare(val);
         t.expect(
           got.matched === expect.matched,
           `comparator(${val}): got: ${expect.matched}, expect: ${got.matched}`
@@ -315,11 +348,11 @@ g.test('skipUndefined').fn(t => {
         testCases: [f32(0), f32(10), f32(122), f32(123), f32(124), f32(200)],
       },
     ]) {
-      const serialized = c.comparator as SerializedComparator;
+      const serialized = serializeComparator(c.comparator);
       const deserialized = deserializeComparator(serialized);
       for (const val of c.testCases) {
-        const got = deserialized(val);
-        const expect = c.comparator(val);
+        const got = deserialized.compare(val);
+        const expect = c.comparator.compare(val);
         t.expect(
           got.matched === expect.matched,
           `comparator(${val}): got: ${expect.matched}, expect: ${got.matched}`

@@ -11,20 +11,19 @@ allBindingEntries,
 bindingTypeInfo,
 bufferBindingEntries,
 bufferBindingTypeInfo,
-kAllTextureFormats,
 kBindableResources,
 kBufferBindingTypes,
 kBufferUsages,
 kCompareFunctions,
 kLimitInfo,
 kSamplerBindingTypes,
-kTextureFormatInfo,
 kTextureUsages,
 kTextureViewDimensions,
 sampledAndStorageBindingEntries,
 texBindingTypeInfo } from
 '../../capability_info.js';
 import { GPUConst } from '../../constants.js';
+import { kAllTextureFormats, kTextureFormatInfo } from '../../format_info.js';
 import { kResourceStates } from '../../gpu_test.js';
 import { getTextureDimensionFromView } from '../../util/texture/base.js';
 
@@ -36,7 +35,7 @@ function clone(descriptor) {
 
 export const g = makeTestGroup(ValidationTest);
 
-const kStorageTextureFormats = kAllTextureFormats.filter((f) => kTextureFormatInfo[f].storage);
+const kStorageTextureFormats = kAllTextureFormats.filter((f) => kTextureFormatInfo[f].color?.storage);
 
 g.test('binding_count_mismatch').
 desc('Test that the number of entries must match the number of entries in the BindGroupLayout.').
@@ -313,6 +312,8 @@ fn((t) => {
     usage,
     dimension: getTextureDimensionFromView(dimension)
   });
+
+  t.skipIfTextureViewDimensionNotSupported(viewDimension, dimension);
 
   const shouldError = viewDimension !== dimension;
   const textureView = texture.createView({ dimension });

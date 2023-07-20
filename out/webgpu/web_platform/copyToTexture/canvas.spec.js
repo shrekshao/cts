@@ -4,12 +4,12 @@
 copyToTexture with HTMLCanvasElement and OffscreenCanvas sources.
 `;import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { skipTestCase } from '../../../common/util/util.js';
+import { kCanvasAlphaModes } from '../../capability_info.js';
 import {
-kCanvasAlphaModes,
 kTextureFormatInfo,
 kValidTextureFormatsForCopyE2T } from
 
-'../../capability_info.js';
+'../../format_info.js';
 import { CopyToTextureUtils } from '../../util/copy_to_texture.js';
 import { kAllCanvasTypes, createCanvas } from '../../util/create_elements.js';
 
@@ -495,6 +495,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15]).
 combine('height', [1, 2, 4, 15])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn((t) => {
   const { width, height, canvasType, dstAlphaMode } = t.params;
 
@@ -556,6 +559,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15]).
 combine('height', [1, 2, 4, 15])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn((t) => {
   const { width, height, canvasType, contextName, srcPremultiplied, dstAlphaMode } = t.params;
 
@@ -623,6 +629,7 @@ combine('width', [1, 2, 4, 15]).
 combine('height', [1, 2, 4, 15])).
 
 beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
   t.selectMismatchedDeviceOrSkipTestCase(undefined);
 }).
 fn((t) => {
@@ -693,6 +700,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15]).
 combine('height', [1, 2, 4, 15])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn(async (t) => {
   const { width, height, canvasType, dstAlphaMode } = t.params;
 
@@ -766,6 +776,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn((t) => {
   const {
     width,

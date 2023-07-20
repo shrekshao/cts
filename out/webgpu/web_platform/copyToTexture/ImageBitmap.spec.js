@@ -15,7 +15,7 @@ import {
 kTextureFormatInfo,
 kValidTextureFormatsForCopyE2T } from
 
-'../../capability_info.js';
+'../../format_info.js';
 import { CopyToTextureUtils, kCopySubrectInfo } from '../../util/copy_to_texture.js';
 
 import { TexelView } from '../../util/texture/texel_view.js';
@@ -113,6 +113,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn(async (t) => {
   const {
     width,
@@ -227,6 +230,9 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
+beforeAllSubcases((t) => {
+  t.skipIfTextureFormatNotSupported(t.params.dstColorFormat);
+}).
 fn(async (t) => {
   const {
     width,

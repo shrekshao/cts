@@ -4,11 +4,11 @@ Test texture views can reinterpret the format of the original texture.
 
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import {
-  EncodableTextureFormat,
   kRenderableColorTextureFormats,
   kRegularTextureFormats,
   viewCompatible,
-} from '../../../capability_info.js';
+  EncodableTextureFormat,
+} from '../../../format_info.js';
 import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 import { TexelView } from '../../../util/texture/texel_view.js';
 
@@ -103,6 +103,10 @@ g.test('texture_binding')
         ({ format, viewFormat }) => format !== viewFormat && viewCompatible(format, viewFormat)
       )
   )
+  .beforeAllSubcases(t => {
+    const { format, viewFormat } = t.params;
+    t.skipIfTextureFormatNotSupported(format, viewFormat);
+  })
   .fn(t => {
     const { format, viewFormat } = t.params;
 
@@ -200,6 +204,10 @@ in view format and match in base format.`
       )
       .combine('sampleCount', [1, 4])
   )
+  .beforeAllSubcases(t => {
+    const { format, viewFormat } = t.params;
+    t.skipIfTextureFormatNotSupported(format, viewFormat);
+  })
   .fn(t => {
     const { format, viewFormat, sampleCount } = t.params;
 

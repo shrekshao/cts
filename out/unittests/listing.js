@@ -27,11 +27,6 @@ export const listing = [
   },
   {
     "file": [
-      "f32_interval"
-    ]
-  },
-  {
-    "file": [
       "floating_point"
     ]
   },
@@ -93,6 +88,11 @@ export const listing = [
   {
     "file": [
       "test_query"
+    ]
+  },
+  {
+    "file": [
+      "texture_ok"
     ]
   }
 ];

@@ -2,15 +2,14 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `Texture related validation tests for B2T copy and T2B copy and writeTexture.`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/util/util.js';
+import { kTextureDimensions, kTextureUsages } from '../../../capability_info.js';
+import { GPUConst } from '../../../constants.js';
 import {
 kColorTextureFormats,
 kSizedTextureFormats,
-kTextureDimensions,
 kTextureFormatInfo,
-kTextureUsages,
 textureDimensionAndFormatCompatible } from
-'../../../capability_info.js';
-import { GPUConst } from '../../../constants.js';
+'../../../format_info.js';
 import { kResourceStates } from '../../../gpu_test.js';
 import { align } from '../../../util/math.js';
 import { virtualMipSize } from '../../../util/texture/base.js';
@@ -267,6 +266,7 @@ combine('copyHeightModifier', [0, -1])
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -357,6 +357,7 @@ expand('valueToCoordinate', texelBlockAlignmentTestExpanderForValueToCoordinate)
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -420,6 +421,7 @@ expand('valueToCoordinate', texelBlockAlignmentTestExpanderForValueToCoordinate)
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {

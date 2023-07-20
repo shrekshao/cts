@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert, unreachable } from '../../../common/util/util.js';import { kTextureFormatInfo } from '../../capability_info.js';import { align } from '../../util/math.js';
+**/import { assert, unreachable } from '../../../common/util/util.js';import { kTextureFormatInfo } from '../../format_info.js';import { align } from '../../util/math.js';
 import { reifyExtent3D } from '../../util/unions.js';
 
 /**
@@ -87,6 +87,18 @@ level)
         };
       }}
 
+}
+
+/**
+ * Compute the "physical size" of a mip level: the size of the level, rounded up to a
+ * multiple of the texel block size.
+ */
+export function physicalMipSizeFromTexture(
+texture,
+mipLevel)
+{
+  const size = physicalMipSize(texture, texture.format, texture.dimension, mipLevel);
+  return [size.width, size.height, size.depthOrArrayLayers];
 }
 
 /**

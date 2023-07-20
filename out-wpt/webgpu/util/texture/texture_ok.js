@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { assert, ErrorWithExtra, unreachable } from '../../../common/util/util.js';
-import { kTextureFormatInfo } from '../../capability_info.js';
+import { kTextureFormatInfo } from '../../format_info.js';
 import { generatePrettyTable } from '../pretty_diff_tables.js';
 import { reifyExtent3D, reifyOrigin3D } from '../unions.js';
 
@@ -120,6 +120,9 @@ function comparePerComponent(actual, expected, maxDiff) {
     const act = actual[k];
     const exp = expected[k];
     if (exp === undefined) return false;
+    if (Number.isNaN(act) && Number.isNaN(exp)) {
+      return true;
+    }
     return Math.abs(act - exp) <= maxDiff;
   });
 }
@@ -153,7 +156,7 @@ function* fullSubrectCoordinates(subrectOrigin, subrectSize) {
   }
 }
 
-function findFailedPixels(
+export function findFailedPixels(
   format,
   subrectOrigin,
   subrectSize,

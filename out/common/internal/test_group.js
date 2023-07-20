@@ -286,7 +286,12 @@ class TestBuilder {
         assert(this.batchSize === 0 || !('batch__' in params));
 
         // stringifyPublicParams also checks for invalid params values
-        const testcaseString = stringifyPublicParams(params);
+        let testcaseString;
+        try {
+          testcaseString = stringifyPublicParams(params);
+        } catch (e) {
+          throw new Error(`${e}: ${testPathString}`);
+        }
 
         // A (hopefully) unique representation of a params value.
         const testcaseStringUnique = stringifyPublicParamsUniquely(params);
@@ -479,7 +484,7 @@ class RunCaseSpecific {
     const { testHeartbeatCallback, maxSubcasesInFlight } = globalTestConfig;
     try {
       rec.start();
-      const sharedState = this.fixture.MakeSharedState(this.params);
+      const sharedState = this.fixture.MakeSharedState(rec, this.params);
       try {
         await sharedState.init();
         if (this.beforeFn) {

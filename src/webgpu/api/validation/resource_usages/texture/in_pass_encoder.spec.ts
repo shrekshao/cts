@@ -5,12 +5,12 @@ Texture Usages Validation Tests in Render Pass and Compute Pass.
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { pp } from '../../../../../common/util/preprocessor.js';
 import { assert } from '../../../../../common/util/util.js';
+import { GPUConst } from '../../../../constants.js';
 import {
   kDepthStencilFormats,
   kDepthStencilFormatResolvedAspect,
   kTextureFormatInfo,
-} from '../../../../capability_info.js';
-import { GPUConst } from '../../../../constants.js';
+} from '../../../../format_info.js';
 import { ValidationTest } from '../../validation_test.js';
 
 type TextureBindingType = 'sampled-texture' | 'multisampled-texture' | 'writeonly-storage-texture';
@@ -457,6 +457,17 @@ g.test('subresources_and_binding_types_combination_for_color')
       arrayLayerCount: layerCount1,
     });
 
+    const viewsAreSame =
+      dimension0 === dimension1 &&
+      layerCount0 === layerCount1 &&
+      BASE_LEVEL === baseLevel1 &&
+      levelCount0 === levelCount1 &&
+      BASE_LAYER === baseLayer1 &&
+      layerCount0 === layerCount1;
+    if (!viewsAreSame && t.isCompatibility) {
+      t.skip('different views of same texture are not supported in compatibility mode');
+    }
+
     const encoder = t.device.createCommandEncoder();
     if (type0 === 'render-target') {
       // Note that type1 is 'render-target' too. So we don't need to create bindings.
@@ -598,8 +609,8 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       .unless(
         // Can't sample a multiplanar texture without selecting an aspect.
         p =>
-          kTextureFormatInfo[p.format].depth &&
-          kTextureFormatInfo[p.format].stencil &&
+          !!kTextureFormatInfo[p.format].depth &&
+          !!kTextureFormatInfo[p.format].stencil &&
           ((p.aspect0 === 'all' && p.type0 === 'sampled-texture') ||
             (p.aspect1 === 'all' && p.type1 === 'sampled-texture'))
       )
@@ -619,8 +630,8 @@ g.test('subresources_and_binding_types_combination_for_aspect')
           // Depth-stencil attachment views must encompass all aspects of the texture. Invalid
           // cases are for depth-stencil textures when the aspect is not 'all'.
           p.type1 === 'render-target' &&
-          kTextureFormatInfo[p.format].depth &&
-          kTextureFormatInfo[p.format].stencil &&
+          !!kTextureFormatInfo[p.format].depth &&
+          !!kTextureFormatInfo[p.format].stencil &&
           p.aspect1 !== 'all'
       )
   )

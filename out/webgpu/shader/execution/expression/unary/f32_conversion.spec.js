@@ -15,7 +15,7 @@ TypeMat,
 TypeU32,
 u32 } from
 '../../../../util/conversion.js';
-import { correctlyRoundedInterval, correctlyRoundedMatrix } from '../../../../util/f32_interval.js';
+import { FP } from '../../../../util/floating_point.js';
 import {
 fullF32Range,
 fullI32Range,
@@ -23,7 +23,7 @@ fullU32Range,
 sparseMatrixF32Range } from
 '../../../../util/math.js';
 import { makeCaseCache } from '../case_cache.js';
-import { allInputSources, generateMatrixToMatrixCases, run } from '../expression.js';
+import { allInputSources, run } from '../expression.js';
 
 import { unary } from './unary.js';
 
@@ -38,143 +38,143 @@ export const d = makeCaseCache('unary/f32_conversion', {
   },
   u32: () => {
     return fullU32Range().map((u) => {
-      return { input: u32(u), expected: correctlyRoundedInterval(u) };
+      return { input: u32(u), expected: FP.f32.correctlyRoundedInterval(u) };
     });
   },
   i32: () => {
     return fullI32Range().map((i) => {
-      return { input: i32(i), expected: correctlyRoundedInterval(i) };
+      return { input: i32(i), expected: FP.f32.correctlyRoundedInterval(i) };
     });
   },
   f32: () => {
     return fullF32Range().map((f) => {
-      return { input: f32(f), expected: correctlyRoundedInterval(f) };
+      return { input: f32(f), expected: FP.f32.correctlyRoundedInterval(f) };
     });
   },
   f32_mat2x2_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 2),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat2x2_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 2),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat2x3_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 3),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat2x3_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 3),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat2x4_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 4),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat2x4_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(2, 4),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x2_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 2),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x2_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 2),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x3_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 3),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x3_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 3),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x4_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 4),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat3x4_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(3, 4),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x2_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 2),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x2_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 2),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x3_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 3),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x3_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 3),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x4_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 4),
     'finite',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   },
   f32_mat4x4_non_const: () => {
-    return generateMatrixToMatrixCases(
+    return FP.f32.generateMatrixToMatrixCases(
     sparseMatrixF32Range(4, 4),
     'unfiltered',
-    correctlyRoundedMatrix);
+    FP.f32.correctlyRoundedMatrix);
 
   }
 });

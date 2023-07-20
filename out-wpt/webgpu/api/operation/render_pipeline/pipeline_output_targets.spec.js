@@ -5,11 +5,8 @@
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { range } from '../../../../common/util/util.js';
-import {
-  kLimitInfo,
-  kRenderableColorTextureFormats,
-  kTextureFormatInfo,
-} from '../../../capability_info.js';
+import { kLimitInfo } from '../../../capability_info.js';
+import { kRenderableColorTextureFormats, kTextureFormatInfo } from '../../../format_info.js';
 import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 import { getFragmentShaderCodeWithOutput, getPlainTypeInfo } from '../../../util/shader.js';
 import { kTexelRepresentationInfo } from '../../../util/texture/texel_data.js';
@@ -54,7 +51,7 @@ g.test('color,attachments')
       .combine('attachmentCount', [2, 3, 4])
       .filter(t => {
         // We only need to test formats that have a valid color attachment bytes per sample.
-        const pixelByteCost = kTextureFormatInfo[t.format].renderTargetPixelByteCost;
+        const pixelByteCost = kTextureFormatInfo[t.format].colorRender?.byteCost;
         return (
           pixelByteCost !== undefined &&
           pixelByteCost * t.attachmentCount <= kLimitInfo.maxColorAttachmentBytesPerSample.default
@@ -64,6 +61,7 @@ g.test('color,attachments')
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -72,7 +70,7 @@ g.test('color,attachments')
     const info = kTextureFormatInfo[format];
 
     const writeValues =
-      info.sampleType === 'sint' || info.sampleType === 'uint'
+      info.color.type === 'sint' || info.color.type === 'uint'
         ? attachmentsIntWriteValues
         : attachmentsFloatWriteValues;
 
@@ -106,7 +104,7 @@ g.test('color,attachments')
                       writeValues[i].A,
                     ],
 
-                    plainType: getPlainTypeInfo(info.sampleType),
+                    plainType: getPlainTypeInfo(info.color.type),
                     componentCount,
                   }
             )
@@ -159,6 +157,7 @@ g.test('color,component_count')
   )
   .beforeAllSubcases(t => {
     const info = kTextureFormatInfo[t.params.format];
+    t.skipIfTextureFormatNotSupported(t.params.format);
     t.selectDeviceOrSkipTestCase(info.feature);
   })
   .fn(t => {
@@ -188,7 +187,7 @@ g.test('color,component_count')
           code: getFragmentShaderCodeWithOutput([
             {
               values,
-              plainType: getPlainTypeInfo(info.sampleType),
+              plainType: getPlainTypeInfo(info.color.type),
               componentCount,
             },
           ]),
@@ -399,7 +398,7 @@ The attachment has a load value of [1, 0, 0, 1]
           code: getFragmentShaderCodeWithOutput([
             {
               values: output,
-              plainType: getPlainTypeInfo(info.sampleType),
+              plainType: getPlainTypeInfo(info.color.type),
               componentCount,
             },
           ]),

@@ -4,12 +4,12 @@
 
 TODO check if the tests need to be updated to support aspects of depth-stencil textures`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/util/util.js';
+import { kTextureDimensions } from '../../../capability_info.js';
 import {
 kTextureFormatInfo,
 kSizedTextureFormats,
-textureDimensionAndFormatCompatible,
-kTextureDimensions } from
-'../../../capability_info.js';
+textureDimensionAndFormatCompatible } from
+'../../../format_info.js';
 import { align } from '../../../util/math.js';
 import {
 bytesInACompleteRow,
@@ -174,11 +174,12 @@ expand('offset', (p) => {
   if (info.depth || info.stencil) {
     return [p._offsetMultiplier * 4];
   }
-  return [p._offsetMultiplier * info.bytesPerBlock];
+  return [p._offsetMultiplier * info.color.bytes];
 })).
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -251,6 +252,7 @@ expand('rowsPerImage', texelBlockAlignmentTestExpanderForRowsPerImage)
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -293,6 +295,7 @@ expand('offset', texelBlockAlignmentTestExpanderForOffset)).
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -311,7 +314,7 @@ fn((t) => {
   if (info.depth || info.stencil) {
     if (offset % 4 === 0) success = true;
   } else {
-    if (offset % info.bytesPerBlock === 0) success = true;
+    if (offset % info.color.bytes === 0) success = true;
   }
 
   t.testRun({ texture }, { offset, bytesPerRow: 256 }, size, {
@@ -397,6 +400,7 @@ expandWithParams((p) => {
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -459,8 +463,8 @@ fn((t) => {
 
   const format = 'rgba8unorm';
   const info = kTextureFormatInfo[format];
-  const offset = offsetInBlocks * info.bytesPerBlock;
-  const dataSize = dataSizeInBlocks * info.bytesPerBlock;
+  const offset = offsetInBlocks * info.color.bytes;
+  const dataSize = dataSizeInBlocks * info.color.bytes;
 
   const texture = t.device.createTexture({
     size: { width: 4, height: 4, depthOrArrayLayers: 1 },

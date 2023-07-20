@@ -163,6 +163,13 @@ export function rejectWithoutUncaught(err) {
 }
 
 /**
+ * Returns true if v is a plain JavaScript object.
+ */
+export function isPlainObject(v) {
+  return !!v && Object.getPrototypeOf(v).constructor === Object.prototype.constructor;
+}
+
+/**
  * Makes a copy of a JS `object`, with the keys reordered into sorted order.
  */
 export function sortObjectByKey(v) {
@@ -312,6 +319,78 @@ export const kTypedArrayBufferViews =
 };
 export const kTypedArrayBufferViewKeys = keysOf(kTypedArrayBufferViews);
 export const kTypedArrayBufferViewConstructors = Object.values(kTypedArrayBufferViews);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Creates a case parameter for a typedarray.
+ *
+ * You can't put typedarrays in case parameters directly so instead of
+ *
+ * ```
+ * u.combine('data', [
+ *   new Uint8Array([1, 2, 3]),
+ *   new Float32Array([4, 5, 6]),
+ * ])
+ * ```
+ *
+ * You can use
+ *
+ * ```
+ * u.combine('data', [
+ *   typedArrayParam('Uint8Array' [1, 2, 3]),
+ *   typedArrayParam('Float32Array' [4, 5, 6]),
+ * ])
+ * ```
+ *
+ * and then convert the params to typedarrays eg.
+ *
+ * ```
+ *  .fn(t => {
+ *    const data = t.params.data.map(v => typedArrayFromParam(v));
+ *  })
+ * ```
+ */
+export function typedArrayParam(
+type,
+data)
+{
+  return { type, data };
+}
+
+export function createTypedArray(
+type,
+data)
+{
+  return new kTypedArrayBufferViews[type](data);
+}
+
+/**
+ * Converts a TypedArrayParam to a typedarray. See typedArrayParam
+ */
+export function typedArrayFromParam(
+param)
+{
+  const { type, data } = param;
+  return createTypedArray(type, data);
+}
 
 function subarrayAsU8(
 buf,
