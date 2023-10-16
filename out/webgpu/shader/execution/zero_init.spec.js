@@ -228,6 +228,14 @@ expandWithParams(function* (p) {
 
 batch(15).
 fn((t) => {
+  const { workgroupSize } = t.params;
+  const { maxComputeInvocationsPerWorkgroup } = t.device.limits;
+  const numWorkgroupInvocations = workgroupSize.reduce((a, b) => a * b);
+  t.skipIf(
+  numWorkgroupInvocations > maxComputeInvocationsPerWorkgroup,
+  `workgroupSize: ${workgroupSize} > maxComputeInvocationsPerWorkgroup: ${maxComputeInvocationsPerWorkgroup}`);
+
+
   let moduleScope = `
       struct Output {
         failed : atomic<u32>
@@ -423,8 +431,24 @@ fn((t) => {
       }
       `;
 
+    const fillLayout = t.device.createBindGroupLayout({
+      entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: { type: 'read-only-storage' }
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: { type: 'storage' }
+      }]
+
+    });
+
     const fillPipeline = t.device.createComputePipeline({
-      layout: 'auto',
+      layout: t.device.createPipelineLayout({ bindGroupLayouts: [fillLayout] }),
+      label: 'Workgroup Fill Pipeline',
       compute: {
         module: t.device.createShaderModule({
           code: wgsl

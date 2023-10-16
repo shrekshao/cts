@@ -119,10 +119,21 @@ function typeAssert() {}
 
 
 
+/** Merges two objects into one `{ ...a, ...b }` and return it with a flattened type. */
 export function mergeParams(a, b) {
-  for (const key of Object.keys(a)) {
-    assert(!(key in b), 'Duplicate key: ' + key);
-  }
   return { ...a, ...b };
+}
+
+/**
+ * Merges two objects into one `{ ...a, ...b }` and asserts they had no overlapping keys.
+ * This is slower than {@link mergeParams}.
+ */
+export function mergeParamsChecked(a, b) {
+  const merged = mergeParams(a, b);
+  assert(
+  Object.keys(merged).length === Object.keys(a).length + Object.keys(b).length,
+  () => `Duplicate key between ${JSON.stringify(a)} and ${JSON.stringify(b)}`);
+
+  return merged;
 }
 //# sourceMappingURL=params_utils.js.map

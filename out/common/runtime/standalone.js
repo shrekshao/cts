@@ -11,7 +11,7 @@ import { parseQuery } from '../internal/query/parseQuery.js';
 
 import { TestTree } from '../internal/tree.js';
 import { setDefaultRequestAdapterOptions } from '../util/navigator_gpu.js';
-import { assert, unreachable } from '../util/util.js';
+import { unreachable } from '../util/util.js';
 
 import {
 kCTSOptionsInfo,
@@ -321,6 +321,9 @@ function makeSubtreeHTML(n, parentLevel) {
       if (subtreeResult.fail > 0) {
         status += 'fail';
       }
+      if (subtreeResult.skip === subtreeResult.total && subtreeResult.total > 0) {
+        status += 'skip';
+      }
       div.setAttribute('data-status', status);
       if (autoCloseOnPass.checked && status === 'pass') {
         div.firstElementChild.removeAttribute('open');
@@ -387,6 +390,19 @@ onChange)
   const div = $('<details>').addClass('nodeheader');
   const header = $('<summary>').appendTo(div);
 
+  // prevent toggling if user is selecting text from an input element
+  {
+    let lastNodeName = '';
+    div.on('pointerdown', (event) => {
+      lastNodeName = event.target.nodeName;
+    });
+    div.on('click', (event) => {
+      if (lastNodeName === 'INPUT') {
+        event.preventDefault();
+      }
+    });
+  }
+
   const setChecked = () => {
     div.prop('open', true); // (does not fire onChange)
     onChange(true);
@@ -410,13 +426,28 @@ onChange)
   addClass(isLeaf ? 'leafrun' : 'subtreerun').
   attr('alt', runtext).
   attr('title', runtext).
-  on('click', () => void runSubtree()).
+  on('click', async () => {
+    console.log(`Starting run for ${n.query}`);
+    const startTime = performance.now();
+    await runSubtree();
+    const dt = performance.now() - startTime;
+    const dtMinutes = dt / 1000 / 60;
+    console.log(`Finished run: ${dt.toFixed(1)} ms = ${dtMinutes.toFixed(1)} min`);
+  }).
   appendTo(header);
   $('<a>').
   addClass('nodelink').
   attr('href', href).
   attr('alt', kOpenTestLinkAltText).
   attr('title', kOpenTestLinkAltText).
+  appendTo(header);
+  $('<button>').
+  addClass('copybtn').
+  attr('alt', 'copy query').
+  attr('title', 'copy query').
+  on('click', () => {
+    void navigator.clipboard.writeText(n.query.toString());
+  }).
   appendTo(header);
   if ('testCreationStack' in n && n.testCreationStack) {
     $('<button>').
@@ -435,6 +466,9 @@ onChange)
     attr('type', 'text').
     prop('readonly', true).
     addClass('nodequery').
+    on('click', (event) => {
+      event.target.select();
+    }).
     val(n.query.toString()).
     appendTo(nodecolumns);
     if (n.subtreeCounts) {
@@ -509,6 +543,14 @@ function createSearchQuery(queries, params) {
   return `?${params}${params ? '&' : ''}${queries.map((q) => 'q=' + q).join('&')}`;
 }
 
+/**
+ * Show an info message on the page.
+ * @param msg Message to show
+ */
+function showInfo(msg) {
+  $('#info')[0].textContent = msg;
+}
+
 void (async () => {
   const loader = new DefaultTestFileLoader();
 
@@ -575,26 +617,37 @@ void (async () => {
   };
   addOptionsToPage(options, kStandaloneOptionsInfos);
 
-  assert(qs.length === 1, 'currently, there must be exactly one ?q=');
-  const rootQuery = parseQuery(qs[0]);
+  if (qs.length !== 1) {
+    showInfo('currently, there must be exactly one ?q=');
+    return;
+  }
+
+  let rootQuery;
+  try {
+    rootQuery = parseQuery(qs[0]);
+  } catch (e) {
+    showInfo(e.toString());
+    return;
+  }
+
   if (rootQuery.level > lastQueryLevelToExpand) {
     lastQueryLevelToExpand = rootQuery.level;
   }
   loader.addEventListener('import', (ev) => {
-    $('#info')[0].textContent = `loading: ${ev.data.url}`;
+    showInfo(`loading: ${ev.data.url}`);
   });
   loader.addEventListener('imported', (ev) => {
-    $('#info')[0].textContent = `imported: ${ev.data.url}`;
+    showInfo(`imported: ${ev.data.url}`);
   });
   loader.addEventListener('finish', () => {
-    $('#info')[0].textContent = '';
+    showInfo('');
   });
 
   let tree;
   try {
     tree = await loader.loadTree(rootQuery);
   } catch (err) {
-    $('#info')[0].textContent = err.toString();
+    showInfo(err.toString());
     return;
   }
 

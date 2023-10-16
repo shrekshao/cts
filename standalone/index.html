@@ -42,7 +42,7 @@
         --testcase-data-status-fail-bg-color: #fdd;
         --testcase-data-status-warn-bg-color: #ffb;
         --testcase-data-status-pass-bg-color: #cfc;
-        --testcase-data-status-skip-bg-color: #eee;
+        --testcase-data-status-skip-bg-color: #aaf;
 
         --testcase-logs-bg-color: #white;
         --testcase-log-odd-bg-color: #fff;
@@ -74,7 +74,7 @@
           --testcase-data-status-fail-bg-color: #400;
           --testcase-data-status-warn-bg-color: #660;
           --testcase-data-status-pass-bg-color: #040;
-          --testcase-data-status-skip-bg-color: #444;
+          --testcase-data-status-skip-bg-color: #446;
 
           --testcase-logs-bg-color: #black;
           --testcase-log-odd-bg-color: #000;
@@ -184,7 +184,8 @@
       .leafrun,
       .nodelink,
       .collapsebtn,
-      .testcaselogbtn {
+      .testcaselogbtn,
+      .copybtn {
         display: inline-flex;
         flex-shrink: 0;
         flex-grow: 0;
@@ -202,7 +203,8 @@
       .leafrun::before,
       .nodelink::before,
       .collapsebtn::before,
-      .testcaselogbtn::before {
+      .testcaselogbtn::before,
+      .copybtn::before {
         content: "";
         width: 100%;
         height: 100%;
@@ -215,7 +217,8 @@
         .leafrun,
         .nodelink,
         .collapsebtn,
-        .testcaselogbtn {
+        .testcaselogbtn,
+        .copybtn {
           flex-basis: 24px;
           border-radius: 4px;
           width: 24px;
@@ -227,7 +230,8 @@
         .leafrun,
         .nodelink,
         .collapsebtn,
-        .testcaselogbtn {
+        .testcaselogbtn,
+        .copybtn {
           flex-basis: 36px;
           border-radius: 6px;
           width: 36px;
@@ -242,6 +246,9 @@
       }
       .nodelink::before {
         background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMAQMAAABsu86kAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACRJREFUCNdjYGBg+P+BoUGAYesFhj4BhvsFDPYNDHwMCMTAAACqJwbp3VgbrAAAAABJRU5ErkJggg==);
+      }
+      .copybtn::before {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMAQMAAABsu86kAAAABlBMVEUAAAAAAAClZ7nPAAAAAXRSTlMAQObYZgAAACVJREFUCNdjYGBgqGdgcGRgcGBg8H/A4KEAQhkKDBxgxP8AKA8AVNUEx41Lj8MAAAAASUVORK5CYII=);
       }
       .nodetitle {
         display: inline;
@@ -288,8 +295,14 @@
       .subtree[data-status='pass'] {
         background: linear-gradient(90deg, var(--testcase-data-status-pass-bg-color), var(--testcase-data-status-pass-bg-color) 16px, var(--bg-color) 16px);
       }
+      .subtree[data-status='skip'] {
+        background: linear-gradient(90deg, var(--testcase-data-status-skip-bg-color), var(--testcase-data-status-skip-bg-color) 16px, var(--bg-color) 16px);
+      }
       .subtree[data-status='pass']::before {
         content: "✔"
+      }
+      .subtree[data-status='skip']::before {
+        content: "○"
       }
       .subtree[data-status='passfail']::before {
         content: "✔/⛔"

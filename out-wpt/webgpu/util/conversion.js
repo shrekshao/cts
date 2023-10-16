@@ -12,6 +12,7 @@ import {
   isFiniteF16,
   isSubnormalNumberF16,
   isSubnormalNumberF32,
+  isSubnormalNumberF64,
 } from './math.js';
 
 /**
@@ -54,6 +55,20 @@ export function normalizedIntegerAsFloat(integer, bits, signed) {
 }
 
 /**
+ * Compares 2 numbers. Returns true if their absolute value is
+ * less than or equal to maxDiff or if they are both NaN or the
+ * same sign infinity.
+ */
+export function numbersApproximatelyEqual(a, b, maxDiff = 0) {
+  return (
+    (Number.isNaN(a) && Number.isNaN(b)) ||
+    (a === Number.POSITIVE_INFINITY && b === Number.POSITIVE_INFINITY) ||
+    (a === Number.NEGATIVE_INFINITY && b === Number.NEGATIVE_INFINITY) ||
+    Math.abs(a - b) <= maxDiff
+  );
+}
+
+/**
  * Encodes a JS `number` into an IEEE754 floating point number with the specified number of
  * sign, exponent, mantissa bits, and exponent bias.
  * Returns the result as an integer-valued JS `number`.
@@ -66,14 +81,10 @@ export function normalizedIntegerAsFloat(integer, bits, signed) {
 export function float32ToFloatBits(n, signBits, exponentBits, mantissaBits, bias) {
   assert(exponentBits <= 8);
   assert(mantissaBits <= 23);
-  assert(Number.isFinite(n));
 
-  if (n === 0) {
-    return 0;
-  }
-
-  if (signBits === 0) {
-    assert(n >= 0);
+  if (Number.isNaN(n)) {
+    // NaN = all exponent bits true, 1 or more mantissia bits true
+    return (((1 << exponentBits) - 1) << mantissaBits) | ((1 << mantissaBits) - 1);
   }
 
   const buf = new DataView(new ArrayBuffer(Float32Array.BYTES_PER_ELEMENT));
@@ -81,10 +92,30 @@ export function float32ToFloatBits(n, signBits, exponentBits, mantissaBits, bias
   const bits = buf.getUint32(0, true);
   // bits (32): seeeeeeeefffffffffffffffffffffff
 
-  const mantissaBitsToDiscard = 23 - mantissaBits;
-
   // 0 or 1
   const sign = (bits >> 31) & signBits;
+
+  if (n === 0) {
+    if (sign === 1) {
+      // Handle negative zero.
+      return 1 << (exponentBits + mantissaBits);
+    }
+    return 0;
+  }
+
+  if (signBits === 0) {
+    assert(n >= 0);
+  }
+
+  if (!Number.isFinite(n)) {
+    // Infinity = all exponent bits true, no mantissa bits true
+    // plus the sign bit.
+    return (
+      (((1 << exponentBits) - 1) << mantissaBits) | (n < 0 ? 2 ** (exponentBits + mantissaBits) : 0)
+    );
+  }
+
+  const mantissaBitsToDiscard = 23 - mantissaBits;
 
   // >> to remove mantissa, & to remove sign, - 127 to remove bias.
   const exp = ((bits >> 23) & 0xff) - 127;
@@ -168,8 +199,21 @@ export function floatBitsToNumber(bits, fmt) {
 
   const kNonSignBits = fmt.exponentBits + fmt.mantissaBits;
   const kNonSignBitsMask = (1 << kNonSignBits) - 1;
-  const expAndMantBits = bits & kNonSignBitsMask;
-  let f32BitsWithWrongBias = expAndMantBits << (kFloat32Format.mantissaBits - fmt.mantissaBits);
+  const exponentAndMantissaBits = bits & kNonSignBitsMask;
+  const exponentMask = ((1 << fmt.exponentBits) - 1) << fmt.mantissaBits;
+  const infinityOrNaN = (bits & exponentMask) === exponentMask;
+  if (infinityOrNaN) {
+    const mantissaMask = (1 << fmt.mantissaBits) - 1;
+    const signBit = 2 ** kNonSignBits;
+    const isNegative = (bits & signBit) !== 0;
+    return bits & mantissaMask
+      ? Number.NaN
+      : isNegative
+      ? Number.NEGATIVE_INFINITY
+      : Number.POSITIVE_INFINITY;
+  }
+  let f32BitsWithWrongBias =
+    exponentAndMantissaBits << (kFloat32Format.mantissaBits - fmt.mantissaBits);
   f32BitsWithWrongBias |= (bits << (31 - kNonSignBits)) & 0x8000_0000;
   const numberWithWrongBias = float32BitsToNumber(f32BitsWithWrongBias);
   return numberWithWrongBias * 2 ** (kFloat32Format.bias - fmt.bias);
@@ -652,8 +696,10 @@ export class MatrixType {
     this.cols = cols;
     this.rows = rows;
     assert(
-      elementType.kind === 'f32' || elementType.kind === 'f16',
-      "MatrixType can only have elementType of 'f32' or 'f16'"
+      elementType.kind === 'f32' ||
+        elementType.kind === 'f16' ||
+        elementType.kind === 'abstract-float',
+      "MatrixType can only have elementType of 'f32' or 'f16' or 'abstract-float'"
     );
 
     this.elementType = elementType;
@@ -834,6 +880,7 @@ export class Scalar {
    * @param offset the byte offset within buffer
    */
   copyTo(buffer, offset) {
+    assert(this.type.kind !== 'f64', `Copying f64 values to/from buffers is not defined`);
     for (let i = 0; i < this.bits.length; i++) {
       buffer[offset + i] = this.bits[i];
     }
@@ -888,9 +935,28 @@ export class Scalar {
         if (n !== null && isFloatValue(this)) {
           let str = this.value.toString();
           str = str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
-          return isSubnormalNumberF32(n.valueOf())
-            ? `${Colors.bold(str)} (0x${hex} subnormal)`
-            : `${Colors.bold(str)} (0x${hex})`;
+          switch (this.type.kind) {
+            case 'abstract-float':
+              return isSubnormalNumberF64(n.valueOf())
+                ? `${Colors.bold(str)} (0x${hex} subnormal)`
+                : `${Colors.bold(str)} (0x${hex})`;
+            case 'f64':
+              return isSubnormalNumberF64(n.valueOf())
+                ? `${Colors.bold(str)} (0x${hex} subnormal)`
+                : `${Colors.bold(str)} (0x${hex})`;
+            case 'f32':
+              return isSubnormalNumberF32(n.valueOf())
+                ? `${Colors.bold(str)} (0x${hex} subnormal)`
+                : `${Colors.bold(str)} (0x${hex})`;
+            case 'f16':
+              return isSubnormalNumberF16(n.valueOf())
+                ? `${Colors.bold(str)} (0x${hex} subnormal)`
+                : `${Colors.bold(str)} (0x${hex})`;
+            default:
+              unreachable(
+                `Printing of floating point kind ${this.type.kind} is not implemented...`
+              );
+          }
         }
         return `${Colors.bold(this.value.toString())} (0x${hex})`;
       }

@@ -11,14 +11,16 @@ SubcaseBatchState } from
 import { globalTestConfig } from '../common/framework/test_config.js';
 import {
 assert,
+makeValueTestVariant,
 memcpy,
 range,
+
 
 
 unreachable } from
 '../common/util/util.js';
 
-import { kQueryTypeInfo } from './capability_info.js';
+import { getDefaultLimits, kQueryTypeInfo } from './capability_info.js';
 import {
 kTextureFormatInfo,
 kEncodableTextureFormats,
@@ -117,6 +119,10 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     return globalTestConfig.compatibility;
   }
 
+  getDefaultLimits() {
+    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
+  }
+
   /**
    * Some tests or cases need particular feature flags or limits to be enabled.
    * Call this function with a descriptor or feature name (or `undefined`) to select a
@@ -200,6 +206,13 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     throw new SkipTestCase(msg);
   }
 
+  /** Throws an exception making the subcase as skipped if condition is true */
+  skipIf(cond, msg = '') {
+    if (cond) {
+      this.skip(typeof msg === 'function' ? msg() : msg);
+    }
+  }
+
   /**
    * Skips test if any format is not supported.
    */
@@ -208,6 +221,16 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
       for (const format of formats) {
         if (format === 'bgra8unorm-srgb') {
           this.skip(`texture format '${format} is not supported`);
+        }
+      }
+    }
+  }
+
+  skipIfCopyTextureToTextureNotSupportedForFormat(...formats) {
+    if (this.isCompatibility) {
+      for (const format of formats) {
+        if (format && isCompressedTextureFormat(format)) {
+          this.skip(`copyTextureToTexture with ${format} is not supported`);
         }
       }
     }
@@ -251,6 +274,18 @@ export class GPUTestBase extends Fixture {
 
   get isCompatibility() {
     return globalTestConfig.compatibility;
+  }
+
+  getDefaultLimits() {
+    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
+  }
+
+  getDefaultLimit(limit) {
+    return this.getDefaultLimits()[limit].default;
+  }
+
+  makeLimitVariant(limit, variant) {
+    return makeValueTestVariant(this.device.limits[limit], variant);
   }
 
   canCallCopyTextureToBufferWithTextureFormat(format) {
@@ -370,6 +405,16 @@ export class GPUTestBase extends Fixture {
       for (const dimension of dimensions) {
         if (dimension === 'cube-array') {
           this.skip(`texture view dimension '${dimension}' is not supported`);
+        }
+      }
+    }
+  }
+
+  skipIfCopyTextureToTextureNotSupportedForFormat(...formats) {
+    if (this.isCompatibility) {
+      for (const format of formats) {
+        if (format && isCompressedTextureFormat(format)) {
+          this.skip(`copyTextureToTexture with ${format} is not supported`);
         }
       }
     }

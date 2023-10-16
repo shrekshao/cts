@@ -22,132 +22,64 @@ const multiplicationScalarVectorInterval = (s, v) => {
 
 export const g = makeTestGroup(GPUTest);
 
-export const d = makeCaseCache('binary/f16_multiplication', {
-  scalar_const: () => {
+const scalar_cases = [true, false].
+map((nonConst) => ({
+  [`scalar_${nonConst ? 'non_const' : 'const'}`]: () => {
     return FP.f16.generateScalarPairToIntervalCases(
     sparseF16Range(),
     sparseF16Range(),
-    'finite',
+    nonConst ? 'unfiltered' : 'finite',
     FP.f16.multiplicationInterval);
 
-  },
-  scalar_non_const: () => {
-    return FP.f16.generateScalarPairToIntervalCases(
-    sparseF16Range(),
-    sparseF16Range(),
-    'unfiltered',
-    FP.f16.multiplicationInterval);
+  }
+})).
+reduce((a, b) => ({ ...a, ...b }), {});
 
-  },
-  vec2_scalar_const: () => {
+const vector_scalar_cases = [2, 3, 4].
+flatMap((dim) =>
+[true, false].map((nonConst) => ({
+  [`vec${dim}_scalar_${nonConst ? 'non_const' : 'const'}`]: () => {
     return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(2),
+    sparseVectorF16Range(dim),
     sparseF16Range(),
-    'finite',
+    nonConst ? 'unfiltered' : 'finite',
     multiplicationVectorScalarInterval);
 
-  },
-  vec2_scalar_non_const: () => {
-    return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(2),
-    sparseF16Range(),
-    'unfiltered',
-    multiplicationVectorScalarInterval);
+  }
+}))).
 
-  },
-  vec3_scalar_const: () => {
-    return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(3),
-    sparseF16Range(),
-    'finite',
-    multiplicationVectorScalarInterval);
+reduce((a, b) => ({ ...a, ...b }), {});
 
-  },
-  vec3_scalar_non_const: () => {
-    return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(3),
-    sparseF16Range(),
-    'unfiltered',
-    multiplicationVectorScalarInterval);
-
-  },
-  vec4_scalar_const: () => {
-    return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(4),
-    sparseF16Range(),
-    'finite',
-    multiplicationVectorScalarInterval);
-
-  },
-  vec4_scalar_non_const: () => {
-    return FP.f16.generateVectorScalarToVectorCases(
-    sparseVectorF16Range(4),
-    sparseF16Range(),
-    'unfiltered',
-    multiplicationVectorScalarInterval);
-
-  },
-  scalar_vec2_const: () => {
+const scalar_vector_cases = [2, 3, 4].
+flatMap((dim) =>
+[true, false].map((nonConst) => ({
+  [`scalar_vec${dim}_${nonConst ? 'non_const' : 'const'}`]: () => {
     return FP.f16.generateScalarVectorToVectorCases(
     sparseF16Range(),
-    sparseVectorF16Range(2),
-    'finite',
-    multiplicationScalarVectorInterval);
-
-  },
-  scalar_vec2_non_const: () => {
-    return FP.f16.generateScalarVectorToVectorCases(
-    sparseF16Range(),
-    sparseVectorF16Range(2),
-    'unfiltered',
-    multiplicationScalarVectorInterval);
-
-  },
-  scalar_vec3_const: () => {
-    return FP.f16.generateScalarVectorToVectorCases(
-    sparseF16Range(),
-    sparseVectorF16Range(3),
-    'finite',
-    multiplicationScalarVectorInterval);
-
-  },
-  scalar_vec3_non_const: () => {
-    return FP.f16.generateScalarVectorToVectorCases(
-    sparseF16Range(),
-    sparseVectorF16Range(3),
-    'unfiltered',
-    multiplicationScalarVectorInterval);
-
-  },
-  scalar_vec4_const: () => {
-    return FP.f16.generateScalarVectorToVectorCases(
-    sparseF16Range(),
-    sparseVectorF16Range(4),
-    'finite',
-    multiplicationScalarVectorInterval);
-
-  },
-  scalar_vec4_non_const: () => {
-    return FP.f16.generateScalarVectorToVectorCases(
-    sparseF16Range(),
-    sparseVectorF16Range(4),
-    'unfiltered',
+    sparseVectorF16Range(dim),
+    nonConst ? 'unfiltered' : 'finite',
     multiplicationScalarVectorInterval);
 
   }
+}))).
+
+reduce((a, b) => ({ ...a, ...b }), {});
+
+export const d = makeCaseCache('binary/f16_multiplication', {
+  ...scalar_cases,
+  ...vector_scalar_cases,
+  ...scalar_vector_cases
 });
 
 g.test('scalar').
 specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation').
 desc(
 `
-Expression: x * y
+Expression: x * y, where x and y are scalars
 Accuracy: Correctly rounded
 `).
 
-params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
+params((u) => u.combine('inputSource', allInputSources)).
 beforeAllSubcases((t) => {
   t.selectDeviceOrSkipTestCase({ requiredFeatures: ['shader-f16'] });
 }).
@@ -155,6 +87,25 @@ fn(async (t) => {
   const cases = await d.get(
   t.params.inputSource === 'const' ? 'scalar_const' : 'scalar_non_const');
 
+  await run(t, binary('*'), [TypeF16, TypeF16], TypeF16, t.params, cases);
+});
+
+g.test('vector').
+specURL('https://www.w3.org/TR/WGSL/#floating-point-evaluation').
+desc(
+`
+Expression: x * y, where x and y are vectors
+Accuracy: Correctly rounded
+`).
+
+params((u) => u.combine('inputSource', allInputSources).combine('vectorize', [2, 3, 4])).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase({ requiredFeatures: ['shader-f16'] });
+}).
+fn(async (t) => {
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'scalar_const' : 'scalar_non_const' // Using vectorize to generate vector cases based on scalar cases
+  );
   await run(t, binary('*'), [TypeF16, TypeF16], TypeF16, t.params, cases);
 });
 

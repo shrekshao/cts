@@ -3,7 +3,13 @@
 **/ // MAINTENANCE_TODO: The generated Typedoc for this file is hard to navigate because it's
 // alphabetized. Consider using namespaces or renames to fix this?
 
-import { keysOf, makeTable, numericKeysOf } from '../common/util/data_tables.js';
+import {
+keysOf,
+makeTable,
+makeTableRenameAndFilter,
+numericKeysOf } from
+
+'../common/util/data_tables.js';
 import { assertTypeTrue } from '../common/util/types.js';
 import { unreachable } from '../common/util/util.js';
 
@@ -250,45 +256,49 @@ export const kTextureViewDimensions = keysOf(kTextureViewDimensionInfo);
 
 
 
+
+
 /** Per-GPUVertexFormat info. */
 export const kVertexFormatInfo =
 
 makeTable(
-['bytesPerComponent', 'type', 'componentCount', 'wgslType'],
-[,,,], {
+['bytesPerComponent', 'type', 'componentCount', 'byteSize', 'wgslType'],
+[,,,,], {
   // 8 bit components
-  'uint8x2': [1, 'uint', 2, 'vec2<u32>'],
-  'uint8x4': [1, 'uint', 4, 'vec4<u32>'],
-  'sint8x2': [1, 'sint', 2, 'vec2<i32>'],
-  'sint8x4': [1, 'sint', 4, 'vec4<i32>'],
-  'unorm8x2': [1, 'unorm', 2, 'vec2<f32>'],
-  'unorm8x4': [1, 'unorm', 4, 'vec4<f32>'],
-  'snorm8x2': [1, 'snorm', 2, 'vec2<f32>'],
-  'snorm8x4': [1, 'snorm', 4, 'vec4<f32>'],
+  'uint8x2': [1, 'uint', 2, 2, 'vec2<u32>'],
+  'uint8x4': [1, 'uint', 4, 4, 'vec4<u32>'],
+  'sint8x2': [1, 'sint', 2, 2, 'vec2<i32>'],
+  'sint8x4': [1, 'sint', 4, 4, 'vec4<i32>'],
+  'unorm8x2': [1, 'unorm', 2, 2, 'vec2<f32>'],
+  'unorm8x4': [1, 'unorm', 4, 4, 'vec4<f32>'],
+  'snorm8x2': [1, 'snorm', 2, 2, 'vec2<f32>'],
+  'snorm8x4': [1, 'snorm', 4, 4, 'vec4<f32>'],
   // 16 bit components
-  'uint16x2': [2, 'uint', 2, 'vec2<u32>'],
-  'uint16x4': [2, 'uint', 4, 'vec4<u32>'],
-  'sint16x2': [2, 'sint', 2, 'vec2<i32>'],
-  'sint16x4': [2, 'sint', 4, 'vec4<i32>'],
-  'unorm16x2': [2, 'unorm', 2, 'vec2<f32>'],
-  'unorm16x4': [2, 'unorm', 4, 'vec4<f32>'],
-  'snorm16x2': [2, 'snorm', 2, 'vec2<f32>'],
-  'snorm16x4': [2, 'snorm', 4, 'vec4<f32>'],
-  'float16x2': [2, 'float', 2, 'vec2<f32>'],
-  'float16x4': [2, 'float', 4, 'vec4<f32>'],
+  'uint16x2': [2, 'uint', 2, 4, 'vec2<u32>'],
+  'uint16x4': [2, 'uint', 4, 8, 'vec4<u32>'],
+  'sint16x2': [2, 'sint', 2, 4, 'vec2<i32>'],
+  'sint16x4': [2, 'sint', 4, 8, 'vec4<i32>'],
+  'unorm16x2': [2, 'unorm', 2, 4, 'vec2<f32>'],
+  'unorm16x4': [2, 'unorm', 4, 8, 'vec4<f32>'],
+  'snorm16x2': [2, 'snorm', 2, 4, 'vec2<f32>'],
+  'snorm16x4': [2, 'snorm', 4, 8, 'vec4<f32>'],
+  'float16x2': [2, 'float', 2, 4, 'vec2<f32>'],
+  'float16x4': [2, 'float', 4, 8, 'vec4<f32>'],
   // 32 bit components
-  'float32': [4, 'float', 1, 'f32'],
-  'float32x2': [4, 'float', 2, 'vec2<f32>'],
-  'float32x3': [4, 'float', 3, 'vec3<f32>'],
-  'float32x4': [4, 'float', 4, 'vec4<f32>'],
-  'uint32': [4, 'uint', 1, 'u32'],
-  'uint32x2': [4, 'uint', 2, 'vec2<u32>'],
-  'uint32x3': [4, 'uint', 3, 'vec3<u32>'],
-  'uint32x4': [4, 'uint', 4, 'vec4<u32>'],
-  'sint32': [4, 'sint', 1, 'i32'],
-  'sint32x2': [4, 'sint', 2, 'vec2<i32>'],
-  'sint32x3': [4, 'sint', 3, 'vec3<i32>'],
-  'sint32x4': [4, 'sint', 4, 'vec4<i32>']
+  'float32': [4, 'float', 1, 4, 'f32'],
+  'float32x2': [4, 'float', 2, 8, 'vec2<f32>'],
+  'float32x3': [4, 'float', 3, 12, 'vec3<f32>'],
+  'float32x4': [4, 'float', 4, 16, 'vec4<f32>'],
+  'uint32': [4, 'uint', 1, 4, 'u32'],
+  'uint32x2': [4, 'uint', 2, 8, 'vec2<u32>'],
+  'uint32x3': [4, 'uint', 3, 12, 'vec3<u32>'],
+  'uint32x4': [4, 'uint', 4, 16, 'vec4<u32>'],
+  'sint32': [4, 'sint', 1, 4, 'i32'],
+  'sint32x2': [4, 'sint', 2, 8, 'vec2<i32>'],
+  'sint32x3': [4, 'sint', 3, 12, 'vec3<i32>'],
+  'sint32x4': [4, 'sint', 4, 16, 'vec4<i32>'],
+  // 32 bit packed
+  'unorm10-10-10-2': ['packed', 'unorm', 4, 4, 'vec4<f32>']
 });
 /** List of all GPUVertexFormat values. */
 export const kVertexFormats = keysOf(kVertexFormatInfo);
@@ -357,11 +367,11 @@ export const kPerStageBindingLimits =
 
 
 {
-  'uniformBuf': { class: 'uniformBuf', max: 12 },
-  'storageBuf': { class: 'storageBuf', max: 8 },
-  'sampler': { class: 'sampler', max: 16 },
-  'sampledTex': { class: 'sampledTex', max: 16 },
-  'storageTex': { class: 'storageTex', max: 4 }
+  'uniformBuf': { class: 'uniformBuf', maxLimit: 'maxUniformBuffersPerShaderStage' },
+  'storageBuf': { class: 'storageBuf', maxLimit: 'maxStorageBuffersPerShaderStage' },
+  'sampler': { class: 'sampler', maxLimit: 'maxSamplersPerShaderStage' },
+  'sampledTex': { class: 'sampledTex', maxLimit: 'maxSampledTexturesPerShaderStage' },
+  'storageTex': { class: 'storageTex', maxLimit: 'maxStorageTexturesPerShaderStage' }
 };
 
 /**
@@ -375,12 +385,14 @@ export const kPerPipelineBindingLimits =
 
 
 
+
+
 {
-  'uniformBuf': { class: 'uniformBuf', maxDynamic: 8 },
-  'storageBuf': { class: 'storageBuf', maxDynamic: 4 },
-  'sampler': { class: 'sampler', maxDynamic: 0 },
-  'sampledTex': { class: 'sampledTex', maxDynamic: 0 },
-  'storageTex': { class: 'storageTex', maxDynamic: 0 }
+  'uniformBuf': { class: 'uniformBuf', maxDynamicLimit: 'maxDynamicUniformBuffersPerPipelineLayout' },
+  'storageBuf': { class: 'storageBuf', maxDynamicLimit: 'maxDynamicStorageBuffersPerPipelineLayout' },
+  'sampler': { class: 'sampler', maxDynamicLimit: '' },
+  'sampledTex': { class: 'sampledTex', maxDynamicLimit: '' },
+  'storageTex': { class: 'storageTex', maxDynamicLimit: '' }
 };
 
 
@@ -586,6 +598,20 @@ export const kShaderStageCombinationsWithStage = [
  */
 export const kTextureSampleCounts = [1, 4];
 
+// Sampler info
+
+/** List of all mipmap filter modes. */
+export const kMipmapFilterModes = ['nearest', 'linear'];
+assertTypeTrue();
+
+/** List of address modes. */
+export const kAddressModes = [
+'clamp-to-edge',
+'repeat',
+'mirror-repeat'];
+
+assertTypeTrue();
+
 // Blend factors and Blend components
 
 /** List of all GPUBlendFactor values. */
@@ -628,60 +654,114 @@ export const kIndexFormat = ['uint16', 'uint32'];
 assertTypeTrue();
 
 /** Info for each entry of GPUSupportedLimits */
-export const kLimitInfo = makeTable(
-['class', 'default', 'maximumValue'],
-['maximum',, kMaxUnsignedLongValue], {
-  'maxTextureDimension1D': [, 8192],
-  'maxTextureDimension2D': [, 8192],
-  'maxTextureDimension3D': [, 2048],
-  'maxTextureArrayLayers': [, 256],
+const [
+kLimitInfoKeys,
+kLimitInfoDefaults,
+kLimitInfoData] =
+[
+['class', 'core', 'compatibility', 'maximumValue'],
+['maximum',,, kMaxUnsignedLongValue], {
+  'maxTextureDimension1D': [, 8192, 4096],
+  'maxTextureDimension2D': [, 8192, 4096],
+  'maxTextureDimension3D': [, 2048, 1024],
+  'maxTextureArrayLayers': [, 256, 256],
 
-  'maxBindGroups': [, 4],
-  'maxBindingsPerBindGroup': [, 1000],
-  'maxDynamicUniformBuffersPerPipelineLayout': [, 8],
-  'maxDynamicStorageBuffersPerPipelineLayout': [, 4],
-  'maxSampledTexturesPerShaderStage': [, 16],
-  'maxSamplersPerShaderStage': [, 16],
-  'maxStorageBuffersPerShaderStage': [, 8],
-  'maxStorageTexturesPerShaderStage': [, 4],
-  'maxUniformBuffersPerShaderStage': [, 12],
+  'maxBindGroups': [, 4, 4],
+  'maxBindingsPerBindGroup': [, 1000, 1000],
+  'maxDynamicUniformBuffersPerPipelineLayout': [, 8, 8],
+  'maxDynamicStorageBuffersPerPipelineLayout': [, 4, 4],
+  'maxSampledTexturesPerShaderStage': [, 16, 16],
+  'maxSamplersPerShaderStage': [, 16, 16],
+  'maxStorageBuffersPerShaderStage': [, 8, 4],
+  'maxStorageTexturesPerShaderStage': [, 4, 4],
+  'maxUniformBuffersPerShaderStage': [, 12, 12],
 
-  'maxUniformBufferBindingSize': [, 65536, kMaxUnsignedLongLongValue],
-  'maxStorageBufferBindingSize': [, 134217728, kMaxUnsignedLongLongValue],
-  'minUniformBufferOffsetAlignment': ['alignment', 256],
-  'minStorageBufferOffsetAlignment': ['alignment', 256],
+  'maxUniformBufferBindingSize': [, 65536, 16384, kMaxUnsignedLongLongValue],
+  'maxStorageBufferBindingSize': [, 134217728, 134217728, kMaxUnsignedLongLongValue],
+  'minUniformBufferOffsetAlignment': ['alignment', 256, 256],
+  'minStorageBufferOffsetAlignment': ['alignment', 256, 256],
 
-  'maxVertexBuffers': [, 8],
-  'maxBufferSize': [, 268435456, kMaxUnsignedLongLongValue],
-  'maxVertexAttributes': [, 16],
-  'maxVertexBufferArrayStride': [, 2048],
-  'maxInterStageShaderComponents': [, 60],
-  'maxInterStageShaderVariables': [, 16],
+  'maxVertexBuffers': [, 8, 8],
+  'maxBufferSize': [, 268435456, 268435456, kMaxUnsignedLongLongValue],
+  'maxVertexAttributes': [, 16, 16],
+  'maxVertexBufferArrayStride': [, 2048, 2048],
+  'maxInterStageShaderComponents': [, 60, 60],
+  'maxInterStageShaderVariables': [, 16, 16],
 
-  'maxColorAttachments': [, 8],
-  'maxColorAttachmentBytesPerSample': [, 32],
+  'maxColorAttachments': [, 8, 4],
+  'maxColorAttachmentBytesPerSample': [, 32, 32],
 
-  'maxComputeWorkgroupStorageSize': [, 16384],
-  'maxComputeInvocationsPerWorkgroup': [, 256],
-  'maxComputeWorkgroupSizeX': [, 256],
-  'maxComputeWorkgroupSizeY': [, 256],
-  'maxComputeWorkgroupSizeZ': [, 64],
-  'maxComputeWorkgroupsPerDimension': [, 65535]
-});
+  'maxComputeWorkgroupStorageSize': [, 16384, 16384],
+  'maxComputeInvocationsPerWorkgroup': [, 256, 128],
+  'maxComputeWorkgroupSizeX': [, 256, 128],
+  'maxComputeWorkgroupSizeY': [, 256, 128],
+  'maxComputeWorkgroupSizeZ': [, 64, 64],
+  'maxComputeWorkgroupsPerDimension': [, 65535, 65535]
+}];
+
+/**
+ * Feature levels corresponding to core WebGPU and WebGPU
+ * in compatibility mode. They can be passed to
+ * getDefaultLimits though if you have access to an adapter
+ * it's preferred to use getDefaultLimitsForAdapter.
+ */
+export const kFeatureLevels = ['core', 'compatibility'];
+
+
+const kLimitKeys = ['class', 'default', 'maximumValue'];
+
+const kLimitInfoCore = makeTableRenameAndFilter(
+{ default: 'core' },
+kLimitKeys,
+kLimitInfoKeys,
+kLimitInfoDefaults,
+kLimitInfoData);
+
+
+const kLimitInfoCompatibility = makeTableRenameAndFilter(
+{ default: 'compatibility' },
+kLimitKeys,
+kLimitInfoKeys,
+kLimitInfoDefaults,
+kLimitInfoData);
+
+
+const kLimitInfos = {
+  core: kLimitInfoCore,
+  compatibility: kLimitInfoCompatibility
+};
+
+export const kLimitClasses = Object.fromEntries(
+Object.entries(kLimitInfoCore).map(([k, { class: c }]) => [k, c]));
+
+
+export function getDefaultLimits(featureLevel) {
+  return kLimitInfos[featureLevel];
+}
+
+export function getDefaultLimitsForAdapter(adapter) {
+  // MAINTENANCE_TODO: Remove casts when GPUAdapter IDL has isCompatibilityMode.
+  return getDefaultLimits(
+  adapter.isCompatibilityMode ?
+  'compatibility' :
+  'core');
+
+}
 
 /** List of all entries of GPUSupportedLimits. */
-export const kLimits = keysOf(kLimitInfo);
+export const kLimits = keysOf(kLimitInfoCore);
 
-// Pipeline limits
-
-/** Maximum number of color attachments to a render pass, by spec. */
-export const kMaxColorAttachments = kLimitInfo.maxColorAttachments.default;
-/** `maxVertexBuffers` per GPURenderPipeline, by spec. */
-export const kMaxVertexBuffers = kLimitInfo.maxVertexBuffers.default;
-/** `maxVertexAttributes` per GPURenderPipeline, by spec. */
-export const kMaxVertexAttributes = kLimitInfo.maxVertexAttributes.default;
-/** `maxVertexBufferArrayStride` in a vertex buffer in a GPURenderPipeline, by spec. */
-export const kMaxVertexBufferArrayStride = kLimitInfo.maxVertexBufferArrayStride.default;
+/**
+ * The number of color attachments to test.
+ * The CTS needs to generate a consistent list of tests.
+ * We can't use any default limits since they different from core to compat mode
+ * So, tests should use this value and filter out any values that are out of
+ * range for the current device.
+ *
+ * The test in maxColorAttachments.spec.ts tests that kMaxColorAttachmentsToTest
+ * is large enough to cover all devices tested.
+ */
+export const kMaxColorAttachmentsToTest = 32;
 
 /** The size of indirect draw parameters in the indirectBuffer of drawIndirect */
 export const kDrawIndirectParametersSize = 4;

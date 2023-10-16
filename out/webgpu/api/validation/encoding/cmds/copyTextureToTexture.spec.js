@@ -363,10 +363,12 @@ beforeAllSubcases((t) => {
 }).
 fn((t) => {
   const { srcFormat, dstFormat } = t.params;
-  const srcFormatInfo = kTextureFormatInfo[srcFormat];
-  const dstFormatInfo = kTextureFormatInfo[dstFormat];
 
   t.skipIfTextureFormatNotSupported(srcFormat, dstFormat);
+  t.skipIfCopyTextureToTextureNotSupportedForFormat(srcFormat, dstFormat);
+
+  const srcFormatInfo = kTextureFormatInfo[srcFormat];
+  const dstFormatInfo = kTextureFormatInfo[dstFormat];
 
   const textureSize = {
     width: lcm(srcFormatInfo.blockWidth, dstFormatInfo.blockWidth),
@@ -779,6 +781,7 @@ combine('dstCopyLevel', [0, 1, 2])).
 beforeAllSubcases((t) => {
   const { format } = t.params;
   t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+  t.skipIfCopyTextureToTextureNotSupportedForFormat(format);
 }).
 fn((t) => {
   const { format, dimension, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
