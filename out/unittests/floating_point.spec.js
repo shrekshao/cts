@@ -6,19 +6,26 @@ Floating Point unit tests.
 import { objectEquals, unreachable } from '../common/util/util.js';
 import { kValue } from '../webgpu/util/constants.js';
 import { FP, FPInterval } from '../webgpu/util/floating_point.js';
+import { map2DArray, oneULPF32, oneULPF16, oneULPF64 } from '../webgpu/util/math.js';
 import {
 reinterpretU16AsF16,
 reinterpretU32AsF32,
-reinterpretU64AsF64,
-map2DArray,
-oneULPF32,
-oneULPF16,
-oneULPF64 } from
-'../webgpu/util/math.js';
+reinterpretU64AsF64 } from
+'../webgpu/util/reinterpret.js';
 
 import { UnitTest } from './unit_test.js';
 
 export const g = makeTestGroup(UnitTest);
+
+/**
+ * For ULP purposes, abstract float behaves like f32, so need to swizzle it in
+ * for expectations.
+ */
+const kFPTraitForULP = {
+  abstract: 'f32',
+  f32: 'f32',
+  f16: 'f16'
+};
 
 /** Bounds indicating an expectation of unbounded error */
 const kUnboundedBounds = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY];
@@ -2079,15 +2086,16 @@ const kULPErrorValue = {
 g.test('ulpInterval').
 params((u) =>
 u.
-combine('trait', ['f32', 'f16']).
+combine('trait', ['abstract', 'f32', 'f16']).
 beginSubcases().
 expandWithParams((p) => {
-  const constants = FP[p.trait].constants();
-  const ULPValue = kULPErrorValue[p.trait];
-  const plusOneULP = kPlusOneULPFunctions[p.trait];
-  const plusNULP = kPlusNULPFunctions[p.trait];
-  const minusOneULP = kMinusOneULPFunctions[p.trait];
-  const minusNULP = kMinusNULPFunctions[p.trait];
+  const trait = kFPTraitForULP[p.trait];
+  const constants = FP[trait].constants();
+  const ULPValue = kULPErrorValue[trait];
+  const plusOneULP = kPlusOneULPFunctions[trait];
+  const plusNULP = kPlusNULPFunctions[trait];
+  const minusOneULP = kMinusOneULPFunctions[trait];
+  const minusNULP = kMinusNULPFunctions[trait];
 
   return [
   // Edge Cases
@@ -2574,8 +2582,7 @@ fn((t) => {
     return ulp_error * trait.oneULP(n);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.atanInterval(t.params.input);
   t.expect(
@@ -2752,8 +2759,7 @@ fn((t) => {
     return t.params.trait === 'f32' ? 2 ** -11 : 2 ** -7;
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.cosInterval(t.params.input);
   t.expect(
@@ -2933,8 +2939,7 @@ fn((t) => {
     return ulp_error * trait.oneULP(x);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
   const got = trait.expInterval(t.params.input);
 
   t.expect(
@@ -2993,8 +2998,7 @@ fn((t) => {
     return ulp_error * trait.oneULP(x);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.exp2Interval(t.params.input);
   t.expect(
@@ -3014,13 +3018,21 @@ const kFloorIntervalCases = {
   { input: 2 ** 14, expected: 2 ** 14 },
   { input: -(2 ** 14), expected: -(2 ** 14) },
   { input: 0x8000, expected: 0x8000 } // https://github.com/gpuweb/cts/issues/2766
+  ],
+  abstract: [
+  { input: 2 ** 62, expected: 2 ** 62 },
+  { input: -(2 ** 62), expected: -(2 ** 62) },
+  {
+    input: 0x8000_0000_0000_0000,
+    expected: 0x8000_0000_0000_0000
+  } // https://github.com/gpuweb/cts/issues/2766
   ]
 };
 
 g.test('floorInterval').
 params((u) =>
 u.
-combine('trait', ['f32', 'f16']).
+combine('trait', ['f32', 'f16', 'abstract']).
 beginSubcases().
 expandWithParams((p) => {
   const constants = FP[p.trait].constants();
@@ -3047,7 +3059,7 @@ expandWithParams((p) => {
   { input: constants.negative.max, expected: -1 },
   ...kFloorIntervalCases[p.trait],
 
-  // 32-bit subnormals
+  // Subnormals
   { input: constants.positive.subnormal.max, expected: 0 },
   { input: constants.positive.subnormal.min, expected: 0 },
   { input: constants.negative.subnormal.min, expected: [-1, 0] },
@@ -3181,8 +3193,7 @@ fn((t) => {
     return 2 * trait.oneULP(n);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.inverseSqrtInterval(t.params.input);
   t.expect(
@@ -3306,8 +3317,7 @@ fn((t) => {
     return 3 * trait.oneULP(n);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.logInterval(t.params.input);
   t.expect(
@@ -3357,8 +3367,7 @@ fn((t) => {
     return 3 * trait.oneULP(n);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.log2Interval(t.params.input);
   t.expect(
@@ -3412,7 +3421,7 @@ fn((t) => {
 
 });
 
-g.test('quantizeToF16Interval_f32').
+g.test('quantizeToF16Interval').
 paramsSubcasesOnly(
 
 [
@@ -3636,7 +3645,7 @@ fn((t) => {
 g.test('signInterval').
 params((u) =>
 u.
-combine('trait', ['f32', 'f16']).
+combine('trait', ['f32', 'f16', 'abstract']).
 beginSubcases().
 expandWithParams((p) => {
   const constants = FP[p.trait].constants();
@@ -3704,8 +3713,7 @@ fn((t) => {
     return t.params.trait === 'f32' ? 2 ** -11 : 2 ** -7;
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.sinInterval(t.params.input);
   t.expect(
@@ -3839,8 +3847,7 @@ fn((t) => {
     return 2.5 * trait.oneULP(n);
   };
 
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
+  const expected = trait.toInterval(applyError(t.params.expected, error));
 
   const got = trait.sqrtInterval(t.params.input);
   t.expect(
@@ -4364,11 +4371,14 @@ const kDivisionInterval64BitsNormalCases = {
 g.test('divisionInterval').
 params((u) =>
 u.
-combine('trait', ['f32', 'f16']).
+combine('trait', ['abstract', 'f32', 'f16']).
 beginSubcases().
 expandWithParams((p) => {
-  const trait = FP[p.trait];
-  const constants = trait.constants();
+  // This is a ULP based interval, so abstract should behave like f32, so
+  // swizzling the trait as needed.
+  const trait = p.trait === 'abstract' ? 'f32' : p.trait;
+  const fp = FP[trait];
+  const constants = fp.constants();
 
   return [
   // Representable normals
@@ -4384,7 +4394,7 @@ expandWithParams((p) => {
   { input: [-4, -2], expected: 2 },
 
   // 64-bit normals that can not be exactly represented
-  ...kDivisionInterval64BitsNormalCases[p.trait],
+  ...kDivisionInterval64BitsNormalCases[trait],
 
   // Denominator out of range
   { input: [1, constants.positive.infinity], expected: kUnboundedBounds },
@@ -4400,17 +4410,20 @@ expandWithParams((p) => {
 })).
 
 fn((t) => {
-  const trait = FP[t.params.trait];
+  // This is a ULP based interval, so abstract should behave like f32, so
+  // swizzling the trait as needed for calculating the expected result.
+  const trait = t.params.trait === 'abstract' ? 'f32' : t.params.trait;
+  const fp = FP[trait];
 
   const error = (n) => {
-    return 2.5 * trait.oneULP(n);
+    return 2.5 * fp.oneULP(n);
   };
 
   const [x, y] = t.params.input;
-  t.params.expected = applyError(t.params.expected, error);
-  const expected = trait.toInterval(t.params.expected);
 
-  const got = trait.divisionInterval(x, y);
+  // Do not swizzle here, so the correct implementation under test is called.
+  const expected = FP[t.params.trait].toInterval(applyError(t.params.expected, error));
+  const got = FP[t.params.trait].divisionInterval(x, y);
   t.expect(
   objectEquals(expected, got),
   `${t.params.trait}.divisionInterval(${x}, ${y}) returned ${got}. Expected ${expected}`);
@@ -4835,14 +4848,15 @@ const kRemainderCases = {
 g.test('remainderInterval').
 params((u) =>
 u.
-combine('trait', ['f32', 'f16']).
+combine('trait', ['abstract', 'f32', 'f16']).
 beginSubcases().
 expandWithParams((p) => {
-  const trait = FP[p.trait];
-  const constants = trait.constants();
+  const trait = kFPTraitForULP[p.trait];
+  const constants = FP[trait].constants();
+
 
   return [
-  ...kRemainderCases[p.trait],
+  ...kRemainderCases[trait],
   // Normals
   { input: [0, 1], expected: 0 },
   { input: [0, -1], expected: 0 },
@@ -4883,7 +4897,7 @@ fn((t) => {
   const got = trait.remainderInterval(x, y);
   t.expect(
   objectEquals(expected, got),
-  `FP.${t.params.trait}.remainderInterval(${x}, ${y}) returned ${got}. Expected ${expected}`);
+  `${t.params.trait}.remainderInterval(${x}, ${y}) returned ${got}. Expected ${expected}`);
 
 });
 

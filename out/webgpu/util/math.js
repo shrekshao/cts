@@ -1,12 +1,19 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../common/util/util.js';import { Float16Array,
+**/import { assert } from '../../common/util/util.js';import {
+Float16Array,
 getFloat16,
 setFloat16 } from
 '../../external/petamoriken/float16/float16.js';
 
 import { kBit, kValue } from './constants.js';
-import { floatBitsToNumber, i32, kFloat16Format, kFloat32Format, u32 } from './conversion.js';
+import { i32, u32 } from './conversion.js';
+import {
+reinterpretF64AsU64,
+reinterpretU64AsF64,
+reinterpretU32AsF32,
+reinterpretU16AsF16 } from
+'./reinterpret.js';
 
 /**
  * A multiple of 8 guaranteed to be way too large to allocate (just under 8 pebibytes).
@@ -2061,38 +2068,6 @@ export function lcm(a, b) {
   return a * b / gcd(a, b);
 }
 
-/**
- * @returns the bit representation as a 64-integer, via interpreting the input
- * as a 64-bit float value
- */
-export function reinterpretF64AsU64(input) {
-  return new BigUint64Array(new Float64Array([input]).buffer)[0];
-}
-
-/**
- * @returns a 64-bit float value via interpreting the input as the bit
- * representation as a 64-bit integer
- */
-export function reinterpretU64AsF64(input) {
-  return new Float64Array(new BigUint64Array([input]).buffer)[0];
-}
-
-/**
- * @returns a 32-bit float value via interpreting the input as the bit
- * representation as a 32-bit integer
- */
-export function reinterpretU32AsF32(input) {
-  return floatBitsToNumber(input, kFloat32Format);
-}
-
-/**
- * @returns a 16-bit float value via interpreting the input as the bit
- * representation as a 16-bit integer
- */
-export function reinterpretU16AsF16(hex) {
-  return floatBitsToNumber(hex, kFloat16Format);
-}
-
 /** @returns the cross of an array with the intermediate result of cartesianProduct
  *
  * @param elements array of values to cross with the intermediate result of
@@ -2100,7 +2075,10 @@ export function reinterpretU16AsF16(hex) {
  * @param intermediate arrays of values representing the partial result of
  *                     cartesianProduct
  */
-function cartesianProductImpl(elements, intermediate) {
+function cartesianProductImpl(
+elements,
+intermediate)
+{
   const result = [];
   elements.forEach((e) => {
     if (intermediate.length > 0) {
@@ -2240,5 +2218,21 @@ export function map2DArray(m, op) {
     }
   }
   return result;
+}
+
+/**
+ * Performs a .every over a matrix and return the result
+ *
+ * @param m input matrix of type T
+ * @param op operation that performs a test on an element
+ * @returns a boolean indicating if the test passed for every element
+ */
+export function every2DArray(m, op) {
+  const r = m[0].length;
+  assert(
+  m.every((c) => c.length === r),
+  `Unexpectedly received jagged array to map`);
+
+  return m.every((col) => col.every((el) => op(el)));
 }
 //# sourceMappingURL=math.js.map

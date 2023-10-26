@@ -1,6 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { globalTestConfig } from '../../../../common/framework/test_config.js';import { assert, objectEquals, unreachable } from '../../../../common/util/util.js';
+
 import { compare } from '../../../util/compare.js';
 import { kValue } from '../../../util/constants.js';
 import {
@@ -26,6 +27,11 @@ cartesianProduct,
 quantizeToI32,
 quantizeToU32 } from
 '../../../util/math.js';
+
+
+
+
+
 
 
 
@@ -255,7 +261,7 @@ function toStorage(ty, expr) {
 
 /**
  * Searches for an entry with the given key, adding and returning the result of calling
- * @p create if the entry was not found.
+ * `create` if the entry was not found.
  * @param map the cache map
  * @param key the entry's key
  * @param create the function used to construct a value, if not found in the cache
@@ -462,9 +468,9 @@ pipelineCache)
 }
 
 /**
- * map is a helper for returning a new array with each element of @p v
- * transformed with @p fn.
- * If @p v is not an array, then @p fn is called with (v, 0).
+ * map is a helper for returning a new array with each element of `v`
+ * transformed with `fn`.
+ * If `v` is not an array, then `fn` is called with (v, 0).
  */
 function map(v, fn) {
   if (v instanceof Array) {
@@ -986,7 +992,7 @@ ${body}
 /**
  * Constructs and returns a GPUComputePipeline and GPUBindGroup for running a
  * batch of test cases. If a pre-created pipeline can be found in
- * @p pipelineCache, then this may be returned instead of creating a new
+ * `pipelineCache`, then this may be returned instead of creating a new
  * pipeline.
  * @param t the GPUTest
  * @param shaderBuilder the shader builder
@@ -1235,7 +1241,11 @@ scalarize)
  * @param param1s array of inputs to try for the second param
  * @param op callback called on each pair of inputs to produce each case
  */
-export function generateBinaryToI32Cases(param0s, param1s, op) {
+export function generateBinaryToI32Cases(
+param0s,
+param1s,
+op)
+{
   return generateScalarBinaryToScalarCases(param0s, param1s, op, quantizeToI32, i32);
 }
 
@@ -1245,7 +1255,11 @@ export function generateBinaryToI32Cases(param0s, param1s, op) {
  * @param param1s array of inputs to try for the second param
  * @param op callback called on each pair of inputs to produce each case
  */
-export function generateBinaryToU32Cases(param0s, param1s, op) {
+export function generateBinaryToU32Cases(
+param0s,
+param1s,
+op)
+{
   return generateScalarBinaryToScalarCases(param0s, param1s, op, quantizeToU32, u32);
 }
 
