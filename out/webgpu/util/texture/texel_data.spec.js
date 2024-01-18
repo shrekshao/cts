@@ -3,16 +3,16 @@
 **/export const description = 'Test helpers for texel data produce the expected data in the shader';import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert } from '../../../common/util/util.js';
 import {
-kEncodableTextureFormats,
-kTextureFormatInfo } from
+  kEncodableTextureFormats,
+  kTextureFormatInfo } from
 
 '../../format_info.js';
 import { GPUTest } from '../../gpu_test.js';
 
 import {
-kTexelRepresentationInfo,
-getSingleDataType,
-getComponentReadbackTraits } from
+  kTexelRepresentationInfo,
+  getSingleDataType,
+  getComponentReadbackTraits } from
 './texel_data.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -42,13 +42,13 @@ t)
   });
 
   t.device.queue.writeTexture(
-  { texture },
-  texelData,
-  {
-    bytesPerRow: texelData.byteLength
-  },
-  [1]);
-
+    { texture },
+    texelData,
+    {
+      bytesPerRow: texelData.byteLength
+    },
+    [1]
+  );
 
   const { ReadbackTypedArray, shaderType } = getComponentReadbackTraits(getSingleDataType(format));
 
@@ -107,15 +107,15 @@ t)
   t.device.queue.submit([encoder.finish()]);
 
   t.expectGPUBufferValuesEqual(
-  outputBuffer,
-  new ReadbackTypedArray(
-  rep.componentOrder.map((c) => {
-    const value = rep.decode(componentData)[c];
-    assert(value !== undefined);
-    return value;
-  })));
-
-
+    outputBuffer,
+    new ReadbackTypedArray(
+      rep.componentOrder.map((c) => {
+        const value = rep.decode(componentData)[c];
+        assert(value !== undefined);
+        return value;
+      })
+    )
+  );
 }
 
 // Make a test parameter by mapping a format and each component to a texel component
@@ -158,8 +158,8 @@ expand('componentData', ({ format }) => {
     return Math.floor(offset[i] * max(bitLength));
   })];
 
-})).
-
+})
+).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
 }).
@@ -193,8 +193,8 @@ expand('componentData', ({ format }) => {
     return -max(bitLength) + Math.floor(offset[i] * range);
   })];
 
-})).
-
+})
+).
 fn(doTest);
 
 g.test('uint_texel_data_in_shader').
@@ -222,8 +222,8 @@ expand('componentData', ({ format }) => {
     return Math.floor(offset[i] * max(bitLength));
   })];
 
-})).
-
+})
+).
 fn(doTest);
 
 g.test('sint_texel_data_in_shader').
@@ -253,15 +253,15 @@ expand('componentData', ({ format }) => {
     return -max(bitLength) + Math.floor(offset[i] * range);
   })];
 
-})).
-
+})
+).
 fn(doTest);
 
 g.test('float_texel_data_in_shader').
 desc(
-`
-TODO: Test NaN, Infinity, -Infinity [1]`).
-
+  `
+TODO: Test NaN, Infinity, -Infinity [1]`
+).
 params((u) =>
 u.
 combine('format', kEncodableTextureFormats).
@@ -290,15 +290,17 @@ expand('componentData', ({ format }) => {
     return [24896, -0.1319580078125, -323.25, -234.375][i];
   })];
 
-})).
-
+})
+).
 fn(doTest);
 
 g.test('ufloat_texel_data_in_shader').
 desc(
-`
-TODO: Test NaN, Infinity [1]`).
+  `
+Note: this uses values that are representable by both rg11b10ufloat and rgb9e5ufloat.
 
+TODO: Test NaN, Infinity`
+).
 params((u) =>
 u.
 combine('format', kEncodableTextureFormats).
@@ -312,24 +314,22 @@ expand('componentData', ({ format }) => {
   // Test extrema
   makeParam(format, () => 0),
 
-  // [2]: Test NaN, Infinity
-
   // Test some values
-  makeParam(format, () => 0.119140625),
-  makeParam(format, () => 1.40625),
-  makeParam(format, () => 24896),
+  makeParam(format, () => 128),
+  makeParam(format, () => 1984),
+  makeParam(format, () => 3968),
 
   // Test scattered mixed values
   makeParam(format, (bitLength, i) => {
-    return [24896, 1.40625, 0.119140625, 0.23095703125][i];
+    return [128, 1984, 3968][i];
   }),
 
   // Test mixed values that are close in magnitude.
   makeParam(format, (bitLength, i) => {
-    return [0.1337890625, 0.17919921875, 0.119140625, 0.125][i];
+    return [0.05859375, 0.03125, 0.03515625][i];
   })];
 
-})).
-
+})
+).
 fn(doTest);
 //# sourceMappingURL=texel_data.spec.js.map

@@ -1,7 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import {
-kMaxQueryCount } from
+  kMaxQueryCount } from
 
 '../../capability_info.js';
 import { GPUTest } from '../../gpu_test.js';
@@ -38,8 +38,8 @@ export class ValidationTest extends GPUTest {
           const texture = this.device.createTexture(descriptor);
           texture.destroy();
           return texture;
-        }}
-
+        }
+    }
   }
 
   /**
@@ -74,8 +74,8 @@ export class ValidationTest extends GPUTest {
           const buffer = this.device.createBuffer(descriptor);
           buffer.destroy();
           return buffer;
-        }}
-
+        }
+    }
   }
 
   /**
@@ -100,22 +100,22 @@ export class ValidationTest extends GPUTest {
           const queryset = this.device.createQuerySet(descriptor);
           queryset.destroy();
           return queryset;
-        }}
-
+        }
+    }
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the STORAGE usage. */
   getStorageBuffer() {
     return this.trackForCleanup(
-    this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE }));
-
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE })
+    );
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the UNIFORM usage. */
   getUniformBuffer() {
     return this.trackForCleanup(
-    this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM }));
-
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM })
+    );
   }
 
   /** Return an invalid GPUBuffer. */
@@ -142,36 +142,36 @@ export class ValidationTest extends GPUTest {
     GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT :
     GPUTextureUsage.TEXTURE_BINDING;
     return this.trackForCleanup(
-    this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage,
-      sampleCount
-    }));
-
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage,
+        sampleCount
+      })
+    );
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `STORAGE_BINDING` usage. */
-  getStorageTexture() {
+  getStorageTexture(format) {
     return this.trackForCleanup(
-    this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE_BINDING
-    }));
-
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format,
+        usage: GPUTextureUsage.STORAGE_BINDING
+      })
+    );
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `RENDER_ATTACHMENT` usage. */
   getRenderTexture(sampleCount = 1) {
     return this.trackForCleanup(
-    this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-      sampleCount
-    }));
-
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        sampleCount
+      })
+    );
   }
 
   /** Return an invalid GPUTexture. */
@@ -220,23 +220,25 @@ export class ValidationTest extends GPUTest {
         return this.getSampledTexture(1).createView();
       case 'sampledTexMS':
         return this.getSampledTexture(4).createView();
-      case 'storageTex':
-        return this.getStorageTexture().createView();}
-
+      case 'readonlyStorageTex':
+      case 'writeonlyStorageTex':
+      case 'readwriteStorageTex':
+        return this.getStorageTexture('r32float').createView();
+    }
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the STORAGE usage from mismatched device. */
   getDeviceMismatchedStorageBuffer() {
     return this.trackForCleanup(
-    this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE }));
-
+      this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE })
+    );
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the UNIFORM usage from mismatched device. */
   getDeviceMismatchedUniformBuffer() {
     return this.trackForCleanup(
-    this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.UNIFORM }));
-
+      this.mismatchedDevice.createBuffer({ size: 4, usage: GPUBufferUsage.UNIFORM })
+    );
   }
 
   /** Return a GPUTexture with descriptor from mismatched device. */
@@ -255,10 +257,10 @@ export class ValidationTest extends GPUTest {
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `STORAGE` usage from mismatched device. */
-  getDeviceMismatchedStorageTexture() {
+  getDeviceMismatchedStorageTexture(format) {
     return this.getDeviceMismatchedTexture({
       size: { width: 4, height: 4, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
+      format,
       usage: GPUTextureUsage.STORAGE_BINDING
     });
   }
@@ -289,9 +291,11 @@ export class ValidationTest extends GPUTest {
         return this.getDeviceMismatchedSampledTexture(1).createView();
       case 'sampledTexMS':
         return this.getDeviceMismatchedSampledTexture(4).createView();
-      case 'storageTex':
-        return this.getDeviceMismatchedStorageTexture().createView();}
-
+      case 'readonlyStorageTex':
+      case 'writeonlyStorageTex':
+      case 'readwriteStorageTex':
+        return this.getDeviceMismatchedStorageTexture('r32float').createView();
+    }
   }
 
   /** Return a no-op shader code snippet for the specified shader stage. */
@@ -306,8 +310,8 @@ export class ValidationTest extends GPUTest {
       case 'FRAGMENT':
         return `@fragment fn main() {}`;
       case 'COMPUTE':
-        return `@compute @workgroup_size(1) fn main() {}`;}
-
+        return `@compute @workgroup_size(1) fn main() {}`;
+    }
   }
 
   /** Create a GPURenderPipeline in the specified state. */
@@ -317,7 +321,8 @@ export class ValidationTest extends GPUTest {
 
   /** Return a GPURenderPipeline with default options and no-op vertex and fragment shaders. */
   createNoOpRenderPipeline(
-  layout = 'auto')
+  layout = 'auto',
+  colorFormat = 'rgba8unorm')
   {
     return this.device.createRenderPipeline({
       layout,
@@ -332,7 +337,7 @@ export class ValidationTest extends GPUTest {
           code: this.getNoOpShaderCode('FRAGMENT')
         }),
         entryPoint: 'main',
-        targets: [{ format: 'rgba8unorm', writeMask: 0 }]
+        targets: [{ format: colorFormat, writeMask: 0 }]
       },
       primitive: { topology: 'triangle-list' }
     });

@@ -5,7 +5,8 @@ Unit tests for TestGroup.
 `;
 
 import { makeTestGroup } from '../common/framework/test_group.js';
-import { makeTestGroupForUnitTesting } from '../common/internal/test_group.js';
+import { TestQueryMultiFile } from '../common/internal/query/query.js';
+import { kQueryMaxLength, makeTestGroupForUnitTesting } from '../common/internal/test_group.js';
 import { assert } from '../common/util/util.js';
 
 import { TestGroupTest } from './test_group_test.js';
@@ -15,7 +16,7 @@ export const g = makeTestGroup(TestGroupTest);
 
 g.test('UnitTest_fixture').fn(async (t0) => {
   let seen = 0;
-  function count(t) {
+  function count(_t) {
     seen++;
   }
 
@@ -65,10 +66,10 @@ g.test('stack').fn(async (t0) => {
   g.test('fail').fn((t) => {
     t.fail();
   });
-  g.test('throw').fn((t) => {
+  g.test('throw').fn((_t) => {
     throw new Error('hello');
   });
-  g.test('throw_nested').fn((t) => {
+  g.test('throw_nested').fn((_t) => {
     doNestedThrow2();
   });
 
@@ -89,7 +90,7 @@ g.test('no_fn').fn((t) => {
   g.test('missing');
 
   t.shouldThrow('Error', () => {
-    g.validate();
+    g.validate(new TestQueryMultiFile('s', ['f']));
   });
 });
 
@@ -108,13 +109,13 @@ g.test('duplicate_test_params,none').fn(() => {
     g.test('abc').
     paramsSimple([]).
     fn(() => {});
-    g.validate();
+    g.validate(new TestQueryMultiFile('s', ['f']));
   }
 
   {
     const g = makeTestGroupForUnitTesting(UnitTest);
     g.test('abc').fn(() => {});
-    g.validate();
+    g.validate(new TestQueryMultiFile('s', ['f']));
   }
 
   {
@@ -124,7 +125,7 @@ g.test('duplicate_test_params,none').fn(() => {
     { a: 1 } //
     ]).
     fn(() => {});
-    g.validate();
+    g.validate(new TestQueryMultiFile('s', ['f']));
   }
 });
 
@@ -135,9 +136,9 @@ g.test('duplicate_test_params,basic').fn((t) => {
     t.shouldThrow('Error', () => {
       builder.paramsSimple([
       { a: 1 }, //
-      { a: 1 }]);
-
-      g.validate();
+      { a: 1 }]
+      );
+      g.validate(new TestQueryMultiFile('s', ['f']));
     });
   }
   {
@@ -146,12 +147,12 @@ g.test('duplicate_test_params,basic').fn((t) => {
     params((u) =>
     u.expandWithParams(() => [
     { a: 1 }, //
-    { a: 1 }])).
-
-
+    { a: 1 }]
+    )
+    ).
     fn(() => {});
     t.shouldThrow('Error', () => {
-      g.validate();
+      g.validate(new TestQueryMultiFile('s', ['f']));
     });
   }
   {
@@ -159,11 +160,11 @@ g.test('duplicate_test_params,basic').fn((t) => {
     g.test('abc').
     paramsSimple([
     { a: 1, b: 3 }, //
-    { b: 3, a: 1 }]).
-
+    { b: 3, a: 1 }]
+    ).
     fn(() => {});
     t.shouldThrow('Error', () => {
-      g.validate();
+      g.validate(new TestQueryMultiFile('s', ['f']));
     });
   }
 });
@@ -175,8 +176,8 @@ g.test('duplicate_test_params,with_different_private_params').fn((t) => {
     t.shouldThrow('Error', () => {
       builder.paramsSimple([
       { a: 1, _b: 1 }, //
-      { a: 1, _b: 2 }]);
-
+      { a: 1, _b: 2 }]
+      );
     });
   }
   {
@@ -185,12 +186,12 @@ g.test('duplicate_test_params,with_different_private_params').fn((t) => {
     params((u) =>
     u.expandWithParams(() => [
     { a: 1, _b: 1 }, //
-    { a: 1, _b: 2 }])).
-
-
+    { a: 1, _b: 2 }]
+    )
+    ).
     fn(() => {});
     t.shouldThrow('Error', () => {
-      g.validate();
+      g.validate(new TestQueryMultiFile('s', ['f']));
     });
   }
 });
@@ -202,13 +203,74 @@ g.test('invalid_test_name').fn((t) => {
   for (const char of badChars) {
     const name = 'a' + char + 'b';
     t.shouldThrow(
+      'Error',
+      () => {
+        g.test(name).fn(() => {});
+      },
+      { message: name }
+    );
+  }
+});
+
+g.test('long_test_query,long_test_name').fn((t) => {
+  const g = makeTestGroupForUnitTesting(UnitTest);
+
+  const long = Array(kQueryMaxLength - 5).join('a');
+
+  const fileQuery = new TestQueryMultiFile('s', ['f']);
+  g.test(long).unimplemented();
+  g.validate(fileQuery);
+
+  g.test(long + 'a').unimplemented();
+  t.shouldThrow(
     'Error',
     () => {
-      g.test(name).fn(() => {});
+      g.validate(fileQuery);
     },
-    name);
+    { message: long }
+  );
+});
 
-  }
+g.test('long_case_query,long_test_name').fn((t) => {
+  const g = makeTestGroupForUnitTesting(UnitTest);
+
+  const long = Array(kQueryMaxLength - 5).join('a');
+
+  const fileQuery = new TestQueryMultiFile('s', ['f']);
+  g.test(long).fn(() => {});
+  g.validate(fileQuery);
+
+  g.test(long + 'a').fn(() => {});
+  t.shouldThrow(
+    'Error',
+    () => {
+      g.validate(fileQuery);
+    },
+    { message: long }
+  );
+});
+
+g.test('long_case_query,long_case_name').fn((t) => {
+  const g = makeTestGroupForUnitTesting(UnitTest);
+
+  const long = Array(kQueryMaxLength - 9).join('a');
+
+  const fileQuery = new TestQueryMultiFile('s', ['f']);
+  g.test('t').
+  paramsSimple([{ x: long }]).
+  fn(() => {});
+  g.validate(fileQuery);
+
+  g.test('u').
+  paramsSimple([{ x: long + 'a' }]).
+  fn(() => {});
+  t.shouldThrow(
+    'Error',
+    () => {
+      g.validate(fileQuery);
+    },
+    { message: long }
+  );
 });
 
 g.test('param_value,valid').fn(() => {
@@ -231,8 +293,8 @@ g.test('subcases').fn(async (t0) => {
   g.test('a').
   paramsSubcasesOnly((u) =>
   u //
-  .combineWithParams([{ a: 1 }])).
-
+  .combineWithParams([{ a: 1 }])
+  ).
   fn((t) => {
     t.expect(t.params.a === 1, 'a must be 1');
   });
@@ -251,8 +313,8 @@ g.test('subcases').fn(async (t0) => {
   u.
   combineWithParams([{ a: 1 }, { b: 2 }]).
   beginSubcases().
-  expandWithParams(gen)).
-
+  expandWithParams(gen)
+  ).
   fn((t) => {
     const { a, b, ret } = t.params;
     t.expect(a === 1 && ret === 1 || b === 2 && ret === 2);
@@ -264,8 +326,8 @@ g.test('subcases').fn(async (t0) => {
 
 g.test('subcases,skip').
 desc(
-'If all tests are skipped then status is "skip". If at least one test passed, status is "pass"').
-
+  'If all tests are skipped then status is "skip". If at least one test passed, status is "pass"'
+).
 params((u) => u.combine('allSkip', [false, true])).
 fn(async (t0) => {
   const { allSkip } = t0.params;
@@ -280,17 +342,17 @@ fn(async (t0) => {
   t0.expect(values.length === 1);
   const expectedStatus = allSkip ? 'skip' : 'pass';
   t0.expect(
-  values[0].status === expectedStatus,
-  `expect: ${values[0].status} === ${expectedStatus}}, allSkip: ${allSkip}`);
-
+    values[0].status === expectedStatus,
+    `expect: ${values[0].status} === ${expectedStatus}}, allSkip: ${allSkip}`
+  );
 });
 
 g.test('exceptions').
 params((u) =>
 u.
 combine('useSubcases', [false, true]) //
-.combine('useDOMException', [false, true])).
-
+.combine('useDOMException', [false, true])
+).
 fn(async (t0) => {
   const { useSubcases, useDOMException } = t0.params;
   const g = makeTestGroupForUnitTesting(UnitTest);
@@ -302,7 +364,7 @@ fn(async (t0) => {
   } else {
     b2 = b1.params((u) => u);
   }
-  b2.fn((t) => {
+  b2.fn((_t) => {
     if (useDOMException) {
       throw new DOMException('Message!', 'Name!');
     } else {
@@ -319,7 +381,7 @@ fn(async (t0) => {
 g.test('throws').fn(async (t0) => {
   const g = makeTestGroupForUnitTesting(UnitTest);
 
-  g.test('a').fn((t) => {
+  g.test('a').fn((_t) => {
     throw new Error();
   });
 
@@ -350,21 +412,21 @@ g.test('shouldThrow').fn(async (t0) => {
 
 g.test('shouldReject').fn(async (t0) => {
   t0.shouldReject(
-  'TypeError',
-  (async () => {
-    throw new TypeError();
-  })());
-
+    'TypeError',
+    (async () => {
+      throw new TypeError();
+    })()
+  );
 
   const g = makeTestGroupForUnitTesting(UnitTest);
 
   g.test('a').fn((t) => {
     t.shouldReject(
-    'Error',
-    (async () => {
-      throw new TypeError();
-    })());
-
+      'Error',
+      (async () => {
+        throw new TypeError();
+      })()
+    );
   });
 
   const result = await t0.run(g);

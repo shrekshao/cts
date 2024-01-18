@@ -12,12 +12,12 @@ export const g = makeTestGroup(ValidationTest);
 
 g.test('occlusion_query,query_type').
 desc(
-`
+  `
 Tests that set occlusion query set with all types in render pass descriptor:
 - type {occlusion (control case), timestamp}
 - {undefined} for occlusion query set in render pass descriptor
-  `).
-
+  `
+).
 params((u) => u.combine('type', [undefined, ...kQueryTypes])).
 beforeAllSubcases((t) => {
   const { type } = t.params;
@@ -37,10 +37,10 @@ fn((t) => {
 
 g.test('occlusion_query,invalid_query_set').
 desc(
-`
+  `
 Tests that begin occlusion query with a invalid query set that failed during creation.
-  `).
-
+  `
+).
 paramsSubcasesOnly((u) => u.combine('querySetState', ['valid', 'invalid'])).
 fn((t) => {
   const occlusionQuerySet = t.createQuerySetWithState(t.params.querySetState);
@@ -53,11 +53,11 @@ fn((t) => {
 
 g.test('occlusion_query,query_index').
 desc(
-`
+  `
 Tests that begin occlusion query with query index:
 - queryIndex {in, out of} range for GPUQuerySet
-  `).
-
+  `
+).
 paramsSubcasesOnly((u) => u.combine('queryIndex', [0, 2])).
 fn((t) => {
   const occlusionQuerySet = createQuerySetWithType(t, 'occlusion', 2);
@@ -68,21 +68,23 @@ fn((t) => {
   encoder.validateFinish(t.params.queryIndex < 2);
 });
 
-g.test('timestamp_query,query_type_and_index').
+g.test('writeTimestamp,query_type_and_index').
 desc(
-`
+  `
 Tests that write timestamp to all types of query set on all possible encoders:
 - type {occlusion, timestamp}
 - queryIndex {in, out of} range for GPUQuerySet
 - x= {non-pass} encoder
-  `).
 
+TODO: writeTimestamp is removed from the spec so it's skipped if it TypeErrors.
+`
+).
 params((u) =>
 u.
 combine('type', kQueryTypes).
 beginSubcases().
-expand('queryIndex', (p) => p.type === 'timestamp' ? [0, 2] : [0])).
-
+expand('queryIndex', (p) => p.type === 'timestamp' ? [0, 2] : [0])
+).
 beforeAllSubcases((t) => {
   const { type } = t.params;
 
@@ -101,17 +103,24 @@ fn((t) => {
   const querySet = createQuerySetWithType(t, type, count);
 
   const encoder = t.createEncoder('non-pass');
-  encoder.encoder.writeTimestamp(querySet, queryIndex);
+  try {
+
+    encoder.encoder.writeTimestamp(querySet, queryIndex);
+  } catch (ex) {
+    t.skipIf(ex instanceof TypeError, 'writeTimestamp is actually not available');
+  }
   encoder.validateFinish(type === 'timestamp' && queryIndex < count);
 });
 
-g.test('timestamp_query,invalid_query_set').
+g.test('writeTimestamp,invalid_query_set').
 desc(
-`
+  `
 Tests that write timestamp to a invalid query set that failed during creation:
 - x= {non-pass} encoder
-  `).
 
+TODO: writeTimestamp is removed from the spec so it's skipped if it TypeErrors.
+`
+).
 paramsSubcasesOnly((u) => u.combine('querySetState', ['valid', 'invalid'])).
 beforeAllSubcases((t) => {
   t.selectDeviceForQueryTypeOrSkipTestCase('timestamp');
@@ -125,12 +134,22 @@ fn((t) => {
   });
 
   const encoder = t.createEncoder('non-pass');
-  encoder.encoder.writeTimestamp(querySet, 0);
+  try {
+
+    encoder.encoder.writeTimestamp(querySet, 0);
+  } catch (ex) {
+    t.skipIf(ex instanceof TypeError, 'writeTimestamp is actually not available');
+  }
   encoder.validateFinish(querySetState !== 'invalid');
 });
 
-g.test('timestamp_query,device_mismatch').
-desc('Tests writeTimestamp cannot be called with a query set created from another device').
+g.test('writeTimestamp,device_mismatch').
+desc(
+  `Tests writeTimestamp cannot be called with a query set created from another device
+
+  TODO: writeTimestamp is removed from the spec so it's skipped if it TypeErrors.
+  `
+).
 paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
 beforeAllSubcases((t) => {
   t.selectDeviceForQueryTypeOrSkipTestCase('timestamp');
@@ -147,7 +166,12 @@ fn((t) => {
   t.trackForCleanup(querySet);
 
   const encoder = t.createEncoder('non-pass');
-  encoder.encoder.writeTimestamp(querySet, 0);
+  try {
+
+    encoder.encoder.writeTimestamp(querySet, 0);
+  } catch (ex) {
+    t.skipIf(ex instanceof TypeError, 'writeTimestamp is actually not available');
+  }
   encoder.validateFinish(!mismatched);
 });
 //# sourceMappingURL=general.spec.js.map

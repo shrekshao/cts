@@ -5,6 +5,7 @@
 import { runRefTest } from './gpu_ref_test.js';
 
 function bgra8UnormFromRgba8Unorm(rgba8Unorm) {
+  // This is used only once. May need to optimize if reused.
   const bgra8Unorm = rgba8Unorm.slice();
   for (let i = 0; i < bgra8Unorm.length; i += 4) {
     [bgra8Unorm[i], bgra8Unorm[i + 2]] = [bgra8Unorm[i + 2], bgra8Unorm[i]];
@@ -13,6 +14,7 @@ function bgra8UnormFromRgba8Unorm(rgba8Unorm) {
 }
 
 function rgba16floatFromRgba8unorm(rgba8Unorm) {
+  // This is used only once. May need to optimize if reused.
   const rgba16Float = new Float16Array(rgba8Unorm.length);
   for (let i = 0; i < rgba8Unorm.length; ++i) {
     rgba16Float[i] = rgba8Unorm[i] / 255;
@@ -52,8 +54,8 @@ export function runColorSpaceTest(format) {
     0, 255, 0, 255,
     117, 251, 7, 255,
     170, 35, 209, 255,
-    80, 150, 200, 255]);
-
+    80, 150, 200, 255]
+    );
     const kBGRA8UnormData = bgra8UnormFromRgba8Unorm(kRGBA8UnormData);
     const kRGBA16FloatData = rgba16floatFromRgba8unorm(kRGBA8UnormData);
     const width = kRGBA8UnormData.length / 4;
@@ -112,13 +114,13 @@ export function runColorSpaceTest(format) {
               resolve(event.data);
             };
             worker.postMessage(
-            { canvas: offscreenCanvas, format, alphaMode, colorSpace, textureData },
-            [offscreenCanvas]);
-
+              { canvas: offscreenCanvas, format, alphaMode, colorSpace, textureData },
+              [offscreenCanvas]
+            );
             await promise;
             break;
-          }}
-
+          }
+      }
     }
 
     const u = kUnitCaseParamsBuilder.
@@ -127,8 +129,8 @@ export function runColorSpaceTest(format) {
     combine('creation', [
     'canvas',
     'transferControlToOffscreen',
-    'transferControlToOffscreenWorker']);
-
+    'transferControlToOffscreenWorker']
+    );
 
     for (const { alphaMode, colorSpace, creation } of u) {
       await createCanvas(creation, alphaMode, format, colorSpace);

@@ -18,12 +18,12 @@ import { generatePrettyTable } from './pretty_diff_tables.js';
 
 /** Generate an expected value at `index`, to test for equality with the actual value. */
 
+/** Check whether the actual `value` at `index` is as expected. */
 
-
-
-
-
-
+/**
+ * Provides a pretty-printing implementation for a particular CheckElementsPredicate.
+ * This is an array; each element provides info to print an additional row in the error message.
+ */
 
 
 
@@ -44,7 +44,28 @@ expected)
 {
   assert(actual.constructor === expected.constructor, 'TypedArray type mismatch');
   assert(actual.length === expected.length, 'size mismatch');
-  return checkElementsEqualGenerated(actual, (i) => expected[i]);
+
+  let failedElementsFirstMaybe = undefined;
+  /** Sparse array with `true` for elements that failed. */
+  const failedElements = [];
+  for (let i = 0; i < actual.length; ++i) {
+    if (actual[i] !== expected[i]) {
+      failedElementsFirstMaybe ??= i;
+      failedElements[i] = true;
+    }
+  }
+
+  if (failedElementsFirstMaybe === undefined) {
+    return undefined;
+  }
+
+  const failedElementsFirst = failedElementsFirstMaybe;
+  return failCheckElements({
+    actual,
+    failedElements,
+    failedElementsFirst,
+    predicatePrinter: [{ leftHeader: 'expected ==', getValueForCell: (index) => expected[index] }]
+  });
 }
 
 /**
@@ -56,17 +77,17 @@ actual,
 expected)
 {
   const error = checkElementsPassPredicate(
-  actual,
-  (index, value) =>
-  value >= Math.min(expected[0](index), expected[1](index)) &&
-  value <= Math.max(expected[0](index), expected[1](index)),
-  {
-    predicatePrinter: [
-    { leftHeader: 'between', getValueForCell: (index) => expected[0](index) },
-    { leftHeader: 'and', getValueForCell: (index) => expected[1](index) }]
+    actual,
+    (index, value) =>
+    value >= Math.min(expected[0](index), expected[1](index)) &&
+    value <= Math.max(expected[0](index), expected[1](index)),
+    {
+      predicatePrinter: [
+      { leftHeader: 'between', getValueForCell: (index) => expected[0](index) },
+      { leftHeader: 'and', getValueForCell: (index) => expected[1](index) }]
 
-  });
-
+    }
+  );
   // If there was an error, extend it with additional extras.
   return error ? new ErrorWithExtra(error, () => ({ expected })) : undefined;
 }
@@ -80,15 +101,15 @@ actual,
 expected)
 {
   const error = checkElementsPassPredicate(
-  actual,
-  (index, value) => value === expected[0][index] || value === expected[1][index],
-  {
-    predicatePrinter: [
-    { leftHeader: 'either', getValueForCell: (index) => expected[0][index] },
-    { leftHeader: 'or', getValueForCell: (index) => expected[1][index] }]
+    actual,
+    (index, value) => value === expected[0][index] || value === expected[1][index],
+    {
+      predicatePrinter: [
+      { leftHeader: 'either', getValueForCell: (index) => expected[0][index] },
+      { leftHeader: 'or', getValueForCell: (index) => expected[1][index] }]
 
-  });
-
+    }
+  );
   // If there was an error, extend it with additional extras.
   return error ? new ErrorWithExtra(error, () => ({ expected })) : undefined;
 }
@@ -117,11 +138,29 @@ export function checkElementsEqualGenerated(
 actual,
 generator)
 {
-  const error = checkElementsPassPredicate(actual, (index, value) => value === generator(index), {
+  let failedElementsFirstMaybe = undefined;
+  /** Sparse array with `true` for elements that failed. */
+  const failedElements = [];
+  for (let i = 0; i < actual.length; ++i) {
+    if (actual[i] !== generator(i)) {
+      failedElementsFirstMaybe ??= i;
+      failedElements[i] = true;
+    }
+  }
+
+  if (failedElementsFirstMaybe === undefined) {
+    return undefined;
+  }
+
+  const failedElementsFirst = failedElementsFirstMaybe;
+  const error = failCheckElements({
+    actual,
+    failedElements,
+    failedElementsFirst,
     predicatePrinter: [{ leftHeader: 'expected ==', getValueForCell: (index) => generator(index) }]
   });
-  // If there was an error, extend it with additional extras.
-  return error ? new ErrorWithExtra(error, () => ({ generator })) : undefined;
+  // Add more extras to the error.
+  return new ErrorWithExtra(error, () => ({ generator }));
 }
 
 /**
@@ -133,14 +172,10 @@ actual,
 predicate,
 { predicatePrinter })
 {
-  const size = actual.length;
-  const ctor = actual.constructor;
-  const printAsFloat = ctor === Float16Array || ctor === Float32Array || ctor === Float64Array;
-
   let failedElementsFirstMaybe = undefined;
   /** Sparse array with `true` for elements that failed. */
   const failedElements = [];
-  for (let i = 0; i < size; ++i) {
+  for (let i = 0; i < actual.length; ++i) {
     if (!predicate(i, actual[i])) {
       failedElementsFirstMaybe ??= i;
       failedElements[i] = true;
@@ -150,7 +185,35 @@ predicate,
   if (failedElementsFirstMaybe === undefined) {
     return undefined;
   }
+
   const failedElementsFirst = failedElementsFirstMaybe;
+  return failCheckElements({ actual, failedElements, failedElementsFirst, predicatePrinter });
+}
+
+
+
+
+
+
+
+
+/**
+ * Implements the failure case of some checkElementsX helpers above. This allows those functions to
+ * implement their checks directly without too many function indirections in between.
+ *
+ * Note: Separating this into its own function significantly speeds up the non-error case in
+ * Chromium (though this may be V8-specific behavior).
+ */
+function failCheckElements({
+  actual,
+  failedElements,
+  failedElementsFirst,
+  predicatePrinter
+}) {
+  const size = actual.length;
+  const ctor = actual.constructor;
+  const printAsFloat = ctor === Float16Array || ctor === Float32Array || ctor === Float64Array;
+
   const failedElementsLast = failedElements.length - 1;
 
   // Include one extra non-failed element at the beginning and end (if they exist), for context.
@@ -168,11 +231,11 @@ predicate,
   if (predicatePrinter) {
     for (const { leftHeader, getValueForCell: cell } of predicatePrinter) {
       printExpected.push(
-      function* () {
-        yield* [leftHeader, ''];
-        yield* iterRange(printElementsCount, (i) => cell(printElementsStart + i));
-      }());
-
+        function* () {
+          yield* [leftHeader, ''];
+          yield* iterRange(printElementsCount, (i) => cell(printElementsStart + i));
+        }()
+      );
     }
   }
 
@@ -190,8 +253,8 @@ predicate,
 ${generatePrettyTable(opts, [
   ['actual ==', numberPrefix, ...printActual],
   printFailedValueMarkers,
-  ...printExpected])
-  }`;
+  ...printExpected]
+  )}`;
   return new ErrorWithExtra(msg, () => ({
     actual: actual.slice()
   }));

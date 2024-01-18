@@ -100,7 +100,31 @@ function getOptionsInfoFromSearchString<Type extends CTSOptions>(
     const parser = info.parser || optionEnabled;
     optionValues[optionName] = parser(camelCaseToSnakeCase(optionName), searchParams);
   }
-  return (optionValues as unknown) as Type;
+  return optionValues as unknown as Type;
+}
+
+/**
+ * converts foo/bar/src/webgpu/this/that/file.spec.ts to webgpu:this,that,file,*
+ */
+function convertPathToQuery(path: string) {
+  // removes .spec.ts and splits by directory separators.
+  const parts = path.substring(0, path.length - 8).split(/\/|\\/g);
+  // Gets parts only after the last `src`. Example: returns ['webgpu', 'foo', 'bar', 'test']
+  // for ['Users', 'me', 'src', 'cts', 'src', 'webgpu', 'foo', 'bar', 'test']
+  const partsAfterSrc = parts.slice(parts.lastIndexOf('src') + 1);
+  const suite = partsAfterSrc.shift();
+  return `${suite}:${partsAfterSrc.join(',')},*`;
+}
+
+/**
+ * If a query looks like a path (ends in .spec.ts and has directory separators)
+ * then convert try to convert it to a query.
+ */
+function convertPathLikeToQuery(queryOrPath: string) {
+  return queryOrPath.endsWith('.spec.ts') &&
+    (queryOrPath.includes('/') || queryOrPath.includes('\\'))
+    ? convertPathToQuery(queryOrPath)
+    : queryOrPath;
 }
 
 /**
@@ -115,7 +139,7 @@ export function parseSearchParamLikeWithOptions<Type extends CTSOptions>(
   options: Type;
 } {
   const searchString = query.includes('q=') || query.startsWith('?') ? query : `q=${query}`;
-  const queries = new URLSearchParams(searchString).getAll('q');
+  const queries = new URLSearchParams(searchString).getAll('q').map(convertPathLikeToQuery);
   const options = getOptionsInfoFromSearchString(optionsInfos, searchString);
   return { queries, options };
 }

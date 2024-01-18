@@ -7,7 +7,7 @@ import * as fs from 'fs';import * as path from 'path';
 
 import { loadMetadataForSuite } from '../framework/metadata.js';
 
-import { TestQueryMultiCase } from '../internal/query/query.js';
+import { TestQueryMultiCase, TestQueryMultiFile } from '../internal/query/query.js';
 import { validQueryPart } from '../internal/query/validQueryPart.js';
 
 import { assert, unreachable } from '../util/util.js';
@@ -16,33 +16,33 @@ const specFileSuffix = __filename.endsWith('.ts') ? '.spec.ts' : '.spec.js';
 
 async function crawlFilesRecursively(dir) {
   const subpathInfo = await Promise.all(
-  (await fs.promises.readdir(dir)).map(async (d) => {
-    const p = path.join(dir, d);
-    const stats = await fs.promises.stat(p);
-    return {
-      path: p,
-      isDirectory: stats.isDirectory(),
-      isFile: stats.isFile()
-    };
-  }));
-
+    (await fs.promises.readdir(dir)).map(async (d) => {
+      const p = path.join(dir, d);
+      const stats = await fs.promises.stat(p);
+      return {
+        path: p,
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile()
+      };
+    })
+  );
 
   const files = subpathInfo.
   filter(
-  (i) =>
-  i.isFile && (
-  i.path.endsWith(specFileSuffix) ||
-  i.path.endsWith(`${path.sep}README.txt`) ||
-  i.path === 'README.txt')).
-
+    (i) =>
+    i.isFile && (
+    i.path.endsWith(specFileSuffix) ||
+    i.path.endsWith(`${path.sep}README.txt`) ||
+    i.path === 'README.txt')
+  ).
   map((i) => i.path);
 
   return files.concat(
-  await subpathInfo.
-  filter((i) => i.isDirectory).
-  map((i) => crawlFilesRecursively(i.path)).
-  reduce(async (a, b) => (await a).concat(await b), Promise.resolve([])));
-
+    await subpathInfo.
+    filter((i) => i.isDirectory).
+    map((i) => crawlFilesRecursively(i.path)).
+    reduce(async (a, b) => (await a).concat(await b), Promise.resolve([]))
+  );
 }
 
 export async function crawl(suiteDir, validate) {
@@ -82,6 +82,8 @@ export async function crawl(suiteDir, validate) {
         const mod = await import(filename);
         assert(mod.description !== undefined, 'Test spec file missing description: ' + filename);
         assert(mod.g !== undefined, 'Test spec file missing TestGroup definition: ' + filename);
+
+        mod.g.validate(new TestQueryMultiFile(suite, pathSegments));
 
         for (const { testPath } of mod.g.collectNonEmptyTests()) {
           const testQuery = new TestQueryMultiCase(suite, pathSegments, testPath, {}).toString();
@@ -145,8 +147,8 @@ export async function crawl(suiteDir, validate) {
     }
     if (missingEntries.length) {
       console.error(
-      'ERROR: Tests missing from listing_meta.json. Please add the new tests (See docs/adding_timing_metadata.md):');
-
+        'ERROR: Tests missing from listing_meta.json. Please add the new tests (See docs/adding_timing_metadata.md):'
+      );
       for (const metadataKey of missingEntries) {
         console.error(`  ${metadataKey}`);
         failed = true;

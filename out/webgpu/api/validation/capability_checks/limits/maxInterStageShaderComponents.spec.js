@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert, range } from '../../../../../common/util/util.js';import { kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
+**/import { range } from '../../../../../common/util/util.js';import { kMaximumLimitBaseParams, makeLimitTestGroup } from './limit_utils.js';
 
 function getTypeForNumComponents(numComponents) {
   return numComponents > 1 ? `vec${numComponents}f` : 'f32';
@@ -21,7 +21,6 @@ sampleMaskOut)
 
   const maxInterStageVariables = device.limits.maxInterStageShaderVariables;
   const numComponents = Math.min(maxVertexShaderOutputComponents, maxFragmentShaderInputComponents);
-  assert(Math.ceil(numComponents / 4) <= maxInterStageVariables);
 
   const num4ComponentVaryings = Math.floor(numComponents / 4);
   const lastVaryingNumComponents = numComponents % 4;
@@ -31,8 +30,8 @@ sampleMaskOut)
       ${
   lastVaryingNumComponents > 0 ?
   `@location(${num4ComponentVaryings}) vx: ${getTypeForNumComponents(
-  lastVaryingNumComponents)
-  },` :
+    lastVaryingNumComponents
+  )},` :
   ``
   }
   `;
@@ -103,17 +102,21 @@ export const { g, description } = makeLimitTestGroup(limit);
 g.test('createRenderPipeline,at_over').
 desc(`Test using at and over ${limit} limit in createRenderPipeline(Async)`).
 params(
-kMaximumLimitBaseParams.
-combine('async', [false, true]).
-combine('pointList', [false, true]).
-combine('frontFacing', [false, true]).
-combine('sampleIndex', [false, true]).
-combine('sampleMaskIn', [false, true]).
-combine('sampleMaskOut', [false, true])).
-
+  kMaximumLimitBaseParams.
+  combine('async', [false, true]).
+  combine('pointList', [false, true]).
+  combine('frontFacing', [false, true]).
+  combine('sampleIndex', [false, true]).
+  combine('sampleMaskIn', [false, true]).
+  combine('sampleMaskOut', [false, true])
+).
 beforeAllSubcases((t) => {
-  if (t.isCompatibility && (t.params.sampleMaskIn || t.params.sampleMaskOut)) {
-    t.skip('sample_mask not supported in compatibility mode');
+  if (t.isCompatibility) {
+    t.skipIf(
+      t.params.sampleMaskIn || t.params.sampleMaskOut,
+      'sample_mask not supported in compatibility mode'
+    );
+    t.skipIf(t.params.sampleIndex, 'sample_index not supported in compatibility mode');
   }
 }).
 fn(async (t) => {
@@ -127,22 +130,27 @@ fn(async (t) => {
     sampleMaskIn,
     sampleMaskOut
   } = t.params;
+  // Request the largest value of maxInterStageShaderVariables to allow the test using as many
+  // inter-stage shader components as possible without being limited by
+  // maxInterStageShaderVariables.
+  const extraLimits = { maxInterStageShaderVariables: 'adapterLimit' };
   await t.testDeviceWithRequestedMaximumLimits(
-  limitTest,
-  testValueName,
-  async ({ device, testValue, shouldError }) => {
-    const { pipelineDescriptor, code } = getPipelineDescriptor(
-    device,
-    testValue,
-    pointList,
-    frontFacing,
-    sampleIndex,
-    sampleMaskIn,
-    sampleMaskOut);
+    limitTest,
+    testValueName,
+    async ({ device, testValue, shouldError }) => {
+      const { pipelineDescriptor, code } = getPipelineDescriptor(
+        device,
+        testValue,
+        pointList,
+        frontFacing,
+        sampleIndex,
+        sampleMaskIn,
+        sampleMaskOut
+      );
 
-
-    await t.testCreateRenderPipeline(pipelineDescriptor, async, shouldError, code);
-  });
-
+      await t.testCreateRenderPipeline(pipelineDescriptor, async, shouldError, code);
+    },
+    extraLimits
+  );
 });
 //# sourceMappingURL=maxInterStageShaderComponents.spec.js.map

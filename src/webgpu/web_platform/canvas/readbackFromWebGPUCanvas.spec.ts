@@ -14,7 +14,12 @@ TODO: implement all canvas types, see TODO on kCanvasTypes.
 `;
 
 import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { assert, raceWithRejectOnTimeout, unreachable } from '../../../common/util/util.js';
+import {
+  ErrorWithExtra,
+  assert,
+  raceWithRejectOnTimeout,
+  unreachable,
+} from '../../../common/util/util.js';
 import {
   kCanvasAlphaModes,
   kCanvasColorSpaces,
@@ -28,6 +33,8 @@ import {
   createCanvas,
   createOnscreenCanvas,
 } from '../../util/create_elements.js';
+import { TexelView } from '../../util/texture/texel_view.js';
+import { findFailedPixels } from '../../util/texture/texture_ok.js';
 
 export const g = makeTestGroup(GPUTest);
 
@@ -47,17 +54,17 @@ const kPixelValueFloat = 0x66 / 0xff; // 0.4
 const expect = {
   /* prettier-ignore */
   'opaque': new Uint8ClampedArray([
-    0, 0, kPixelValue, 0xff, // blue
-    0, kPixelValue, 0, 0xff, // green
-    kPixelValue, 0, 0, 0xff, // red
-    kPixelValue, kPixelValue, 0, 0xff, // yellow
+           0x00,        0x00, kPixelValue, 0xff, // blue
+           0x00, kPixelValue,        0x00, 0xff, // green
+    kPixelValue,        0x00,        0x00, 0xff, // red
+    kPixelValue, kPixelValue,        0x00, 0xff, // yellow
   ]),
   /* prettier-ignore */
   'premultiplied': new Uint8ClampedArray([
-    0, 0, 0xff, kPixelValue, // blue
-    0, 0xff, 0, kPixelValue, // green
-    0xff, 0, 0, kPixelValue, // red
-    0xff, 0xff, 0, kPixelValue, // yellow
+    0x00, 0x00, 0xff, kPixelValue, // blue
+    0x00, 0xff, 0x00, kPixelValue, // green
+    0xff, 0x00, 0x00, kPixelValue, // red
+    0xff, 0xff, 0x00, kPixelValue, // yellow
   ]),
 };
 
@@ -180,9 +187,40 @@ function readPixelsFrom2DCanvasAndCompare(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   expect: Uint8ClampedArray
 ) {
-  const actual = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data;
+  const { width, height } = ctx.canvas;
+  const actual = ctx.getImageData(0, 0, width, height).data;
 
-  t.expectOK(checkElementsEqual(actual, expect));
+  const subrectOrigin = [0, 0, 0];
+  const subrectSize = [width, height, 1];
+
+  const areaDesc = {
+    bytesPerRow: width * 4,
+    rowsPerImage: height,
+    subrectOrigin,
+    subrectSize,
+  };
+
+  const format = 'rgba8unorm';
+  const actTexelView = TexelView.fromTextureDataByReference(format, actual, areaDesc);
+  const expTexelView = TexelView.fromTextureDataByReference(format, expect, areaDesc);
+
+  const failedPixelsMessage = findFailedPixels(
+    format,
+    { x: 0, y: 0, z: 0 },
+    { width, height, depthOrArrayLayers: 1 },
+    { actTexelView, expTexelView },
+    { maxFractionalDiff: 0 }
+  );
+
+  if (failedPixelsMessage !== undefined) {
+    const msg = 'Canvas had unexpected contents:\n' + failedPixelsMessage;
+    t.expectOK(
+      new ErrorWithExtra(msg, () => ({
+        expTexelView,
+        actTexelView,
+      }))
+    );
+  }
 }
 
 g.test('onscreenCanvas,snapshot')
@@ -279,7 +317,7 @@ g.test('offscreenCanvas,snapshot')
     let snapshot: HTMLImageElement | ImageBitmap;
     switch (t.params.snapshotType) {
       case 'convertToBlob': {
-        if (typeof offscreenCanvas.convertToBlob === undefined) {
+        if (typeof offscreenCanvas.convertToBlob === 'undefined') {
           t.skip("Browser doesn't support OffscreenCanvas.convertToBlob");
           return;
         }
@@ -292,7 +330,7 @@ g.test('offscreenCanvas,snapshot')
         break;
       }
       case 'transferToImageBitmap': {
-        if (typeof offscreenCanvas.transferToImageBitmap === undefined) {
+        if (typeof offscreenCanvas.transferToImageBitmap === 'undefined') {
           t.skip("Browser doesn't support OffscreenCanvas.transferToImageBitmap");
           return;
         }

@@ -2,9 +2,9 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { assert, unreachable } from '../../../../../common/util/util.js';import { kTextureFormatInfo } from '../../../../format_info.js';import { virtualMipSize } from '../../../../util/texture/base.js';
 import {
-kTexelRepresentationInfo,
-getSingleDataType,
-getComponentReadbackTraits } from
+  kTexelRepresentationInfo,
+  getSingleDataType,
+  getComponentReadbackTraits } from
 '../../../../util/texture/texel_data.js';
 
 
@@ -21,14 +21,14 @@ subresourceRange) =>
 
   for (const { level, layers } of subresourceRange.mipLevels()) {
     const [width, height, depth] = virtualMipSize(
-    params.dimension,
-    [t.textureWidth, t.textureHeight, t.textureDepth],
-    level);
-
+      params.dimension,
+      [t.textureWidth, t.textureHeight, t.textureDepth],
+      level
+    );
 
     const { ReadbackTypedArray, shaderType } = getComponentReadbackTraits(
-    getSingleDataType(format));
-
+      getSingleDataType(format)
+    );
 
     const componentOrder = rep.componentOrder;
     const componentCount = componentOrder.length;
@@ -41,14 +41,20 @@ subresourceRange) =>
     componentOrder[0].toLowerCase() :
     componentOrder.map((c) => c.toLowerCase()).join('') + '[i]';
 
-    const _xd = '_' + params.dimension;
+    const viewDimension =
+    t.isCompatibility && params.dimension === '2d' && texture.depthOrArrayLayers > 1 ?
+    '2d-array' :
+    params.dimension;
+    const _xd = `_${viewDimension.replace('-', '_')}`;
     const _multisampled = params.sampleCount > 1 ? '_multisampled' : '';
     const texelIndexExpression =
-    params.dimension === '2d' ?
+    viewDimension === '2d' ?
     'vec2<i32>(GlobalInvocationID.xy)' :
-    params.dimension === '3d' ?
+    viewDimension === '2d-array' ?
+    'vec2<i32>(GlobalInvocationID.xy), constants.layer' :
+    viewDimension === '3d' ?
     'vec3<i32>(GlobalInvocationID.xyz)' :
-    params.dimension === '1d' ?
+    viewDimension === '1d' ?
     'i32(GlobalInvocationID.x)' :
     unreachable();
     const computePipeline = t.device.createComputePipeline({
@@ -58,7 +64,8 @@ subresourceRange) =>
         module: t.device.createShaderModule({
           code: `
             struct Constants {
-              level : i32
+              level : i32,
+              layer : i32,
             };
 
             @group(0) @binding(0) var<uniform> constants : Constants;
@@ -90,10 +97,10 @@ subresourceRange) =>
     for (const layer of layers) {
       const ubo = t.device.createBuffer({
         mappedAtCreation: true,
-        size: 4,
+        size: 8,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
       });
-      new Int32Array(ubo.getMappedRange(), 0, 1)[0] = level;
+      new Int32Array(ubo.getMappedRange()).set([level, layer]);
       ubo.unmap();
 
       const byteLength =
@@ -104,6 +111,14 @@ subresourceRange) =>
       });
       t.trackForCleanup(resultBuffer);
 
+      const viewDescriptor = {
+        ...(!t.isCompatibility && {
+          baseArrayLayer: layer,
+          arrayLayerCount: 1
+        }),
+        dimension: viewDimension
+      };
+
       const bindGroup = t.device.createBindGroup({
         layout: computePipeline.getBindGroupLayout(0),
         entries: [
@@ -113,11 +128,7 @@ subresourceRange) =>
         },
         {
           binding: 1,
-          resource: texture.createView({
-            baseArrayLayer: layer,
-            arrayLayerCount: 1,
-            dimension: params.dimension
-          })
+          resource: texture.createView(viewDescriptor)
         },
         {
           binding: 3,

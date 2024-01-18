@@ -3,6 +3,7 @@
 **/import * as fs from 'fs';
 
 import { dataCache } from '../framework/data_cache.js';
+import { getResourcePath, setBaseResourcePath } from '../framework/resources.js';
 import { globalTestConfig } from '../framework/test_config.js';
 import { DefaultTestFileLoader } from '../internal/file_loader.js';
 import { prettyPrintLog } from '../internal/logging/log_message.js';
@@ -37,6 +38,12 @@ Options:
   return sys.exit(rc);
 }
 
+if (!sys.existsSync('src/common/runtime/cmdline.ts')) {
+  console.log('Must be run from repository root');
+  usage(1);
+}
+setBaseResourcePath('out-node/resources');
+
 // The interface that exposes creation of the GPU, and optional interface to code coverage.
 
 
@@ -65,7 +72,6 @@ let printJSON = false;
 let quiet = false;
 let loadWebGPUExpectations = undefined;
 let gpuProviderModule = undefined;
-let dataPath = undefined;
 
 const queries = [];
 const gpuProviderFlags = [];
@@ -84,8 +90,6 @@ for (let i = 0; i < sys.args.length; ++i) {
       listMode = 'unimplemented';
     } else if (a === '--debug') {
       debug = true;
-    } else if (a === '--data') {
-      dataPath = sys.args[++i];
     } else if (a === '--print-json') {
       printJSON = true;
     } else if (a === '--expectations') {
@@ -124,29 +128,28 @@ if (gpuProviderModule) {
     codeCoverage = gpuProviderModule.coverage;
     if (codeCoverage === undefined) {
       console.error(
-      `--coverage specified, but the GPUProviderModule does not support code coverage.
-Did you remember to build with code coverage instrumentation enabled?`);
-
+        `--coverage specified, but the GPUProviderModule does not support code coverage.
+Did you remember to build with code coverage instrumentation enabled?`
+      );
       sys.exit(1);
     }
   }
 }
 
-if (dataPath !== undefined) {
-  dataCache.setStore({
-    load: (path) => {
-      return new Promise((resolve, reject) => {
-        fs.readFile(`${dataPath}/${path}`, (err, data) => {
-          if (err !== null) {
-            reject(err.message);
-          } else {
-            resolve(data);
-          }
-        });
+dataCache.setStore({
+  load: (path) => {
+    return new Promise((resolve, reject) => {
+      fs.readFile(getResourcePath(`cache/${path}`), (err, data) => {
+        if (err !== null) {
+          reject(err.message);
+        } else {
+          resolve(data);
+        }
       });
-    }
-  });
-}
+    });
+  }
+});
+
 if (verbose) {
   dataCache.setDebugLogger(console.log);
 }
@@ -162,9 +165,9 @@ if (queries.length === 0) {
   const filterQuery = parseQuery(queries[0]);
   const testcases = await loader.loadCases(filterQuery);
   const expectations = parseExpectationsForTestQuery(
-  await (loadWebGPUExpectations ?? []),
-  filterQuery);
-
+    await (loadWebGPUExpectations ?? []),
+    filterQuery
+  );
 
   Logger.globalDebugMode = debug;
   const log = new Logger();
@@ -191,8 +194,8 @@ if (queries.length === 0) {
         }
         continue;
       default:
-        break;}
-
+        break;
+    }
 
     const [rec, res] = log.record(name);
     await testcase.run(rec, expectations);
@@ -215,8 +218,8 @@ if (queries.length === 0) {
         skipped.push([name, res]);
         break;
       default:
-        unreachable('unrecognized status');}
-
+        unreachable('unrecognized status');
+    }
   }
 
   if (codeCoverage !== undefined) {

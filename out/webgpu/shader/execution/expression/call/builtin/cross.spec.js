@@ -9,72 +9,27 @@ Returns the cross product of e1 and e2.
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeAbstractFloat, TypeF16, TypeF32, TypeVec } from '../../../../../util/conversion.js';
-import { FP } from '../../../../../util/floating_point.js';
-import { sparseVectorF64Range, vectorF16Range, vectorF32Range } from '../../../../../util/math.js';
-import { makeCaseCache } from '../../case_cache.js';
 import { allInputSources, onlyConstInputSource, run } from '../../expression.js';
 
 import { abstractBuiltin, builtin } from './builtin.js';
+import { d } from './cross.cache.js';
 
 export const g = makeTestGroup(GPUTest);
-
-export const d = makeCaseCache('cross', {
-  f32_const: () => {
-    return FP.f32.generateVectorPairToVectorCases(
-    vectorF32Range(3),
-    vectorF32Range(3),
-    'finite',
-    FP.f32.crossInterval);
-
-  },
-  f32_non_const: () => {
-    return FP.f32.generateVectorPairToVectorCases(
-    vectorF32Range(3),
-    vectorF32Range(3),
-    'unfiltered',
-    FP.f32.crossInterval);
-
-  },
-  f16_const: () => {
-    return FP.f16.generateVectorPairToVectorCases(
-    vectorF16Range(3),
-    vectorF16Range(3),
-    'finite',
-    FP.f16.crossInterval);
-
-  },
-  f16_non_const: () => {
-    return FP.f16.generateVectorPairToVectorCases(
-    vectorF16Range(3),
-    vectorF16Range(3),
-    'unfiltered',
-    FP.f16.crossInterval);
-
-  },
-  abstract: () => {
-    return FP.abstract.generateVectorPairToVectorCases(
-    sparseVectorF64Range(3),
-    sparseVectorF64Range(3),
-    'finite',
-    FP.abstract.crossInterval);
-
-  }
-});
 
 g.test('abstract_float').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
 desc(`abstract float tests`).
 params((u) => u.combine('inputSource', onlyConstInputSource)).
 fn(async (t) => {
-  const cases = await d.get('abstract');
+  const cases = await d.get('abstract_const');
   await run(
-  t,
-  abstractBuiltin('cross'),
-  [TypeVec(3, TypeAbstractFloat), TypeVec(3, TypeAbstractFloat)],
-  TypeVec(3, TypeAbstractFloat),
-  t.params,
-  cases);
-
+    t,
+    abstractBuiltin('cross'),
+    [TypeVec(3, TypeAbstractFloat), TypeVec(3, TypeAbstractFloat)],
+    TypeVec(3, TypeAbstractFloat),
+    t.params,
+    cases
+  );
 });
 
 g.test('f32').
@@ -84,13 +39,13 @@ params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
   const cases = await d.get(t.params.inputSource === 'const' ? 'f32_const' : 'f32_non_const');
   await run(
-  t,
-  builtin('cross'),
-  [TypeVec(3, TypeF32), TypeVec(3, TypeF32)],
-  TypeVec(3, TypeF32),
-  t.params,
-  cases);
-
+    t,
+    builtin('cross'),
+    [TypeVec(3, TypeF32), TypeVec(3, TypeF32)],
+    TypeVec(3, TypeF32),
+    t.params,
+    cases
+  );
 });
 
 g.test('f16').
@@ -103,12 +58,12 @@ beforeAllSubcases((t) => {
 fn(async (t) => {
   const cases = await d.get(t.params.inputSource === 'const' ? 'f16_const' : 'f16_non_const');
   await run(
-  t,
-  builtin('cross'),
-  [TypeVec(3, TypeF16), TypeVec(3, TypeF16)],
-  TypeVec(3, TypeF16),
-  t.params,
-  cases);
-
+    t,
+    builtin('cross'),
+    [TypeVec(3, TypeF16), TypeVec(3, TypeF16)],
+    TypeVec(3, TypeF16),
+    t.params,
+    cases
+  );
 });
 //# sourceMappingURL=cross.spec.js.map

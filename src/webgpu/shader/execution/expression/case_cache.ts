@@ -3,21 +3,22 @@ import { unreachable } from '../../../../common/util/util.js';
 import BinaryStream from '../../../util/binary_stream.js';
 import { deserializeComparator, serializeComparator } from '../../../util/compare.js';
 import {
-  Scalar,
-  Vector,
-  serializeValue,
-  deserializeValue,
   Matrix,
+  Scalar,
   Value,
+  Vector,
+  deserializeValue,
+  serializeValue,
 } from '../../../util/conversion.js';
 import {
-  deserializeFPInterval,
   FPInterval,
+  deserializeFPInterval,
   serializeFPInterval,
 } from '../../../util/floating_point.js';
 import { flatten2DArray, unflatten2DArray } from '../../../util/math.js';
 
-import { Case, CaseList, Expectation, isComparator } from './expression.js';
+import { Case, CaseList } from './case.js';
+import { Expectation, isComparator } from './expectation.js';
 
 enum SerializedExpectationKind {
   Value,
@@ -137,7 +138,7 @@ export class CaseCache implements Cacheable<Record<string, CaseList>> {
    * @param builders a Record of case-list name to case-list builder.
    */
   constructor(name: string, builders: Record<string, CaseListBuilder>) {
-    this.path = `webgpu/shader/execution/case-cache/${name}.bin`;
+    this.path = `webgpu/shader/execution/${name}.bin`;
     this.builders = builders;
   }
 
@@ -166,21 +167,21 @@ export class CaseCache implements Cacheable<Record<string, CaseList>> {
    */
   serialize(data: Record<string, CaseList>): Uint8Array {
     const maxSize = 32 << 20; // 32MB - max size for a file
-    const s = new BinaryStream(new Uint8Array(maxSize));
-    s.writeU32(Object.keys(data).length);
+    const stream = new BinaryStream(new ArrayBuffer(maxSize));
+    stream.writeU32(Object.keys(data).length);
     for (const name in data) {
-      s.writeString(name);
-      s.writeArray(data[name], serializeCase);
+      stream.writeString(name);
+      stream.writeArray(data[name], serializeCase);
     }
-    return s.buffer();
+    return stream.buffer();
   }
 
   /**
    * deserialize() implements the Cacheable.deserialize interface.
    * @returns the deserialize data.
    */
-  deserialize(buffer: Uint8Array): Record<string, CaseList> {
-    const s = new BinaryStream(buffer);
+  deserialize(array: Uint8Array): Record<string, CaseList> {
+    const s = new BinaryStream(array.buffer);
     const casesByName: Record<string, CaseList> = {};
     const numRecords = s.readU32();
     for (let i = 0; i < numRecords; i++) {

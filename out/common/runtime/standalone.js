@@ -2,7 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/ // Implements the standalone test runner (see also: /standalone/index.html).
 import { dataCache } from '../framework/data_cache.js';
-import { setBaseResourcePath } from '../framework/resources.js';
+import { getResourcePath, setBaseResourcePath } from '../framework/resources.js';
 import { globalTestConfig } from '../framework/test_config.js';
 import { DefaultTestFileLoader } from '../internal/file_loader.js';
 import { Logger } from '../internal/logging/logger.js';
@@ -14,12 +14,12 @@ import { setDefaultRequestAdapterOptions } from '../util/navigator_gpu.js';
 import { unreachable } from '../util/util.js';
 
 import {
-kCTSOptionsInfo,
-parseSearchParamLikeWithOptions,
+  kCTSOptionsInfo,
+  parseSearchParamLikeWithOptions,
 
 
 
-camelCaseToSnakeCase } from
+  camelCaseToSnakeCase } from
 './helper/options.js';
 import { TestWorker } from './helper/test_worker.js';
 
@@ -44,9 +44,9 @@ const kStandaloneOptionsInfos = {
 };
 
 const { queries: qs, options } = parseSearchParamLikeWithOptions(
-kStandaloneOptionsInfos,
-window.location.search || rootQuerySpec);
-
+  kStandaloneOptionsInfos,
+  window.location.search || rootQuerySpec
+);
 const { runnow, debug, unrollConstEvalLoops, powerPreference, compatibility } = options;
 globalTestConfig.unrollConstEvalLoops = unrollConstEvalLoops;
 globalTestConfig.compatibility = compatibility;
@@ -80,7 +80,7 @@ if (powerPreference || compatibility) {
 
 dataCache.setStore({
   load: async (path) => {
-    const response = await fetch(`data/${path}`);
+    const response = await fetch(getResourcePath(`cache/${path}`));
     if (!response.ok) {
       return Promise.reject(response.statusText);
     }
@@ -190,8 +190,8 @@ function makeCaseHTML(t) {
         result.warn++;
         break;
       default:
-        unreachable();}
-
+        unreachable();
+    }
 
     if (updateRenderedResult) updateRenderedResult();
 
@@ -223,6 +223,12 @@ function makeCaseHTML(t) {
 
         if (caseResult.logs) {
           caselogs.empty();
+          // Show exceptions at the top since they are often unexpected can point out an error in the test itself vs the WebGPU implementation.
+          caseResult.logs.
+          filter((l) => l.name === 'EXCEPTION').
+          forEach((l) => {
+            $('<pre>').addClass('testcaselogtext').text(l.toJSON()).appendTo(caselogs);
+          });
           for (const l of caseResult.logs) {
             const caselog = $('<div>').addClass('testcaselog').appendTo(caselogs);
             $('<button>').
@@ -254,9 +260,9 @@ function makeSubtreeHTML(n, parentLevel) {
   let updateRenderedResult;
 
   const { runSubtree, generateSubtreeHTML } = makeSubtreeChildrenHTML(
-  n.children.values(),
-  n.query.level);
-
+    n.children.values(),
+    n.query.level
+  );
 
   const runMySubtree = async () => {
     if (runDepth === 0) {
@@ -357,8 +363,8 @@ parentLevel)
   };
   const generateMyHTML = (div) => {
     const setChildrenChecked = Array.from(childFns, ({ generateSubtreeHTML }) =>
-    generateSubtreeHTML(div));
-
+    generateSubtreeHTML(div)
+    );
 
     return () => {
       for (const setChildChecked of setChildrenChecked) {
@@ -427,11 +433,20 @@ onChange)
   attr('alt', runtext).
   attr('title', runtext).
   on('click', async () => {
+    if (runDepth > 0) {
+      showInfo('tests are already running');
+      return;
+    }
+    showInfo('');
     console.log(`Starting run for ${n.query}`);
+    // turn off all run buttons
+    $('#resultsVis').addClass('disable-run');
     const startTime = performance.now();
     await runSubtree();
     const dt = performance.now() - startTime;
     const dtMinutes = dt / 1000 / 60;
+    // turn on all run buttons
+    $('#resultsVis').removeClass('disable-run');
     console.log(`Finished run: ${dt.toFixed(1)} ms = ${dtMinutes.toFixed(1)} min`);
   }).
   appendTo(header);

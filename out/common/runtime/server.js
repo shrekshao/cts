@@ -5,6 +5,7 @@ import * as http from 'http';
 
 
 import { dataCache } from '../framework/data_cache.js';
+import { getResourcePath, setBaseResourcePath } from '../framework/resources.js';
 import { globalTestConfig } from '../framework/test_config.js';
 import { DefaultTestFileLoader } from '../internal/file_loader.js';
 import { prettyPrintLog } from '../internal/logging/log_message.js';
@@ -20,12 +21,11 @@ import sys from './helper/sys.js';
 
 function usage(rc) {
   console.log(`Usage:
-  tools/run_${sys.type} [OPTIONS...]
+  tools/server [OPTIONS...]
 Options:
   --colors                  Enable ANSI colors in output.
   --compat                  Run tests in compatibility mode.
   --coverage                Add coverage data to each result.
-  --data                    Path to the data cache directory.
   --verbose                 Print result/log of every test as it runs.
   --gpu-provider            Path to node module that provides the GPU implementation.
   --gpu-provider-flag       Flag to set on the gpu-provider as <flag>=<value>
@@ -33,8 +33,10 @@ Options:
   --u                       Flag to set on the gpu-provider as <flag>=<value>
 
 Provides an HTTP server used for running tests via an HTTP RPC interface
-To run a test, perform an HTTP GET or POST at the URL:
-  http://localhost:port/run?<test-name>
+First, load some tree or subtree of tests:
+  http://localhost:port/load?unittests:basic:*
+To run a single test case, perform an HTTP GET or POST at the URL:
+  http://localhost:port/run?unittests:basic:test,sync
 To shutdown the server perform an HTTP GET or POST at the URL:
   http://localhost:port/terminate
 `);
@@ -51,7 +53,7 @@ To shutdown the server perform an HTTP GET or POST at the URL:
 
 
 
-
+// The interface that exposes creation of the GPU, and optional interface to code coverage.
 
 
 
@@ -71,13 +73,13 @@ if (!sys.existsSync('src/common/runtime/cmdline.ts')) {
   console.log('Must be run from repository root');
   usage(1);
 }
+setBaseResourcePath('out-node/resources');
 
 Colors.enabled = false;
 
 let emitCoverage = false;
 let verbose = false;
 let gpuProviderModule = undefined;
-let dataPath = undefined;
 
 const gpuProviderFlags = [];
 for (let i = 0; i < sys.args.length; ++i) {
@@ -89,8 +91,6 @@ for (let i = 0; i < sys.args.length; ++i) {
       globalTestConfig.compatibility = true;
     } else if (a === '--coverage') {
       emitCoverage = true;
-    } else if (a === '--data') {
-      dataPath = sys.args[++i];
     } else if (a === '--gpu-provider') {
       const modulePath = sys.args[++i];
       gpuProviderModule = require(modulePath);
@@ -122,29 +122,28 @@ if (gpuProviderModule) {
     codeCoverage = gpuProviderModule.coverage;
     if (codeCoverage === undefined) {
       console.error(
-      `--coverage specified, but the GPUProviderModule does not support code coverage.
-Did you remember to build with code coverage instrumentation enabled?`);
-
+        `--coverage specified, but the GPUProviderModule does not support code coverage.
+Did you remember to build with code coverage instrumentation enabled?`
+      );
       sys.exit(1);
     }
   }
 }
 
-if (dataPath !== undefined) {
-  dataCache.setStore({
-    load: (path) => {
-      return new Promise((resolve, reject) => {
-        fs.readFile(`${dataPath}/${path}`, (err, data) => {
-          if (err !== null) {
-            reject(err.message);
-          } else {
-            resolve(data);
-          }
-        });
+dataCache.setStore({
+  load: (path) => {
+    return new Promise((resolve, reject) => {
+      fs.readFile(getResourcePath(`cache/${path}`), (err, data) => {
+        if (err !== null) {
+          reject(err.message);
+        } else {
+          resolve(data);
+        }
       });
-    }
-  });
-}
+    });
+  }
+});
+
 if (verbose) {
   dataCache.setDebugLogger(console.log);
 }
@@ -166,65 +165,65 @@ if (verbose) {
   }
 
   const server = http.createServer(
-  async (request, response) => {
-    if (request.url === undefined) {
-      response.end('invalid url');
-      return;
-    }
-
-    const loadCasesPrefix = '/load?';
-    const runPrefix = '/run?';
-    const terminatePrefix = '/terminate';
-
-    if (request.url.startsWith(loadCasesPrefix)) {
-      const query = request.url.substr(loadCasesPrefix.length);
-      try {
-        const webgpuQuery = parseQuery(query);
-        const loader = new DefaultTestFileLoader();
-        for (const testcase of await loader.loadCases(webgpuQuery)) {
-          testcases.set(testcase.query.toString(), testcase);
-        }
-        response.statusCode = 200;
-        response.end();
-      } catch (err) {
-        response.statusCode = 500;
-        response.end(`load failed with error: ${err}\n${err.stack}`);
+    async (request, response) => {
+      if (request.url === undefined) {
+        response.end('invalid url');
+        return;
       }
-    } else if (request.url.startsWith(runPrefix)) {
-      const name = request.url.substr(runPrefix.length);
-      try {
-        const testcase = testcases.get(name);
-        if (testcase) {
-          if (codeCoverage !== undefined) {
-            codeCoverage.begin();
+
+      const loadCasesPrefix = '/load?';
+      const runPrefix = '/run?';
+      const terminatePrefix = '/terminate';
+
+      if (request.url.startsWith(loadCasesPrefix)) {
+        const query = request.url.substr(loadCasesPrefix.length);
+        try {
+          const webgpuQuery = parseQuery(query);
+          const loader = new DefaultTestFileLoader();
+          for (const testcase of await loader.loadCases(webgpuQuery)) {
+            testcases.set(testcase.query.toString(), testcase);
           }
-          const result = await runTestcase(testcase);
-          const coverageData = codeCoverage !== undefined ? codeCoverage.end() : undefined;
-          let message = '';
-          if (result.logs !== undefined) {
-            message = result.logs.map((log) => prettyPrintLog(log)).join('\n');
-          }
-          const status = result.status;
-          const res = { status, message, coverageData };
           response.statusCode = 200;
-          response.end(JSON.stringify(res));
-        } else {
-          response.statusCode = 404;
-          response.end(`test case '${name}' not found`);
+          response.end();
+        } catch (err) {
+          response.statusCode = 500;
+          response.end(`load failed with error: ${err}\n${err.stack}`);
         }
-      } catch (err) {
-        response.statusCode = 500;
-        response.end(`run failed with error: ${err}`);
+      } else if (request.url.startsWith(runPrefix)) {
+        const name = request.url.substr(runPrefix.length);
+        try {
+          const testcase = testcases.get(name);
+          if (testcase) {
+            if (codeCoverage !== undefined) {
+              codeCoverage.begin();
+            }
+            const result = await runTestcase(testcase);
+            const coverageData = codeCoverage !== undefined ? codeCoverage.end() : undefined;
+            let message = '';
+            if (result.logs !== undefined) {
+              message = result.logs.map((log) => prettyPrintLog(log)).join('\n');
+            }
+            const status = result.status;
+            const res = { status, message, coverageData };
+            response.statusCode = 200;
+            response.end(JSON.stringify(res));
+          } else {
+            response.statusCode = 404;
+            response.end(`test case '${name}' not found`);
+          }
+        } catch (err) {
+          response.statusCode = 500;
+          response.end(`run failed with error: ${err}`);
+        }
+      } else if (request.url.startsWith(terminatePrefix)) {
+        server.close();
+        sys.exit(1);
+      } else {
+        response.statusCode = 404;
+        response.end('unhandled url request');
       }
-    } else if (request.url.startsWith(terminatePrefix)) {
-      server.close();
-      sys.exit(1);
-    } else {
-      response.statusCode = 404;
-      response.end('unhandled url request');
     }
-  });
-
+  );
 
   server.listen(0, () => {
     const address = server.address();
