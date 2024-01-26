@@ -317,7 +317,7 @@ Read values from color array in the shader, and write it to the texture view via
     // MAINTENANCE_TODO: Remove this skipping when TexelRepresentation.numericRange is made per-component.
     t.skipIf(format === 'rgb10a2uint', 'NumericRange is not per component yet for rgba10a2unit.');
 
-    // MAINTENANCE_TODO: Remove this skipping when copySinglePixelTextureToBufferUsingComputePass is made capable of reading multiple pixels and use that to check texture with sampleCount === 4. [1]
+    // MAINTENANCE_TODO: Remove this skipping when copy2DTextureToBufferUsingComputePass is made capable of reading multiple pixels and use that to check texture with sampleCount === 4. [1]
     t.skipIf(
       sampleCount === 4,
       'Helper needed for checking multiple pixels of a multisampled texture.'
@@ -358,7 +358,7 @@ Read values from color array in the shader, and write it to the texture view via
       sampleCount
     );
 
-    // [1] Use copySinglePixelTextureToBufferUsingComputePass to check multisampled texture.
+    // [1] Use copy2DTextureToBufferUsingComputePass to check multisampled texture.
     t.expectTexelViewComparisonIsOkInTexture({ texture }, expectedTexelView, [
       kTextureSize,
       kTextureSize,
