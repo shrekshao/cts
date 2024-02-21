@@ -53,6 +53,8 @@ To shutdown the server perform an HTTP GET or POST at the URL:
 
 
 
+
+
 // The interface that exposes creation of the GPU, and optional interface to code coverage.
 
 
@@ -91,6 +93,8 @@ for (let i = 0; i < sys.args.length; ++i) {
       globalTestConfig.compatibility = true;
     } else if (a === '--coverage') {
       emitCoverage = true;
+    } else if (a === '--force-fallback-adapter') {
+      globalTestConfig.forceFallbackAdapter = true;
     } else if (a === '--gpu-provider') {
       const modulePath = sys.args[++i];
       gpuProviderModule = require(modulePath);
@@ -110,9 +114,12 @@ for (let i = 0; i < sys.args.length; ++i) {
 
 let codeCoverage = undefined;
 
-if (globalTestConfig.compatibility) {
+if (globalTestConfig.compatibility || globalTestConfig.forceFallbackAdapter) {
   // MAINTENANCE_TODO: remove the cast once compatibilityMode is officially added
-  setDefaultRequestAdapterOptions({ compatibilityMode: true });
+  setDefaultRequestAdapterOptions({
+    compatibilityMode: globalTestConfig.compatibility,
+    forceFallbackAdapter: globalTestConfig.forceFallbackAdapter
+  });
 }
 
 if (gpuProviderModule) {
@@ -197,14 +204,16 @@ if (verbose) {
             if (codeCoverage !== undefined) {
               codeCoverage.begin();
             }
+            const start = performance.now();
             const result = await runTestcase(testcase);
+            const durationMS = performance.now() - start;
             const coverageData = codeCoverage !== undefined ? codeCoverage.end() : undefined;
             let message = '';
             if (result.logs !== undefined) {
               message = result.logs.map((log) => prettyPrintLog(log)).join('\n');
             }
             const status = result.status;
-            const res = { status, message, coverageData };
+            const res = { status, message, durationMS, coverageData };
             response.statusCode = 200;
             response.end(JSON.stringify(res));
           } else {

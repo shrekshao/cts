@@ -21,7 +21,7 @@ import {
 
   camelCaseToSnakeCase } from
 './helper/options.js';
-import { TestWorker } from './helper/test_worker.js';
+import { TestDedicatedWorker, TestSharedWorker } from './helper/test_worker.js';
 
 const rootQuerySpec = 'webgpu:*';
 let promptBeforeReload = false;
@@ -47,7 +47,14 @@ const { queries: qs, options } = parseSearchParamLikeWithOptions(
   kStandaloneOptionsInfos,
   window.location.search || rootQuerySpec
 );
-const { runnow, debug, unrollConstEvalLoops, powerPreference, compatibility } = options;
+const {
+  runnow,
+  debug,
+  unrollConstEvalLoops,
+  powerPreference,
+  compatibility,
+  forceFallbackAdapter
+} = options;
 globalTestConfig.unrollConstEvalLoops = unrollConstEvalLoops;
 globalTestConfig.compatibility = compatibility;
 
@@ -56,7 +63,9 @@ const logger = new Logger();
 
 setBaseResourcePath('../out/resources');
 
-const worker = options.worker ? new TestWorker(options) : undefined;
+const dedicatedWorker =
+options.worker === 'dedicated' ? new TestDedicatedWorker(options) : undefined;
+const sharedWorker = options.worker === 'shared' ? new TestSharedWorker(options) : undefined;
 
 const autoCloseOnPass = document.getElementById('autoCloseOnPass');
 const resultsVis = document.getElementById('resultsVis');
@@ -70,11 +79,12 @@ stopButtonElem.addEventListener('click', () => {
   stopRequested = true;
 });
 
-if (powerPreference || compatibility) {
+if (powerPreference || compatibility || forceFallbackAdapter) {
   setDefaultRequestAdapterOptions({
     ...(powerPreference && { powerPreference }),
     // MAINTENANCE_TODO: Change this to whatever the option ends up being
-    ...(compatibility && { compatibilityMode: true })
+    ...(compatibility && { compatibilityMode: true }),
+    ...(forceFallbackAdapter && { forceFallbackAdapter: true })
   });
 }
 
@@ -168,8 +178,10 @@ function makeCaseHTML(t) {
 
     const [rec, res] = logger.record(name);
     caseResult = res;
-    if (worker) {
-      await worker.run(rec, name);
+    if (dedicatedWorker) {
+      await dedicatedWorker.run(rec, name);
+    } else if (sharedWorker) {
+      await sharedWorker.run(rec, name);
     } else {
       await t.run(rec);
     }

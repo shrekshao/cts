@@ -1,6 +1,7 @@
-import { GPUTest } from '../../../gpu_test';
+import { GPUTest } from '../../../gpu_test.js';
 import { checkElementsPassPredicate } from '../../../util/check_contents.js';
 import { align } from '../../../util/math.js';
+import { PRNG } from '../../../util/prng.js';
 
 /* All buffer sizes are counted in units of 4-byte words. */
 
@@ -191,6 +192,7 @@ export class MemoryModelTester {
   protected testBindGroup: GPUBindGroup;
   protected resultPipeline: GPUComputePipeline;
   protected resultBindGroup: GPUBindGroup;
+  protected prng: PRNG;
 
   /** Sets up a memory model test by initializing buffers and pipeline layouts. */
   constructor(
@@ -200,6 +202,7 @@ export class MemoryModelTester {
     resultShader: string,
     accessValueType: AccessValueType = 'u32'
   ) {
+    this.prng = new PRNG(1);
     this.test = t;
     this.params = params;
 
@@ -485,8 +488,8 @@ export class MemoryModelTester {
    * If the weak index's value is not 0, it means the test has observed a behavior disallowed by the memory model and
    * is considered a test failure.
    */
-  protected checkResult(weakIndex: number): (i: number, v: number) => boolean {
-    return function (i: number, v: number): boolean {
+  protected checkResult(weakIndex: number): (i: number, v: number | bigint) => boolean {
+    return function (i: number, v: number | bigint): boolean {
       if (i === weakIndex && v > 0) {
         return false;
       }
@@ -495,7 +498,7 @@ export class MemoryModelTester {
   }
 
   /** Returns a printer function that visualizes the results of checking the test results. */
-  protected resultPrinter(weakIndex: number): (i: number) => string | number {
+  protected resultPrinter(weakIndex: number): (i: number) => string | number | bigint {
     return function (i: number): string | number {
       if (i === weakIndex) {
         return 0;
@@ -519,12 +522,12 @@ export class MemoryModelTester {
     );
   }
 
-  /** Returns a random integer between 0 and the max. */
+  /** Returns a random integer in the range [0, max). */
   protected getRandomInt(max: number): number {
-    return Math.floor(Math.random() * max);
+    return this.prng.randomU32() % max;
   }
 
-  /** Returns a random number in between the min and max values. */
+  /** Returns a random number in the range [min, max). */
   protected getRandomInRange(min: number, max: number): number {
     if (min === max) {
       return min;

@@ -10,7 +10,8 @@ import {
   TypeF32,
   elementType,
   kAllFloatScalarsAndVectors,
-  kAllIntegerScalarsAndVectors } from
+  kAllConcreteIntegerScalarsAndVectors,
+  kAllAbstractIntegerScalarAndVectors } from
 '../../../../../util/conversion.js';
 import { ShaderValidationTest } from '../../../shader_validation_test.js';
 
@@ -23,7 +24,10 @@ import {
 
 export const g = makeTestGroup(ShaderValidationTest);
 
-const kValuesTypes = objectsToRecord(kAllFloatScalarsAndVectors);
+const kValuesTypes = objectsToRecord([
+...kAllAbstractIntegerScalarAndVectors,
+...kAllFloatScalarsAndVectors]
+);
 
 g.test('values').
 desc(
@@ -36,6 +40,7 @@ u.
 combine('stage', kConstantAndOverrideStages).
 combine('type', keysOf(kValuesTypes)).
 filter((u) => stageSupportsType(u.stage, kValuesTypes[u.type])).
+beginSubcases().
 expand('value', (u) => fullRangeForType(kValuesTypes[u.type]))
 ).
 beforeAllSubcases((t) => {
@@ -54,7 +59,7 @@ fn((t) => {
   );
 });
 
-const kIntegerArgumentTypes = objectsToRecord([TypeF32, ...kAllIntegerScalarsAndVectors]);
+const kIntegerArgumentTypes = objectsToRecord([TypeF32, ...kAllConcreteIntegerScalarsAndVectors]);
 
 g.test('integer_argument').
 desc(

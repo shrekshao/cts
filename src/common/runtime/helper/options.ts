@@ -25,17 +25,19 @@ export function optionString(
  * The possible options for the tests.
  */
 export interface CTSOptions {
-  worker: boolean;
+  worker?: 'dedicated' | 'shared' | '';
   debug: boolean;
   compatibility: boolean;
+  forceFallbackAdapter: boolean;
   unrollConstEvalLoops: boolean;
   powerPreference?: GPUPowerPreference | '';
 }
 
 export const kDefaultCTSOptions: CTSOptions = {
-  worker: false,
+  worker: '',
   debug: true,
   compatibility: false,
+  forceFallbackAdapter: false,
   unrollConstEvalLoops: false,
   powerPreference: '',
 };
@@ -59,9 +61,18 @@ export type OptionsInfos<Type> = Record<keyof Type, OptionInfo>;
  * Options to the CTS.
  */
 export const kCTSOptionsInfo: OptionsInfos<CTSOptions> = {
-  worker: { description: 'run in a worker' },
+  worker: {
+    description: 'run in a worker',
+    parser: optionString,
+    selectValueDescriptions: [
+      { value: '', description: 'no worker' },
+      { value: 'dedicated', description: 'dedicated worker' },
+      { value: 'shared', description: 'shared worker' },
+    ],
+  },
   debug: { description: 'show more info' },
   compatibility: { description: 'run in compatibility mode' },
+  forceFallbackAdapter: { description: 'pass forceFallbackAdapter: true to requestAdapter' },
   unrollConstEvalLoops: { description: 'unroll const eval loops in WGSL' },
   powerPreference: {
     description: 'set default powerPreference for some tests',
@@ -104,30 +115,6 @@ function getOptionsInfoFromSearchString<Type extends CTSOptions>(
 }
 
 /**
- * converts foo/bar/src/webgpu/this/that/file.spec.ts to webgpu:this,that,file,*
- */
-function convertPathToQuery(path: string) {
-  // removes .spec.ts and splits by directory separators.
-  const parts = path.substring(0, path.length - 8).split(/\/|\\/g);
-  // Gets parts only after the last `src`. Example: returns ['webgpu', 'foo', 'bar', 'test']
-  // for ['Users', 'me', 'src', 'cts', 'src', 'webgpu', 'foo', 'bar', 'test']
-  const partsAfterSrc = parts.slice(parts.lastIndexOf('src') + 1);
-  const suite = partsAfterSrc.shift();
-  return `${suite}:${partsAfterSrc.join(',')},*`;
-}
-
-/**
- * If a query looks like a path (ends in .spec.ts and has directory separators)
- * then convert try to convert it to a query.
- */
-function convertPathLikeToQuery(queryOrPath: string) {
-  return queryOrPath.endsWith('.spec.ts') &&
-    (queryOrPath.includes('/') || queryOrPath.includes('\\'))
-    ? convertPathToQuery(queryOrPath)
-    : queryOrPath;
-}
-
-/**
  * Given a test query string in the form of `suite:foo,bar,moo&opt1=val1&opt2=val2
  * returns the query and the options.
  */
@@ -139,7 +126,7 @@ export function parseSearchParamLikeWithOptions<Type extends CTSOptions>(
   options: Type;
 } {
   const searchString = query.includes('q=') || query.startsWith('?') ? query : `q=${query}`;
-  const queries = new URLSearchParams(searchString).getAll('q').map(convertPathLikeToQuery);
+  const queries = new URLSearchParams(searchString).getAll('q');
   const options = getOptionsInfoFromSearchString(optionsInfos, searchString);
   return { queries, options };
 }

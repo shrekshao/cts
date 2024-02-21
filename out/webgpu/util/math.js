@@ -881,6 +881,41 @@ export function biasedRange(a, b, num_steps) {
 }
 
 /**
+ * Version of biasedRange that operates on bigint values
+ *
+ * biasedRange was not made into a generic or to take in (number|bigint),
+ * because that introduces a bunch of complexity overhead related to type
+ * differentiation.
+ *
+ * Scaling is used internally so that the number of possible indices is
+ * significantly larger than num_steps. This is done to avoid duplicate entries
+ * in the resulting range due to quantizing to integers during the calculation.
+ *
+ *  If a and b are close together, such that the number of integers between them
+ *  is close to num_steps, then duplicates will occur regardless of scaling.
+ */
+export function biasedRangeBigInt(a, b, num_steps) {
+  if (num_steps <= 0) {
+    return [];
+  }
+
+  // Avoid division by 0
+  if (num_steps === 1) {
+    return [a];
+  }
+
+  const c = 2;
+  const scaling = 1000;
+  const scaled_num_steps = num_steps * scaling;
+
+  return Array.from(Array(num_steps).keys()).map((i) => {
+    const biased_i = Math.pow(i / (num_steps - 1), c); // Floating Point on [0, 1]
+    const scaled_i = Math.trunc((scaled_num_steps - 1) * biased_i); // Integer on [0, scaled_num_steps - 1]
+    return lerpBigInt(a, b, scaled_i, scaled_num_steps);
+  });
+}
+
+/**
  * @returns an ascending sorted array of numbers spread over the entire range of 32-bit floats
  *
  * Numbers are divided into 4 regions: negative normals, negative subnormals, positive subnormals & positive normals.
@@ -1136,27 +1171,18 @@ export function sparseI32Range() {
 const kVectorI32Values = {
   2: kInterestingI32Values.flatMap((f) => [
   [f, 1],
-  [1, f],
-  [f, -1],
   [-1, f]]
   ),
   3: kInterestingI32Values.flatMap((f) => [
-  [f, 1, 2],
-  [1, f, 2],
-  [1, 2, f],
-  [f, -1, -2],
-  [-1, f, -2],
-  [-1, -2, f]]
+  [f, 1, -2],
+  [-1, f, 2],
+  [1, -2, f]]
   ),
   4: kInterestingI32Values.flatMap((f) => [
-  [f, 1, 2, 3],
-  [1, f, 2, 3],
-  [1, 2, f, 3],
-  [1, 2, 3, f],
-  [f, -1, -2, -3],
-  [-1, f, -2, -3],
-  [-1, -2, f, -3],
-  [-1, -2, -3, f]]
+  [f, -1, 2, 3],
+  [1, f, -2, 3],
+  [1, 2, f, -3],
+  [-1, 2, -3, f]]
   )
 };
 
@@ -1267,6 +1293,89 @@ export function fullU32Range(count = 50) {
   return [0, ...biasedRange(1, kValue.u32.max, count)].map(Math.trunc);
 }
 
+/** Short list of i64 values of interest to test against */
+const kInterestingI64Values = [
+kValue.i64.negative.max,
+kValue.i64.negative.max / 2n,
+-256n,
+-10n,
+-1n,
+0n,
+1n,
+10n,
+256n,
+kValue.i64.positive.max / 2n,
+kValue.i64.positive.max];
+
+
+/** @returns minimal i64 values that cover the entire range of i64 behaviours
+ *
+ * This is used instead of fullI64Range when the number of test cases being
+ * generated is a super linear function of the length of i64 values which is
+ * leading to time outs.
+ */
+export function sparseI64Range() {
+  return kInterestingI64Values;
+}
+
+const kVectorI64Values = {
+  2: kInterestingI64Values.flatMap((f) => [
+  [f, 1n],
+  [-1n, f]]
+  ),
+  3: kInterestingI64Values.flatMap((f) => [
+  [f, 1n, -2n],
+  [-1n, f, 2n],
+  [1n, -2n, f]]
+  ),
+  4: kInterestingI64Values.flatMap((f) => [
+  [f, -1n, 2n, 3n],
+  [1n, f, -2n, 3n],
+  [1n, 2n, f, -3n],
+  [-1n, 2n, -3n, f]]
+  )
+};
+
+/**
+ * Returns set of vectors, indexed by dimension containing interesting i64
+ * values.
+ *
+ * The tests do not do the simple option for coverage of computing the cartesian
+ * product of all of the interesting i64 values N times for vecN tests,
+ * because that creates a huge number of tests for vec3 and vec4, leading to
+ * time outs.
+ *
+ * Instead they insert the interesting i64 values into each location of the
+ * vector to get a spread of testing over the entire range. This reduces the
+ * number of cases being run substantially, but maintains coverage.
+ */
+export function vectorI64Range(dim) {
+  assert(dim === 2 || dim === 3 || dim === 4, 'vectorI64Range only accepts dimensions 2, 3, and 4');
+  return kVectorI64Values[dim];
+}
+
+/**
+ * @returns an ascending sorted array of numbers spread over the entire range of 64-bit signed ints
+ *
+ * Numbers are divided into 2 regions: negatives, and positives, with their spreads biased towards 0
+ * Zero is included in range.
+ *
+ * @param counts structure param with 2 entries indicating the number of entries to be generated each region, values must be 0 or greater.
+ */
+export function fullI64Range(
+counts =
+
+
+{ positive: 50 })
+{
+  counts.negative = counts.negative === undefined ? counts.positive : counts.negative;
+  return [
+  ...biasedRangeBigInt(kValue.i64.negative.min, -1n, counts.negative),
+  0n,
+  ...biasedRangeBigInt(1n, kValue.i64.positive.max, counts.positive)];
+
+}
+
 /** Short list of f32 values of interest to test against */
 const kInterestingF32Values = [
 kValue.f32.negative.min,
@@ -1304,29 +1413,20 @@ export function sparseScalarF32Range() {
 }
 
 const kVectorF32Values = {
-  2: sparseScalarF32Range().flatMap((f) => [
+  2: kInterestingF32Values.flatMap((f) => [
   [f, 1.0],
-  [1.0, f],
-  [f, -1.0],
   [-1.0, f]]
   ),
-  3: sparseScalarF32Range().flatMap((f) => [
-  [f, 1.0, 2.0],
-  [1.0, f, 2.0],
-  [1.0, 2.0, f],
-  [f, -1.0, -2.0],
-  [-1.0, f, -2.0],
-  [-1.0, -2.0, f]]
+  3: kInterestingF32Values.flatMap((f) => [
+  [f, 1.0, -2.0],
+  [-1.0, f, 2.0],
+  [1.0, -2.0, f]]
   ),
-  4: sparseScalarF32Range().flatMap((f) => [
-  [f, 1.0, 2.0, 3.0],
-  [1.0, f, 2.0, 3.0],
-  [1.0, 2.0, f, 3.0],
-  [1.0, 2.0, 3.0, f],
-  [f, -1.0, -2.0, -3.0],
-  [-1.0, f, -2.0, -3.0],
-  [-1.0, -2.0, f, -3.0],
-  [-1.0, -2.0, -3.0, f]]
+  4: kInterestingF32Values.flatMap((f) => [
+  [f, -1.0, 2.0, 3.0],
+  [1.0, f, -2.0, 3.0],
+  [1.0, 2.0, f, -3.0],
+  [-1.0, 2.0, -3.0, f]]
   )
 };
 
@@ -1540,29 +1640,20 @@ export function sparseScalarF16Range() {
 }
 
 const kVectorF16Values = {
-  2: sparseScalarF16Range().flatMap((f) => [
+  2: kInterestingF16Values.flatMap((f) => [
   [f, 1.0],
-  [1.0, f],
-  [f, -1.0],
   [-1.0, f]]
   ),
-  3: sparseScalarF16Range().flatMap((f) => [
-  [f, 1.0, 2.0],
-  [1.0, f, 2.0],
-  [1.0, 2.0, f],
-  [f, -1.0, -2.0],
-  [-1.0, f, -2.0],
-  [-1.0, -2.0, f]]
+  3: kInterestingF16Values.flatMap((f) => [
+  [f, 1.0, -2.0],
+  [-1.0, f, 2.0],
+  [1.0, -2.0, f]]
   ),
-  4: sparseScalarF16Range().flatMap((f) => [
-  [f, 1.0, 2.0, 3.0],
-  [1.0, f, 2.0, 3.0],
-  [1.0, 2.0, f, 3.0],
-  [1.0, 2.0, 3.0, f],
-  [f, -1.0, -2.0, -3.0],
-  [-1.0, f, -2.0, -3.0],
-  [-1.0, -2.0, f, -3.0],
-  [-1.0, -2.0, -3.0, f]]
+  4: kInterestingF16Values.flatMap((f) => [
+  [f, -1.0, 2.0, 3.0],
+  [1.0, f, -2.0, 3.0],
+  [1.0, 2.0, f, -3.0],
+  [-1.0, 2.0, -3.0, f]]
   )
 };
 
@@ -1776,29 +1867,20 @@ export function sparseScalarF64Range() {
 }
 
 const kVectorF64Values = {
-  2: sparseScalarF64Range().flatMap((f) => [
+  2: kInterestingF64Values.flatMap((f) => [
   [f, 1.0],
-  [1.0, f],
-  [f, -1.0],
   [-1.0, f]]
   ),
-  3: sparseScalarF64Range().flatMap((f) => [
-  [f, 1.0, 2.0],
-  [1.0, f, 2.0],
-  [1.0, 2.0, f],
-  [f, -1.0, -2.0],
-  [-1.0, f, -2.0],
-  [-1.0, -2.0, f]]
+  3: kInterestingF64Values.flatMap((f) => [
+  [f, 1.0, -2.0],
+  [-1.0, f, 2.0],
+  [1.0, -2.0, f]]
   ),
-  4: sparseScalarF64Range().flatMap((f) => [
-  [f, 1.0, 2.0, 3.0],
-  [1.0, f, 2.0, 3.0],
-  [1.0, 2.0, f, 3.0],
-  [1.0, 2.0, 3.0, f],
-  [f, -1.0, -2.0, -3.0],
-  [-1.0, f, -2.0, -3.0],
-  [-1.0, -2.0, f, -3.0],
-  [-1.0, -2.0, -3.0, f]]
+  4: kInterestingF64Values.flatMap((f) => [
+  [f, -1.0, 2.0, 3.0],
+  [1.0, f, -2.0, 3.0],
+  [1.0, 2.0, f, -3.0],
+  [-1.0, 2.0, -3.0, f]]
   )
 };
 
@@ -2051,6 +2133,19 @@ export function quantizeToU32(num) {
   return Math.trunc(num);
 }
 
+/**
+ * @returns the closest 64-bit signed integer value to the input.
+ */
+export function quantizeToI64(num) {
+  if (num >= kValue.i64.positive.max) {
+    return kValue.i64.positive.max;
+  }
+  if (num <= kValue.i64.negative.min) {
+    return kValue.i64.negative.min;
+  }
+  return num;
+}
+
 /** @returns whether the number is an integer and a power of two */
 export function isPowerOfTwo(n) {
   if (!Number.isInteger(n)) {
@@ -2259,5 +2354,20 @@ export function subtractVectors(v1, v2) {
  */
 export function dotProduct(v1, v2) {
   return v1.reduce((a, v, i) => a + v * v2[i], 0);
+}
+
+/** @returns the absolute value of a bigint */
+export function absBigInt(v) {
+  return v < 0n ? -v : v;
+}
+
+/** @returns the maximum from a list of bigints */
+export function maxBigInt(...vals) {
+  return vals.reduce((prev, cur) => cur > prev ? cur : prev);
+}
+
+/** @returns the minimum from a list of bigints */
+export function minBigInt(...vals) {
+  return vals.reduce((prev, cur) => cur < prev ? cur : prev);
 }
 //# sourceMappingURL=math.js.map

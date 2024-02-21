@@ -208,16 +208,17 @@ class F extends GPUTest {
           ],
         });
 
-        const dummyColorTexture = device.createTexture({
+        const placeholderColorTexture = device.createTexture({
           size: [rwTexture.width, rwTexture.height, 1],
           usage: GPUTextureUsage.RENDER_ATTACHMENT,
           format: 'rgba8unorm',
         });
+        this.trackForCleanup(placeholderColorTexture);
 
         const renderPassEncoder = commandEncoder.beginRenderPass({
           colorAttachments: [
             {
-              view: dummyColorTexture.createView(),
+              view: placeholderColorTexture.createView(),
               loadOp: 'clear',
               clearValue: { r: 0, g: 0, b: 0, a: 0 },
               storeOp: 'store',
@@ -315,10 +316,15 @@ g.test('basic')
       .combine('depthOrArrayLayers', [1, 2] as const)
       .unless(p => p.textureDimension === '1d' && p.depthOrArrayLayers > 1)
   )
+  .beforeAllSubcases(t => {
+    t.skipIfTextureFormatNotUsableAsStorageTexture(t.params.format);
+  })
   .fn(t => {
     const { format, shaderStage, textureDimension, depthOrArrayLayers } = t.params;
 
-    const kWidth = 16;
+    // In compatibility mode the lowest maxComputeInvocationsPerWorkgroup is 128 vs non-compat which is 256
+    // So in non-compat we get 16 * 8 * 2, vs compat where we get 8 * 8 * 2
+    const kWidth = t.isCompatibility ? 8 : 16;
     const height = textureDimension === '1d' ? 1 : 8;
     const textureSize = [kWidth, height, depthOrArrayLayers] as const;
     const storageTexture = t.device.createTexture({
@@ -327,6 +333,7 @@ g.test('basic')
       size: textureSize,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.STORAGE_BINDING,
     });
+    t.trackForCleanup(storageTexture);
 
     const bytesPerBlock = kTextureFormatInfo[format].bytesPerBlock;
     const initialData = t.GetInitialData(storageTexture);
@@ -349,6 +356,7 @@ g.test('basic')
       size: expectedData.byteLength,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
+    t.trackForCleanup(readbackBuffer);
     const bytesPerRow = align(bytesPerBlock * kWidth, 256);
     commandEncoder.copyTextureToBuffer(
       {
