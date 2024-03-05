@@ -85,6 +85,7 @@ const workingDataI32 = new Int32Array(workingData);
 const workingDataI8 = new Int8Array(workingData);
 const workingDataF64 = new Float64Array(workingData);
 const workingDataI64 = new BigInt64Array(workingData);
+const workingDataU64 = new BigUint64Array(workingData);
 const workingDataView = new DataView(workingData);
 
 /**
@@ -750,6 +751,21 @@ export class MatrixType {
   toString() {
     return `mat${this.cols}x${this.rows}<${this.elementType}>`;
   }
+
+  /** Constructs a Matrix of this type with the given values */
+  create(value) {
+    if (value instanceof Array) {
+      assert(value.length === this.cols * this.rows);
+    } else {
+      value = Array(this.cols * this.rows).fill(value);
+    }
+    const columns = [];
+    for (let i = 0; i < this.cols; i++) {
+      const start = i * this.rows;
+      columns.push(value.slice(start, start + this.rows));
+    }
+    return new Matrix(columns.map((c) => c.map((v) => this.elementType.create(v))));
+  }
 }
 
 // Maps a string representation of a Matrix type to Matrix type.
@@ -1092,6 +1108,9 @@ scalarFromBits(TypeF16, workingDataU16, workingDataF16, bits);
 /** Create an AbstractInt from a numeric value, a JS `bigint`. */
 export const abstractInt = (value) =>
 scalarFromValue(TypeAbstractInt, workingDataI64, value);
+
+export const abstractIntBits = (bits) =>
+scalarFromBits(TypeAbstractInt, workingDataU64, workingDataI64, bits);
 
 /** Create an i32 from a numeric value, a JS `number`. */
 export const i32 = (value) => scalarFromValue(TypeI32, workingDataI32, value);
@@ -1660,6 +1679,14 @@ export const kAllFloatVectors = [
 ...kAllFloatVector2,
 ...kAllFloatVector3,
 ...kAllFloatVector4];
+
+
+/// All f16 floating-point scalar and vector types
+export const kAllF16ScalarsAndVectors = [
+TypeF16,
+TypeVec(2, TypeF16),
+TypeVec(3, TypeF16),
+TypeVec(4, TypeF16)];
 
 
 /// All floating-point scalar and vector types

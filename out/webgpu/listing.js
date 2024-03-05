@@ -1480,6 +1480,14 @@ export const listing = [
       "api",
       "validation",
       "render_pipeline",
+      "resource_compatibility"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "render_pipeline",
       "shader_module"
     ]
   },
@@ -1827,6 +1835,15 @@ export const listing = [
       "expression",
       "binary",
       "ai_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "ai_comparison"
     ]
   },
   {
@@ -3287,6 +3304,16 @@ export const listing = [
       "execution",
       "expression",
       "call",
+      "builtin",
+      "workgroupUniformLoad"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "user",
       "ptr_params"
     ]
@@ -3334,6 +3361,15 @@ export const listing = [
       "expression",
       "unary",
       "ai_assignment"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "ai_complement"
     ]
   },
   {
@@ -3932,6 +3968,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "derivatives"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "dot4I8Packed"
     ]
   },
@@ -4170,6 +4216,16 @@ export const listing = [
       "shader",
       "validation",
       "expression",
+      "call",
+      "builtin",
+      "workgroupUniformLoad"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
       "unary",
       "address_of_and_indirection"
     ]
@@ -4180,6 +4236,14 @@ export const listing = [
       "validation",
       "extension",
       "pointer_composite_access"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "extension",
+      "readonly_and_readwrite_storage_textures"
     ]
   },
   {
@@ -4452,6 +4516,14 @@ export const listing = [
       "validation",
       "shader_io",
       "invariant"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "shader_io",
+      "layout_constraints"
     ]
   },
   {
