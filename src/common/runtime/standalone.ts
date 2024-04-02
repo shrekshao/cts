@@ -21,7 +21,7 @@ import {
   OptionsInfos,
   camelCaseToSnakeCase,
 } from './helper/options.js';
-import { TestDedicatedWorker, TestSharedWorker } from './helper/test_worker.js';
+import { TestDedicatedWorker, TestSharedWorker, TestServiceWorker } from './helper/test_worker.js';
 
 const rootQuerySpec = 'webgpu:*';
 let promptBeforeReload = false;
@@ -47,25 +47,26 @@ const { queries: qs, options } = parseSearchParamLikeWithOptions(
   kStandaloneOptionsInfos,
   window.location.search || rootQuerySpec
 );
-const {
-  runnow,
-  debug,
-  unrollConstEvalLoops,
-  powerPreference,
-  compatibility,
-  forceFallbackAdapter,
-} = options;
-globalTestConfig.unrollConstEvalLoops = unrollConstEvalLoops;
+const { runnow, powerPreference, compatibility, forceFallbackAdapter } = options;
+globalTestConfig.enableDebugLogs = options.debug;
+globalTestConfig.unrollConstEvalLoops = options.unrollConstEvalLoops;
 globalTestConfig.compatibility = compatibility;
+globalTestConfig.logToWebSocket = options.logToWebSocket;
 
-Logger.globalDebugMode = debug;
 const logger = new Logger();
 
 setBaseResourcePath('../out/resources');
 
-const dedicatedWorker =
-  options.worker === 'dedicated' ? new TestDedicatedWorker(options) : undefined;
-const sharedWorker = options.worker === 'shared' ? new TestSharedWorker(options) : undefined;
+const testWorker =
+  options.worker === null
+    ? null
+    : options.worker === 'dedicated'
+    ? new TestDedicatedWorker(options)
+    : options.worker === 'shared'
+    ? new TestSharedWorker(options)
+    : options.worker === 'service'
+    ? new TestServiceWorker(options)
+    : unreachable();
 
 const autoCloseOnPass = document.getElementById('autoCloseOnPass') as HTMLInputElement;
 const resultsVis = document.getElementById('resultsVis')!;
@@ -178,10 +179,8 @@ function makeCaseHTML(t: TestTreeLeaf): VisualizedSubtree {
 
     const [rec, res] = logger.record(name);
     caseResult = res;
-    if (dedicatedWorker) {
-      await dedicatedWorker.run(rec, name);
-    } else if (sharedWorker) {
-      await sharedWorker.run(rec, name);
+    if (testWorker) {
+      await testWorker.run(rec, name);
     } else {
       await t.run(rec);
     }
@@ -518,13 +517,11 @@ function makeTreeNodeHeaderHTML(
 // Collapse s:f:t:* or s:f:t:c by default.
 let lastQueryLevelToExpand: TestQueryLevel = 2;
 
-type ParamValue = string | undefined | null | boolean | string[];
-
 /**
  * Takes an array of string, ParamValue and returns an array of pairs
  * of [key, value] where value is a string. Converts boolean to '0' or '1'.
  */
-function keyValueToPairs([k, v]: [string, ParamValue]): [string, string][] {
+function keyValueToPairs([k, v]: [string, boolean | string | null]): [string, string][] {
   const key = camelCaseToSnakeCase(k);
   if (typeof v === 'boolean') {
     return [[key, v ? '1' : '0']];
@@ -545,9 +542,9 @@ function keyValueToPairs([k, v]: [string, ParamValue]): [string, string][] {
  * @param params Some object with key value pairs.
  * @returns a search string.
  */
-function prepareParams(params: Record<string, ParamValue>): string {
+function prepareParams(params: Record<string, boolean | string | null>): string {
   const pairsArrays = Object.entries(params)
-    .filter(([, v]) => !!v)
+    .filter(([, v]) => !(v === false || v === null || v === '0'))
     .map(keyValueToPairs);
   const pairs = pairsArrays.flat();
   return new URLSearchParams(pairs).toString();
@@ -555,7 +552,7 @@ function prepareParams(params: Record<string, ParamValue>): string {
 
 // This is just a cast in one place.
 export function optionsToRecord(options: CTSOptions) {
-  return options as unknown as Record<string, boolean | string>;
+  return options as unknown as Record<string, boolean | string | null>;
 }
 
 /**
@@ -615,15 +612,15 @@ void (async () => {
     };
 
     const createSelect = (optionName: string, info: OptionInfo) => {
-      const select = $('<select>').on('change', function () {
-        optionValues[optionName] = (this as HTMLInputElement).value;
+      const select = $('<select>').on('change', function (this: HTMLSelectElement) {
+        optionValues[optionName] = JSON.parse(this.value);
         updateURLsWithCurrentOptions();
       });
       const currentValue = optionValues[optionName];
       for (const { value, description } of info.selectValueDescriptions!) {
         $('<option>')
           .text(description)
-          .val(value)
+          .val(JSON.stringify(value))
           .prop('selected', value === currentValue)
           .appendTo(select);
       }
