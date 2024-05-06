@@ -1753,6 +1753,11 @@ export const listing = [
   },
   {
     "file": [
+      "print_environment"
+    ]
+  },
+  {
+    "file": [
       "shader"
     ],
     "readme": "Tests for full coverage of the shaders that can be passed to WebGPU."
@@ -1781,6 +1786,16 @@ export const listing = [
       "expression",
       "access",
       "matrix",
+      "index"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "access",
+      "structure",
       "index"
     ]
   },
@@ -3416,6 +3431,14 @@ export const listing = [
       "shader",
       "execution",
       "expression",
+      "precedence"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
       "unary",
       "address_of_and_indirection"
     ]
@@ -3809,6 +3832,13 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "value_init"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "zero_init"
     ]
   },
@@ -3855,6 +3885,14 @@ export const listing = [
       "shader",
       "validation",
       "decl",
+      "context_dependent_resolution"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "decl",
       "let"
     ]
   },
@@ -3871,14 +3909,6 @@ export const listing = [
       "shader",
       "validation",
       "decl",
-      "ptr_spelling"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "decl",
       "var"
     ]
   },
@@ -3886,8 +3916,27 @@ export const listing = [
     "file": [
       "shader",
       "validation",
-      "decl",
-      "var_access_mode"
+      "expression",
+      "access",
+      "array"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "access",
+      "matrix"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "access",
+      "structure"
     ]
   },
   {
@@ -3940,6 +3989,15 @@ export const listing = [
       "shader",
       "validation",
       "expression",
+      "binary",
+      "div_rem"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
       "call",
       "builtin",
       "abs"
@@ -3963,6 +4021,26 @@ export const listing = [
       "call",
       "builtin",
       "acosh"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "all"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "any"
     ]
   },
   {
@@ -4102,6 +4180,36 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "countLeadingZeros"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "countOneBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "countTrailingZeros"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "cross"
     ]
   },
@@ -4133,6 +4241,26 @@ export const listing = [
       "call",
       "builtin",
       "determinant"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "distance"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "dot"
     ]
   },
   {
@@ -4182,6 +4310,46 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "extractBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "faceForward"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "firstLeadingBit"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "firstTrailingBit"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "floor"
     ]
   },
@@ -4192,7 +4360,57 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "fma"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "fract"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "frexp"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "insertBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "inverseSqrt"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "ldexp"
     ]
   },
   {
@@ -4252,6 +4470,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "mix"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "modf"
     ]
   },
@@ -4263,6 +4491,56 @@ export const listing = [
       "call",
       "builtin",
       "normalize"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "pack2x16float"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "pack2x16snorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "pack2x16unorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "pack4x8snorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "pack4x8unorm"
     ]
   },
   {
@@ -4312,6 +4590,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "pow"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "quantizeToF16"
     ]
   },
@@ -4332,6 +4620,36 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "reflect"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "refract"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "reverseBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "round"
     ]
   },
@@ -4343,6 +4661,16 @@ export const listing = [
       "call",
       "builtin",
       "saturate"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "select"
     ]
   },
   {
@@ -4382,6 +4710,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "smoothstep"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "sqrt"
     ]
   },
@@ -4412,7 +4750,77 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "tanh"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureDimensions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureGather"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureGatherCompare"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "textureLoad"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureNumLayers"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureNumLevels"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "textureNumSamples"
     ]
   },
   {
@@ -4502,7 +4910,67 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "transpose"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "trunc"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "unpack2x16float"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "unpack2x16snorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "unpack2x16unorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "unpack4x8snorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "unpack4x8unorm"
     ]
   },
   {
@@ -4532,7 +5000,87 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "value_constructor"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "workgroupUniformLoad"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "add_sub"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "and_or_xor"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "bitwise_shift"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "comparison"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "div_rem"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "matrix",
+      "mul"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "overload_resolution"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "precedence"
     ]
   },
   {
@@ -4601,14 +5149,6 @@ export const listing = [
       "validation",
       "functions",
       "restrictions"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "parse",
-      "align"
     ]
   },
   {
@@ -4696,6 +5236,14 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "continue"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "continuing"
     ]
   },
@@ -4728,7 +5276,31 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "for"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "identifiers"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "if"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "increment_decrement"
     ]
   },
   {
@@ -4744,7 +5316,23 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "loop"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "must_use"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "phony"
     ]
   },
   {
@@ -4768,7 +5356,23 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "return"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "semicolon"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "shadow_builtins"
     ]
   },
   {
@@ -4792,6 +5396,14 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "switch"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "unary_ops"
     ]
   },
@@ -4800,7 +5412,15 @@ export const listing = [
       "shader",
       "validation",
       "parse",
-      "var_and_let"
+      "while"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "shader_io",
+      "align"
     ]
   },
   {
@@ -4903,6 +5523,78 @@ export const listing = [
     "file": [
       "shader",
       "validation",
+      "statement",
+      "break_if"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "for"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "if"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "increment_decrement"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "loop"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "phony"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "return"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "switch"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "statement",
+      "while"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
       "types",
       "alias"
     ]
@@ -4928,7 +5620,31 @@ export const listing = [
       "shader",
       "validation",
       "types",
+      "enumerant"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "types",
       "matrix"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "types",
+      "pointer"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "types",
+      "ref"
     ]
   },
   {
