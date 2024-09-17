@@ -89,6 +89,8 @@ combine('format', kAllTextureFormats)
 ).
 fn((t) => {
   const { returnType, textureType, format } = t.params;
+  t.skipIfTextureFormatNotUsableAsStorageTexture(format);
+
   const returnVarType = kValuesTypes[returnType];
 
   const varWGSL = returnVarType.toString();
@@ -125,4 +127,16 @@ fn((t) => {
   const expectSuccess = testTextureType.includes('array');
 
   t.expectCompileResult(expectSuccess, code);
+});
+
+g.test('must_use').
+desc('Tests that the result must be used').
+params((u) => u.combine('use', [true, false])).
+fn((t) => {
+  const code = `
+    @group(0) @binding(0) var t : texture_2d_array<f32>;
+    fn foo() {
+      ${t.params.use ? '_ =' : ''} textureNumLayers(t);
+    }`;
+  t.expectCompileResult(t.params.use, code);
 });

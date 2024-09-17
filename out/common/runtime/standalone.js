@@ -369,6 +369,9 @@ parentLevel)
   const runMySubtree = async () => {
     const results = [];
     for (const { runSubtree } of childFns) {
+      if (stopRequested) {
+        break;
+      }
       results.push(await runSubtree());
     }
     return mergeSubtreeResults(...results);
@@ -491,6 +494,7 @@ onChange)
   {
     $('<input>').
     attr('type', 'text').
+    attr('title', n.query.toString()).
     prop('readonly', true).
     addClass('nodequery').
     on('click', (event) => {
@@ -675,6 +679,8 @@ void (async () => {
     showInfo(err.toString());
     return;
   }
+
+  document.title = `${document.title} ${compatibility ? '(compat)' : ''} - ${rootQuery.toString()}`;
 
   tree.dissolveSingleChildTrees();
 
