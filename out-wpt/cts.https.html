@@ -33,6 +33,8 @@
 <script type=module src=/webgpu/common/runtime/wpt.js></script>
 
 <meta name=variant content='?q=webgpu:api,operation,adapter,info:adapter_info:*'>
+<meta name=variant content='?q=webgpu:api,operation,adapter,info:same_object:*'>
+<meta name=variant content='?q=webgpu:api,operation,adapter,info:device_matches_adapter:*'>
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestAdapter:requestAdapter:*'>
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestAdapter:requestAdapter_no_parameters:*'>
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestDevice:default:*'>
@@ -110,6 +112,7 @@
 <meta name=variant content='?q=webgpu:api,operation,compute_pipeline,overrides:workgroup_size:*'>
 <meta name=variant content='?q=webgpu:api,operation,compute_pipeline,overrides:shared_shader_module:*'>
 <meta name=variant content='?q=webgpu:api,operation,compute_pipeline,overrides:multi_entry_points:*'>
+<meta name=variant content='?q=webgpu:api,operation,device,all_limits_and_features:everything:*'>
 <meta name=variant content='?q=webgpu:api,operation,device,lost:not_lost_on_gc:*'>
 <meta name=variant content='?q=webgpu:api,operation,device,lost:lost_on_destroy:*'>
 <meta name=variant content='?q=webgpu:api,operation,device,lost:same_object:*'>
@@ -305,6 +308,8 @@
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:unmap,state,mappingPending:*'>
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:gc_behavior,mappedAtCreation:*'>
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:gc_behavior,mapAsync:*'>
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,clip_distances:createRenderPipeline,at_over:*'>
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,clip_distances:createRenderPipeline,max_vertex_output_location:*'>
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:createQuerySet:*'>
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:timestamp:*'>
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,texture_formats:texture_descriptor:*'>
@@ -465,6 +470,7 @@
 <meta name=variant content='?q=webgpu:api,validation,createView:mip_levels:*'>
 <meta name=variant content='?q=webgpu:api,validation,createView:cube_faces_square:*'>
 <meta name=variant content='?q=webgpu:api,validation,createView:texture_state:*'>
+<meta name=variant content='?q=webgpu:api,validation,createView:texture_view_usage:*'>
 <meta name=variant content='?q=webgpu:api,validation,debugMarker:push_pop_call_count_unbalance,command_encoder:*'>
 <meta name=variant content='?q=webgpu:api,validation,debugMarker:push_pop_call_count_unbalance,render_compute_pass:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,beginComputePass:timestampWrites,query_set_type:*'>
@@ -532,6 +538,12 @@
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_draw:indirect_buffer_usage:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_draw:indirect_offset_alignment:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_draw:indirect_offset_oob:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:buffers_state:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:buffers,device_mismatch:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:indirect_buffer_usage:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:offsets_alignment:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:indirectBuffer_range:*'>
+<meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,indirect_multi_draw:drawCountBuffer_range:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,setIndexBuffer:index_buffer_state:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,setIndexBuffer:index_buffer,device_mismatch:*'>
 <meta name=variant content='?q=webgpu:api,validation,encoding,cmds,render,setIndexBuffer:index_buffer_usage:*'>
@@ -645,6 +657,7 @@
 <meta name=variant content='?q=webgpu:api,validation,image_copy,texture_related:size_alignment:*'>
 <meta name=variant content='?q=webgpu:api,validation,image_copy,texture_related:copy_rectangle:*'>
 <meta name=variant content='?q=webgpu:api,validation,layout_shader_compat:pipeline_layout_shader_exact_match:*'>
+<meta name=variant content='?q=webgpu:api,validation,non_filterable_texture:non_filterable_texture_with_filtering_sampler:*'>
 <meta name=variant content='?q=webgpu:api,validation,query_set,create:count:*'>
 <meta name=variant content='?q=webgpu:api,validation,query_set,destroy:twice:*'>
 <meta name=variant content='?q=webgpu:api,validation,query_set,destroy:invalid_queryset:*'>
@@ -747,6 +760,7 @@
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,depth_stencil_state:depth_bias:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,depth_stencil_state:stencil_test:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,depth_stencil_state:stencil_write:*'>
+<meta name=variant content='?q=webgpu:api,validation,render_pipeline,float32_blendable:create_render_pipeline:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,fragment_state:color_target_exists:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,fragment_state:targets_format_is_color_format:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,fragment_state:targets_format_renderable:*'>
@@ -834,6 +848,7 @@
 <meta name=variant content='?q=webgpu:api,validation,resource_usages,texture,in_render_misc:subresources,set_bind_group_on_same_index_depth_stencil_texture:*'>
 <meta name=variant content='?q=webgpu:api,validation,resource_usages,texture,in_render_misc:subresources,set_unused_bind_group:*'>
 <meta name=variant content='?q=webgpu:api,validation,resource_usages,texture,in_render_misc:subresources,texture_usages_in_copy_and_render_pass:*'>
+<meta name=variant content='?q=webgpu:api,validation,resource_usages,texture,in_render_misc:subresources,texture_view_usages:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:compute:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:vertex:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:fragment:*'>
@@ -898,6 +913,7 @@
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,render_pass,unused:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,compute_pass,used:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,compute_pass,unused:*'>
+<meta name=variant content='?q=webgpu:compat,api,validation,pipeline_creation:depth_textures:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,render_pipeline,depth_stencil_state:depthBiasClamp:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,render_pipeline,fragment_state:colorState:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,render_pipeline,unsupported_wgsl:sample_mask:*'>
@@ -952,6 +968,7 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,matrix,index:concrete_float_element:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,matrix,index:abstract_float_column:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,matrix,index:abstract_float_element:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,access,matrix,index:non_const_index:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,structure,index:buffer:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,structure,index:buffer_align:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,access,structure,index:buffer_size:*'>
@@ -1510,6 +1527,16 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,pow:abstract_float:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,pow:f32:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,pow:f16:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadBroadcast:data_types:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadBroadcast:compute,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadBroadcast:compute,split:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadBroadcast:fragment,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadBroadcast:fragment,split:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadSwap:data_types:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadSwap:compute,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadSwap:compute,split:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadSwap:fragment,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quadSwap:fragment,split:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,quantizeToF16:f32:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,radians:abstract_float:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,radians:f32:*'>
@@ -1581,6 +1608,11 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBallot:fragment:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBallot:predicate:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBallot:predicate_and_control_flow:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBitwise:data_types:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBitwise:compute,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBitwise:compute,split:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBitwise:fragment,all_active:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBitwise:fragment,split:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBroadcast:data_types:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBroadcast:workgroup_uniform_load:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,subgroupBroadcast:fragment:*'>
@@ -1630,7 +1662,6 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureNumSamples:depth:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:sampled_1d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:sampled_2d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:sampled_2d_coords,derivatives:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:sampled_3d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:depth_2d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSample:sampled_array_2d_coords:*'>
@@ -1647,8 +1678,6 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompare:3d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompare:arrayed_2d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompare:arrayed_3d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompareLevel:stage:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompareLevel:control_flow:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompareLevel:2d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompareLevel:3d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleCompareLevel:arrayed_2d_coords:*'>
@@ -1664,14 +1693,13 @@
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleLevel:depth_2d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleLevel:depth_array_2d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureSampleLevel:depth_3d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:store_1d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:store_2d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:store_array_2d_coords:*'>
-<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:store_3d_coords:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:texel_formats:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:bgra8unorm_swizzle:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:out_of_bounds:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,textureStore:out_of_bounds_array:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,texture_utils:createTextureWithRandomDataAndGetTexels_with_generator:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,texture_utils:readTextureToTexelViews:*'>
+<meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,texture_utils:weights:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,transpose:abstract_float:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,transpose:f32:*'>
 <meta name=variant content='?q=webgpu:shader,execution,expression,call,builtin,transpose:f16:*'>
@@ -1904,6 +1932,8 @@
 <meta name=variant content='?q=webgpu:shader,execution,padding:struct_explicit:*'>
 <meta name=variant content='?q=webgpu:shader,execution,padding:struct_nested:*'>
 <meta name=variant content='?q=webgpu:shader,execution,padding:array_of_vec3:*'>
+<meta name=variant content='?q=webgpu:shader,execution,padding:array_of_vec3h:*'>
+<meta name=variant content='?q=webgpu:shader,execution,padding:array_of_vec3h,elementwise:*'>
 <meta name=variant content='?q=webgpu:shader,execution,padding:array_of_struct:*'>
 <meta name=variant content='?q=webgpu:shader,execution,padding:vec3:*'>
 <meta name=variant content='?q=webgpu:shader,execution,padding:matCx3:*'>
@@ -1925,6 +1955,7 @@
 <meta name=variant content='?q=webgpu:shader,execution,shader_io,shared_structs:shared_between_stages:*'>
 <meta name=variant content='?q=webgpu:shader,execution,shader_io,shared_structs:shared_with_non_entry_point_function:*'>
 <meta name=variant content='?q=webgpu:shader,execution,shader_io,user_io:passthrough:*'>
+<meta name=variant content='?q=webgpu:shader,execution,shader_io,vertex_builtins:outputs,clip_distances:*'>
 <meta name=variant content='?q=webgpu:shader,execution,shader_io,workgroup_size:workgroup_size:*'>
 <meta name=variant content='?q=webgpu:shader,execution,shadow:declaration:*'>
 <meta name=variant content='?q=webgpu:shader,execution,shadow:builtin:*'>
